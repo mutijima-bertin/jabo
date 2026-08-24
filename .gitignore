@@ -1,0 +1,38 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build outputs
+.next/
+out/
+dist/
+build/
+backend/dist/
+
+# env & secrets
+.env
+.env.local
+.env*.local
+
+# logs
+*.log
+npm-debug.log*
+
+# misc
+.DS_Store
+*.pem
+.vscode/
+.idea/
+coverage/
+
+# uploads (local file storage)
+backend/uploads/
+frontend/public/uploads/
+
+# e2e artifacts
+test-results/
+playwright-report/
+
+# real photo archive (source material, kept on disk — back up separately)
+pictures/

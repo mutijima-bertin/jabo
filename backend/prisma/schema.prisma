@@ -1,0 +1,195 @@
+// Creative Sound Studio - Prisma schema (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PRODUCTION
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum NotificationKind {
+  BOOKING_RECEIVED
+  BOOKING_CONFIRMED
+  BOOKING_STATUS_CHANGED
+  BOOKING_CANCELLED
+  MAGIC_LINK
+}
+
+enum PostContentType {
+  PROJECT_RECAP
+  CLIENT_STORY
+  EDUCATIONAL
+  STUDIO_NEWS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Client {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String?   @unique
+  phone               String?
+  loginTokenHash      String?
+  loginTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  bookings            Booking[]
+}
+
+model Service {
+  id             String   @id @default(cuid())
+  nameEn         String
+  nameRw         String
+  descriptionEn  String?
+  descriptionRw  String?
+  priceEn        String
+  priceRw        String
+  category       String
+  icon           String?
+  featured       Boolean  @default(false)
+  published      Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  bookings       Booking[]
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  reference          String        @unique
+  serviceId          String
+  service            Service       @relation(fields: [serviceId], references: [id])
+  clientId           String?
+  client             Client?       @relation(fields: [clientId], references: [id])
+  contactName        String
+  contactEmail       String
+  contactPhone       String?
+  eventDate          DateTime?
+  location           String?
+  budgetRange        String?
+  details            String?
+  language           String        @default("en")
+  status             BookingStatus @default(PENDING)
+  magicTokenHash     String?       @unique
+  magicTokenExpiresAt DateTime?
+  magicTokenRevoked  Boolean       @default(false)
+  lastNotifiedAt     DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  events             BookingEvent[]
+  notifications      NotificationLog[]
+
+  @@index([serviceId])
+  @@index([clientId])
+  @@index([status, createdAt])
+}
+
+model BookingEvent {
+  id        String       @id @default(cuid())
+  bookingId String
+  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  status    BookingStatus
+  note      String?
+  createdAt DateTime     @default(now())
+}
+
+model NotificationLog {
+  id        String              @id @default(cuid())
+  bookingId String
+  booking   Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  channel   NotificationChannel
+  kind      NotificationKind
+  recipient String
+  status    String              @default("sent") // sent | failed | skipped
+  error     String?
+  sentAt    DateTime            @default(now())
+}
+
+model PortfolioItem {
+  id         String   @id @default(cuid())
+  titleEn    String
+  titleRw    String?
+  category   String
+  clientName String?
+  tags       String[] @default([])
+  coverUrl   String
+  mediaUrls  String[] @default([])
+  mediaType  String   @default("image") // image | video
+  published  Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ClientLogo {
+  id        String   @id @default(cuid())
+  name      String
+  url       String?
+  imageUrl  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  author    String
+  role      String?
+  contentEn String
+  contentRw String?
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String
+  locale    String   @default("en")
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, locale])
+}
+
+model BlogPost {
+  id             String           @id @default(cuid())
+  slug           String           @unique // URL slug, e.g. "behind-the-scenes-abis-2019"
+  titleEn        String
+  titleRw        String
+  excerptEn      String? // short summary for cards/meta
+  excerptRw      String?
+  contentEn      String // markdown body (GFM) — sanitize when rendering to HTML
+  contentRw      String
+  contentType    PostContentType  @default(PROJECT_RECAP)
+  coverImageUrl  String? // /uploads/... path, same convention as PortfolioItem.coverUrl
+  published      Boolean          @default(false) // draft vs published
+  views          Int              @default(0)
+  likes          Int              @default(0)
+  publishedAt    DateTime? // set when first published
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([published, publishedAt])
+}

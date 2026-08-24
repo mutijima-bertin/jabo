@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf6ef;
+  --foreground: #1f1d1a;
+  --accent: #b08d57;
+  --cream: #faf6ef;
+  --cream-alt: #f7f2e9;
+  --ink: #1f1d1a;
+  --brass: #b08d57;
+  --brass-dark: #8f6f3e;
+  --green: #3f5a46;
+  --green-deep: #2b4034;
+  --sand: #ece4d3;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-cream: var(--cream);
+  --color-cream-alt: var(--cream-alt);
+  --color-ink: var(--ink);
+  --color-brass: var(--brass);
+  --color-brass-dark: var(--brass-dark);
+  --color-green: var(--green);
+  --color-green-deep: var(--green-deep);
+  --color-sand: var(--sand);
+  --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-fraunces);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--brass);
+  color: var(--cream);
+}
+
+/* Cinematic grain overlay for hero sections */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fade-up 0.7s ease-out both;
+}
+
+/* Slow cinematic zoom for the active hero slide */
+@keyframes kenburns {
+  from {
+    transform: scale(1) translate(0, 0);
+  }
+  to {
+    transform: scale(1.14) translate(1.25%, -1.25%);
+  }
+}
+
+.kenburns {
+  animation: kenburns 11s ease-out both;
+  will-change: transform;
+}

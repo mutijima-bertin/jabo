@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: css-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: css
+      POSTGRES_PASSWORD: css123
+      POSTGRES_DB: creativesoundstudio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U css -d creativesoundstudio"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: css-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://css:css123@postgres:5432/creativesoundstudio
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}
+      ADMIN_EMAILS: ${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}
+      MAGIC_LINK_TTL_HOURS: "168"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      ZAVU_API_KEY: ${ZAVU_API_KEY:-}
+      ZAVU_SENDER: ${ZAVU_SENDER:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      UPLOADS_DIR: /app/uploads
+    ports:
+      - "4000:4000"
+    volumes:
+      - uploads-data:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Inlined into next.config.ts at build time for the /uploads rewrite.
+        BACKEND_URL: http://backend:4000
+    container_name: css-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:4000
+      BACKEND_URL: http://backend:4000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres-data:
+  uploads-data:
