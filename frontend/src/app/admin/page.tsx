@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, CalendarCheck, Images, Settings, LogOut, ChevronRight, Loader2, Newspaper } from "lucide-react";
+import { LayoutDashboard, CalendarCheck, Images, Settings, LogOut, ChevronRight, Loader2, Newspaper, Users } from "lucide-react";
 import { useAdminAuth, clearToken } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
@@ -10,9 +10,10 @@ import { AdminBookings } from "@/components/admin/AdminBookings";
 import { AdminServices } from "@/components/admin/AdminServices";
 import { AdminPortfolio } from "@/components/admin/AdminPortfolio";
 import { AdminBlog } from "@/components/admin/AdminBlog";
+import { AdminClients } from "@/components/admin/AdminClients";
 import { AdminSettings } from "@/components/admin/AdminSettings";
 
-type Tab = "dashboard" | "bookings" | "services" | "portfolio" | "blog" | "settings";
+type Tab = "dashboard" | "bookings" | "services" | "portfolio" | "blog" | "clients" | "settings";
 
 const tabs: Array<{ id: Tab; label: string; icon: typeof LayoutDashboard }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,8 +21,14 @@ const tabs: Array<{ id: Tab; label: string; icon: typeof LayoutDashboard }> = [
   { id: "services", label: "Services", icon: ChevronRight },
   { id: "portfolio", label: "Portfolio", icon: Images },
   { id: "blog", label: "Blog", icon: Newspaper },
+  { id: "clients", label: "", icon: Users },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+
+/** Newer tabs carry bilingual labels via i18n; legacy tabs keep their hardcoded English. */
+function tabLabel(id: Tab, fallback: string, t: (k: "admin_clients_title") => string): string {
+  return id === "clients" ? t("admin_clients_title") : fallback;
+}
 
 export default function AdminPage() {
   const { t } = useI18n();
@@ -72,7 +79,7 @@ export default function AdminPage() {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {tb.label}
+              {tabLabel(tb.id, tb.label, t)}
             </button>
           );
         })}
@@ -95,7 +102,7 @@ export default function AdminPage() {
                 tab === tb.id ? "bg-accent text-zinc-950" : "border border-white/10 text-zinc-400"
               }`}
             >
-              {tb.label}
+              {tabLabel(tb.id, tb.label, t)}
             </button>
           ))}
         </div>
@@ -104,6 +111,7 @@ export default function AdminPage() {
         {tab === "services" && <AdminServices token={token} />}
         {tab === "portfolio" && <AdminPortfolio token={token} />}
         {tab === "blog" && <AdminBlog token={token} />}
+        {tab === "clients" && <AdminClients token={token} />}
         {tab === "settings" && <AdminSettings token={token} />}
       </div>
     </div>

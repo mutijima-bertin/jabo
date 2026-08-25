@@ -1,14 +1,20 @@
 import Link from "next/link";
-import { fetchSettings, fetchServices, fetchPortfolio, s } from "@/lib/content";
+import { fetchSettings, fetchServices, fetchPortfolio, fetchTestimonials, s } from "@/lib/content";
 import { ServiceCard } from "@/components/ServiceCard";
 import { PortfolioGrid } from "@/components/PortfolioGrid";
 import { HeroSection } from "@/components/HeroSection";
 import { SectionTitle } from "@/components/SectionTitle";
 import { TrustBand } from "@/components/TrustBand";
+import { TestimonialsSection } from "@/components/TestimonialsSection";
 import { ClientsWall } from "@/components/ClientsWall";
 
 export default async function HomePage() {
-  const [settings, services, portfolio] = await Promise.all([fetchSettings(), fetchServices(), fetchPortfolio()]);
+  const [settings, services, portfolio, testimonials] = await Promise.all([
+    fetchSettings(),
+    fetchServices(),
+    fetchPortfolio(),
+    fetchTestimonials(),
+  ]);
 
   return (
     <>
@@ -27,6 +33,9 @@ export default async function HomePage() {
 
       {/* TRUST */}
       <TrustBand />
+
+      {/* TESTIMONIALS — hides itself when there are no published quotes */}
+      <TestimonialsSection items={testimonials} />
 
       {/* CLIENTS */}
       <ClientsWall />

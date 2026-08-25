@@ -14,6 +14,11 @@ export function create(data: Prisma.TestimonialCreateInput) {
   return prisma.testimonial.create({ data });
 }
 
+/** Minimal update — used only for the publish toggle. */
+export function update(id: string, data: Prisma.TestimonialUpdateInput) {
+  return prisma.testimonial.update({ where: { id }, data });
+}
+
 export function deleteById(id: string) {
   return prisma.testimonial.delete({ where: { id } });
 }

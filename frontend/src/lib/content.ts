@@ -1,4 +1,4 @@
-import { api, type PostFull, type PostSummary, type Service, type PortfolioItem, type SiteSetting } from "./api";
+import { api, type PostFull, type PostSummary, type Service, type PortfolioItem, type SiteSetting, type Testimonial } from "./api";
 
 export type SettingsMap = Map<string, string>;
 
@@ -34,6 +34,15 @@ export async function fetchPortfolio(): Promise<PortfolioItem[]> {
 export async function fetchPosts(): Promise<PostSummary[]> {
   try {
     return await api.get<PostSummary[]>("/public/posts");
+  } catch {
+    return [];
+  }
+}
+
+/** Published testimonials for the homepage — empty array when unreachable (section hides itself). */
+export async function fetchTestimonials(): Promise<Testimonial[]> {
+  try {
+    return await api.get<Testimonial[]>("/public/testimonials");
   } catch {
     return [];
   }

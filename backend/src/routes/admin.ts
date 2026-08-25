@@ -41,6 +41,7 @@ adminRouter.delete("/admin/logos/:id", adminCatalog.deleteLogo);
 // ---------- Testimonials ----------
 adminRouter.get("/admin/testimonials", adminCatalog.listTestimonials);
 adminRouter.post("/admin/testimonials", adminCatalog.createTestimonial);
+adminRouter.patch("/admin/testimonials/:id", adminCatalog.patchTestimonial);
 adminRouter.delete("/admin/testimonials/:id", adminCatalog.deleteTestimonial);
 
 // ---------- Site settings ----------

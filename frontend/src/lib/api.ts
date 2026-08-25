@@ -144,3 +144,42 @@ export interface PostFull extends PostSummary {
 export interface AdminPost extends PostFull {
   published: boolean;
 }
+
+/** Published testimonial row from GET /public/testimonials. */
+export interface Testimonial {
+  id: string;
+  author: string;
+  role: string | null;
+  contentEn: string;
+  contentRw: string | null;
+}
+
+/** Full admin testimonial row (incl. drafts) — GET/POST/DELETE + PATCH {published} /admin/testimonials. */
+export interface AdminTestimonial extends Testimonial {
+  published: boolean;
+  createdAt: string;
+}
+
+/** Client-logo wall row — GET /public/logos and GET /admin/logos. */
+export interface ClientLogo {
+  id: string;
+  name: string;
+  url: string | null;
+  imageUrl: string | null;
+}
+
+/** Full admin logo row (adds ordering metadata). */
+export interface AdminLogo extends ClientLogo {
+  sortOrder: number;
+  createdAt: string;
+}
+
+/** Portal client as returned by GET /admin/clients (read-only; created via bookings). */
+export interface AdminClient {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  createdAt: string;
+  bookings: Array<{ reference: string; status: string; createdAt: string }>;
+}

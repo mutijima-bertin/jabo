@@ -1,11 +1,17 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import sharp from "sharp";
 
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
+
+// Raster images normalized to WebP on write; GIF is excluded so animation stays intact.
+const WEBP_CONVERSION_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const WEBP_QUALITY = 82;
+const MAX_IMAGE_DIMENSION = 1920;
 
 export function isAllowedMime(mime: string): boolean {
   return IMAGE_TYPES.has(mime) || VIDEO_TYPES.has(mime);
@@ -57,8 +63,32 @@ export function magicBytesMatch(mime: string, buf: Buffer): boolean {
 }
 
 /**
+ * Normalizes a raster image to WebP (q82), auto-rotating per EXIF first
+ * (conversion drops EXIF, so orientation must be baked in) and fitting
+ * inside 1920×1920 without upscaling. Throws IMAGE_PROCESSING_FAILED when
+ * valid-looking content cannot be decoded, so callers fail closed instead
+ * of silently writing the original bytes.
+ */
+async function convertToWebp(buffer: Buffer): Promise<Buffer> {
+  try {
+    // Bound decode size explicitly (sharp's default ~268MP can OOM the
+    // container on large panoramas/adversarial files); overflow throws and
+    // maps to the fail-closed IMAGE_PROCESSING_FAILED path.
+    return await sharp(buffer, { limitInputPixels: 80_000_000 })
+      .rotate()
+      .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+  } catch {
+    throw new Error("IMAGE_PROCESSING_FAILED");
+  }
+}
+
+/**
  * Persists a base64 data URL to disk after verifying declared MIME against
- * actual content. Returns the public URL path.
+ * actual content. JPEG/PNG/WebP images are re-encoded to WebP (quality 82,
+ * fitted inside 1920×1920, never upscaled); GIFs and videos are written
+ * byte-for-byte. Returns the public URL path.
  */
 export async function saveDataUrl(dataUrl: string, mime: string): Promise<string> {
   const match = dataUrl.match(/^data:[^;]+;base64,(.+)$/);
@@ -71,7 +101,12 @@ export async function saveDataUrl(dataUrl: string, mime: string): Promise<string
   const dir = path.join(UPLOADS_DIR, folder);
   fs.mkdirSync(dir, { recursive: true });
 
-  const fileName = `${Date.now()}-${crypto.randomBytes(12).toString("hex")}.${extFor(mime)}`;
-  fs.writeFileSync(path.join(dir, fileName), buffer);
+  // Size cap + magic bytes above run against the ORIGINAL bytes; conversion
+  // happens only after every validation has passed.
+  const toWebp = WEBP_CONVERSION_TYPES.has(mime);
+  const fileBuffer = toWebp ? await convertToWebp(buffer) : buffer;
+  const ext = toWebp ? "webp" : extFor(mime);
+  const fileName = `${Date.now()}-${crypto.randomBytes(12).toString("hex")}.${ext}`;
+  fs.writeFileSync(path.join(dir, fileName), fileBuffer);
   return `/uploads/${folder}/${fileName}`;
 }

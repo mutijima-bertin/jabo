@@ -137,6 +137,10 @@ export async function upload(req: Request, res: Response): Promise<void> {
       res.status(422).json({ error: "CONTENT_MISMATCH", message: "File content does not match its declared type" });
       return;
     }
+    if (msg === "IMAGE_PROCESSING_FAILED") {
+      res.status(422).json({ error: "IMAGE_PROCESSING_FAILED", message: "Image could not be processed" });
+      return;
+    }
     res.status(500).json({ error: "INTERNAL" });
   }
 }
@@ -186,6 +190,25 @@ export async function createTestimonial(req: Request, res: Response): Promise<vo
     return;
   }
   res.status(201).json(await testimonialModel.create(parsed.data));
+}
+
+// Publish toggle only — the public feed's published-only filter is the approval gate.
+const testimonialPatchSchema = z.strictObject({
+  published: z.boolean(),
+});
+
+export async function patchTestimonial(req: Request, res: Response): Promise<void> {
+  const parsed = testimonialPatchSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  try {
+    const testimonial = await testimonialModel.update(pathParam(req, "id"), parsed.data);
+    res.json(testimonial);
+  } catch {
+    res.status(404).json({ error: "NOT_FOUND" });
+  }
 }
 
 export async function deleteTestimonial(req: Request, res: Response): Promise<void> {
