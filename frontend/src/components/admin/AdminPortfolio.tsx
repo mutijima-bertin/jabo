@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { UploadCloud, ImagePlus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { UploadCloud } from "lucide-react";
 import { adminApi } from "@/lib/admin";
 import type { PortfolioItem } from "@/lib/api";
 
@@ -25,11 +25,15 @@ export function AdminPortfolio({ token }: { token: string }) {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => setItems(await adminApi.get<PortfolioItem[]>("/admin/portfolio", token));
+  const fetchItems = useCallback(() => adminApi.get<PortfolioItem[]>("/admin/portfolio", token), [token]);
 
+  // Initial load subscribes via .then rather than calling load() directly —
+  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
   useEffect(() => {
-    load().catch((e) => alert(e.message));
-  }, [token]);
+    fetchItems().then(setItems).catch((e) => alert(e.message));
+  }, [fetchItems]);
+
+  const load = useCallback(async () => setItems(await fetchItems()), [fetchItems]);
 
   async function uploadFile(file: File) {
     setBusy(true);

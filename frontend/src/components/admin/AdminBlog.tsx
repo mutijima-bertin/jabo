@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud, Eye, Heart } from "lucide-react";
 import { adminApi } from "@/lib/admin";
 import type { AdminPost, PostContentType } from "@/lib/api";
@@ -36,11 +36,15 @@ export function AdminBlog({ token }: { token: string }) {
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = async () => setPosts(await adminApi.get<AdminPost[]>("/admin/posts", token));
+  const fetchPosts = useCallback(() => adminApi.get<AdminPost[]>("/admin/posts", token), [token]);
 
+  // Initial load subscribes via .then rather than calling load() directly —
+  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
   useEffect(() => {
-    load().catch((e) => alert(e.message));
-  }, [token]);
+    fetchPosts().then(setPosts).catch((e) => alert(e.message));
+  }, [fetchPosts]);
+
+  const load = useCallback(async () => setPosts(await fetchPosts()), [fetchPosts]);
 
   async function uploadFile(file: File) {
     setBusy(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Booking, DashboardStats } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -24,6 +24,7 @@ export function useAdminAuth() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is unavailable during SSR; restore the persisted admin token after mount
     setTokenState(getToken());
     setReady(true);
   }, []);
@@ -87,19 +88,29 @@ export function useBookings(token: string | null) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState("");
 
-  const load = async () => {
+  const fetchBookings = useCallback((t: string) => adminApi.get<Booking[]>("/admin/bookings", t), []);
+
+  // Initial load subscribes via .then rather than calling load() directly —
+  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
+  useEffect(() => {
+    if (!token) return;
+    fetchBookings(token)
+      .then((data) => {
+        setBookings(data);
+        setError("");
+      })
+      .catch((e) => setError((e as Error).message));
+  }, [fetchBookings, token]);
+
+  const load = useCallback(async () => {
     if (!token) return;
     try {
-      setBookings(await adminApi.get<Booking[]>("/admin/bookings", token));
+      setBookings(await fetchBookings(token));
       setError("");
     } catch (e) {
       setError((e as Error).message);
     }
-  };
-
-  useEffect(() => {
-    load();
-  }, [token]);
+  }, [token, fetchBookings]);
 
   return { bookings, error, reload: load };
 }

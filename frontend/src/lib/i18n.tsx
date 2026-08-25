@@ -259,6 +259,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem("css_locale") as Locale | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is unavailable during SSR; restore the persisted locale after mount
     if (saved === "en" || saved === "rw") setLocale(saved);
   }, []);
 

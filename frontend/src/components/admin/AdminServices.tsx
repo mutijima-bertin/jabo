@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { adminApi } from "@/lib/admin";
 import type { Service } from "@/lib/api";
 
@@ -23,11 +23,15 @@ export function AdminServices({ token }: { token: string }) {
   const [editing, setEditing] = useState<Partial<Service> | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => setItems(await adminApi.get<Service[]>("/admin/services", token));
+  const fetchItems = useCallback(() => adminApi.get<Service[]>("/admin/services", token), [token]);
 
+  // Initial load subscribes via .then rather than calling load() directly —
+  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
   useEffect(() => {
-    load().catch((e) => alert(e.message));
-  }, [token]);
+    fetchItems().then(setItems).catch((e) => alert(e.message));
+  }, [fetchItems]);
+
+  const load = useCallback(async () => setItems(await fetchItems()), [fetchItems]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
