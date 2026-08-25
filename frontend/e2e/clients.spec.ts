@@ -1,22 +1,32 @@
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 
 const API = "http://localhost:4000/api";
 const BACKEND_CONTAINER = "css-backend";
 
 // The magic link is never rendered on the frontend — the "email" is a log
-// line printed by the backend mailer into `docker logs css-backend`:
+// line printed by the backend mailer to its stdout:
 //   [mailer] Magic login link for <email>: http://localhost:3000/login?token=<64-hex>
-// Poll the container logs until the line for our (unique per run) email shows up.
+// In CI the backend runs as a plain process with stdout redirected to
+// BACKEND_LOG_FILE; locally it runs in docker, so we read container logs.
+const BACKEND_LOG_FILE = process.env.BACKEND_LOG_FILE;
+
+function readBackendLogs(): string {
+  if (BACKEND_LOG_FILE) return readFileSync(BACKEND_LOG_FILE, "utf8");
+  return execSync(`docker logs ${BACKEND_CONTAINER} 2>&1`, {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+// Poll the backend output until the line for our (unique per run) email shows up.
 async function fetchMagicToken(email: string, timeoutMs = 15000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   let lastLogs = "";
   while (Date.now() < deadline) {
     try {
-      const logs = execSync(`docker logs ${BACKEND_CONTAINER} 2>&1`, {
-        encoding: "utf8",
-        maxBuffer: 16 * 1024 * 1024,
-      });
+      const logs = readBackendLogs();
       lastLogs = logs;
       const lines = logs.split("\n").filter((l) => l.includes(`Magic login link for ${email}`));
       const last = lines[lines.length - 1];
@@ -25,14 +35,15 @@ async function fetchMagicToken(email: string, timeoutMs = 15000): Promise<string
         if (match) return match[1];
       }
     } catch (err) {
-      // docker logs can exit non-zero on transient failures — keep polling.
+      // Log source can transiently fail (docker logs exit codes, file races) — keep polling.
       lastLogs = String(err);
     }
     await new Promise((r) => setTimeout(r, 750));
   }
   const snippet = lastLogs.split("\n").slice(-5).join("\n");
+  const source = BACKEND_LOG_FILE ? `file ${BACKEND_LOG_FILE}` : `${BACKEND_CONTAINER} logs`;
   throw new Error(
-    `No magic link found in ${BACKEND_CONTAINER} logs for ${email} within ${timeoutMs}ms. ` +
+    `No magic link found in ${source} for ${email} within ${timeoutMs}ms. ` +
       `Check the request reached /clients/login-request (rate limiter: 5 req / 10 min / IP — ` +
       `wait out the window before rerunning). Last log lines:\n${snippet}`,
   );
