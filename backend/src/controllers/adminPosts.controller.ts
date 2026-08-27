@@ -15,7 +15,10 @@ const postSchema = z.object({
   contentEn: z.string().min(1),
   contentRw: z.string().min(1),
   contentType: z.enum(POST_CONTENT_TYPES).default("PROJECT_RECAP"),
-  coverImageUrl: z.string().optional(), // NOTE: rejects null by contract — the UI sends "" instead.
+  coverImageUrl: z
+    .string()
+    .regex(/^\/uploads\//, "must be an uploaded /uploads/ path")
+    .optional(), // NOTE: rejects null by contract — the UI sends "" instead.
   published: z.boolean().default(false),
 });
 

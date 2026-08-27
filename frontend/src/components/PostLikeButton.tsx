@@ -44,7 +44,7 @@ export function PostLikeButton({ postId, initialLikes }: { postId: string; initi
         aria-pressed={liked}
         className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
           liked
-            ? "border-brass bg-brass text-cream"
+            ? "border-brass-dark bg-brass-dark text-cream"
             : "border-ink/15 bg-white/70 text-ink/70 hover:border-brass hover:text-brass"
         } disabled:opacity-60`}
       >

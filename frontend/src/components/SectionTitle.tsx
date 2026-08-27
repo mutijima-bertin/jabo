@@ -11,6 +11,7 @@ export function SectionTitle({
     | "portfolio_title"
     | "portfolio_sub"
     | "about_title"
+    | "clients_title"
     | "testimonials_title"
     | "testimonials_sub";
 }) {

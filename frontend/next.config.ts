@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
   // Pin Turbopack's workspace root to the repo root so a stray lockfile
   // outside the repo (e.g. ~/package-lock.json) can't be picked up.
   turbopack: { root: path.join(import.meta.dirname, "..") },
+  images: {
+    // Next 16 requires an explicit allowlist; the hero uses quality={80}
+    // (blueprint §4.2) on top of the backend's 1920px WebP pipeline.
+    qualities: [80],
+  },
   // Portfolio cover/media files are stored and served by the backend as
   // relative "/uploads/..." paths. Proxy them through the Next.js origin so
   // the browser loads them same-origin (the API responds with

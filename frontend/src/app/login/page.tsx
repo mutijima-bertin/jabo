@@ -81,7 +81,7 @@ function LoginInner() {
           <p className="mt-3 text-ink/65">{t("client_login_success_body")}</p>
           <Link
             href="/"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-brass px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
           >
             <ArrowLeft className="h-4 w-4" />
             {t("client_login_back_home")}
@@ -119,7 +119,7 @@ function LoginInner() {
             <button
               type="submit"
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-brass px-8 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-brass-deep px-8 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark disabled:opacity-60"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               {busy ? t("client_login_sending") : t("client_login_submit")}

@@ -69,6 +69,8 @@ model Service {
   priceRw        String
   category       String
   icon           String?
+  imageUrl       String? // picture for the public services bento cards (/uploads/... path)
+  linkedPostSlug String? // slug of the deep-dive BlogPost — intentionally NO FK so deleting a post never cascades
   featured       Boolean  @default(false)
   published      Boolean  @default(true)
   sortOrder      Int      @default(0)

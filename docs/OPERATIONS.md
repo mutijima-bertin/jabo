@@ -90,6 +90,8 @@ curl -s http://localhost:4000/api/public/posts
 | http://localhost:3000/login , `/account` | Client portal (magic link) |
 | http://localhost:4000/api/health | API health probe |
 
+**Inside the admin panel** (sidebar tabs): **Dashboard** (stats + recent bookings) · **Bookings** (status changes, token revocation) · **Services** (catalog CRUD) · **Portfolio** (drag-and-drop upload — images are auto-converted to WebP, max 1920px) · **Blog** (full CMS) · **Settings** (site texts, **client logos** for the "Trusted by" wall, and **testimonials** — create as Draft, hit **Publish** to make one appear in the homepage section; unpublish anytime) · **Clients** (read-only directory of everyone who booked, with search).
+
 To stop later:
 
 ```sh

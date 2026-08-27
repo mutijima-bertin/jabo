@@ -1,27 +1,41 @@
 "use client";
 
-import { useI18n } from "@/lib/i18n";
-
-const CLIENTS = ["FAO", "The New Times", "Kigali Today", "Radio 10", "ABIS"];
+import type { ClientLogo } from "@/lib/api";
+import { SectionTitle } from "@/components/SectionTitle";
 
 /**
- * Tasteful row of client names as styled text wordmarks — grayscale/cream
- * chips, brass on hover. Proper nouns, so no translation needed.
+ * Client-logo wall (blueprint §4.5): server-fed from GET /public/logos via
+ * page.tsx (same pattern as testimonials). Logos render monochrome at 60%
+ * opacity and come alive on hover; names without an image fall back to
+ * quiet serif wordmarks — not pills. Renders nothing when the wall is empty.
  */
-export function ClientsWall() {
-  const { t } = useI18n();
+export function ClientsWall({ logos }: { logos: ClientLogo[] }) {
+  if (logos.length === 0) return null;
 
   return (
     <section className="border-y border-ink/10 bg-cream">
       <div className="mx-auto max-w-6xl px-4 py-16 text-center md:py-20">
-        <h2 className="font-serif text-3xl font-semibold leading-tight md:text-4xl">{t("clients_title")}</h2>
-        <ul className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          {CLIENTS.map((c) => (
-            <li
-              key={c}
-              className="rounded-full border border-ink/10 bg-white/60 px-6 py-2.5 font-serif text-base font-medium tracking-wide text-ink/55 transition hover:border-brass/40 hover:text-brass"
-            >
-              {c}
+        <SectionTitle k="clients_title" />
+        <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
+          {logos.map((logo) => (
+            <li key={logo.id} className="flex h-12 items-center justify-center">
+              {logo.imageUrl ? (
+                // Raw <img> is intentional here: client logos have arbitrary
+                // intrinsic dimensions and must scale h-auto by width —
+                // next/image cannot express `h-9 w-auto` without distortion.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo.imageUrl}
+                  alt={logo.name}
+                  loading="lazy"
+                  className="h-9 w-auto object-contain opacity-60 grayscale transition duration-300 hover:opacity-100 hover:grayscale-0"
+                />
+              ) : (
+                // Styled wordmark fallback — no border, no pill
+                <span className="cursor-default font-serif text-lg tracking-wide text-ink/45 transition hover:text-brass">
+                  {logo.name}
+                </span>
+              )}
             </li>
           ))}
         </ul>

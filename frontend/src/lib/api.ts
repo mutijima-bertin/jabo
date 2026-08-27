@@ -65,6 +65,10 @@ export interface Service {
   priceRw: string;
   category: string;
   icon: string | null;
+  /** Picture for the public services bento card (/uploads/... path). Null until uploaded. */
+  imageUrl: string | null;
+  /** Optional blog deep-dive slug — public cards link to /blog/<slug> when set. */
+  linkedPostSlug: string | null;
   featured: boolean;
   published: boolean;
   sortOrder: number;

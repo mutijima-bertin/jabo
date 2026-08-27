@@ -6,6 +6,11 @@ import * as clientLogoModel from "../models/clientLogo.model";
 import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
 import { isAllowedMime, saveDataUrl } from "../services/storage";
+import {
+  PORTFOLIO_CATEGORIES,
+  normalizePortfolioCategory,
+  type PortfolioCategory,
+} from "../config/constants";
 import { pathParam } from "./params";
 
 // ---------- Services ----------
@@ -18,6 +23,11 @@ const serviceSchema = z.object({
   priceRw: z.string().min(1),
   category: z.string().min(1),
   icon: z.string().optional(),
+  // Same contract as BlogPost.coverImageUrl: rejects null by design — the UI sends "" to clear.
+  // Must be an uploaded /uploads/... path — external/garbage URLs would crash
+  // next/image rendering on the public site (admin-trusted input, still bounded).
+  imageUrl: z.string().regex(/^\/uploads\//, "must be an uploaded /uploads/ path").optional(), // picture for the public services bento cards
+  linkedPostSlug: z.string().max(160).optional(), // deep-dive BlogPost slug; no FK by design
   featured: z.boolean().default(false),
   published: z.boolean().default(true),
   sortOrder: z.number().default(0),
@@ -61,10 +71,21 @@ export async function deleteService(req: Request, res: Response): Promise<void> 
 }
 
 // ---------- Portfolio ----------
+// Blueprint §5.1: the public grid exact-matches six canonical labels, so the
+// admin API accepts case/singular variants but stores ONLY canonical values;
+// anything else is rejected with the allowed list in the message.
+const portfolioCategorySchema = z
+  .string()
+  .min(1)
+  .transform((value) => normalizePortfolioCategory(value))
+  .refine((category): category is PortfolioCategory => category !== null, {
+    message: `category must be one of: ${PORTFOLIO_CATEGORIES.join(", ")}`,
+  });
+
 const portfolioSchema = z.object({
   titleEn: z.string().min(1),
   titleRw: z.string().optional(),
-  category: z.string().min(1),
+  category: portfolioCategorySchema,
   clientName: z.string().optional(),
   tags: z.array(z.string()).default([]),
   coverUrl: z.string().min(1),

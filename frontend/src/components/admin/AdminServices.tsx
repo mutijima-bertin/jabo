@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { UploadCloud } from "lucide-react";
 import { adminApi } from "@/lib/admin";
-import type { Service } from "@/lib/api";
+import type { AdminPost, Service } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 const empty = {
   nameEn: "",
@@ -13,17 +15,27 @@ const empty = {
   priceRw: "",
   category: "Photography",
   icon: "camera",
+  imageUrl: "",
+  linkedPostSlug: "",
   featured: false,
   published: true,
   sortOrder: 0,
 };
 
 export function AdminServices({ token }: { token: string }) {
+  const { t } = useI18n();
   const [items, setItems] = useState<Service[] | null>(null);
+  /** Blog rows feeding the linked-post dropdown (id/title/slug only matter here). */
+  const [posts, setPosts] = useState<AdminPost[] | null>(null);
   const [editing, setEditing] = useState<Partial<Service> | null>(null);
   const [busy, setBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  /** Upload/save error shown inline instead of a raw alert. */
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = useCallback(() => adminApi.get<Service[]>("/admin/services", token), [token]);
+  const fetchPosts = useCallback(() => adminApi.get<AdminPost[]>("/admin/posts", token), [token]);
 
   // Initial load subscribes via .then rather than calling load() directly —
   // react-hooks/set-state-in-effect rejects component-scope calls that setState.
@@ -31,12 +43,37 @@ export function AdminServices({ token }: { token: string }) {
     fetchItems().then(setItems).catch((e) => alert(e.message));
   }, [fetchItems]);
 
+  // Blog list is optional chrome for the dropdown — a failed load just leaves it empty.
+  useEffect(() => {
+    fetchPosts().then(setPosts).catch(() => {});
+  }, [fetchPosts]);
+
   const load = useCallback(async () => setItems(await fetchItems()), [fetchItems]);
+
+  async function uploadFile(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { url } = await adminApi.post<{ url: string }>("/admin/uploads", token, { dataUrl });
+      setEditing((e) => ({ ...(e ?? empty), imageUrl: url }));
+    } catch (err) {
+      setError((err as Error).message || "Could not upload this image.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!editing) return;
     setBusy(true);
+    setError(null);
     try {
       const body = {
         nameEn: editing.nameEn,
@@ -47,6 +84,9 @@ export function AdminServices({ token }: { token: string }) {
         priceRw: editing.priceRw,
         category: editing.category,
         icon: editing.icon,
+        // Backend zod: both are z.string().optional() (null rejected) — send "" to clear.
+        imageUrl: editing.imageUrl ?? "",
+        linkedPostSlug: editing.linkedPostSlug ?? "",
         featured: editing.featured,
         published: editing.published,
         sortOrder: editing.sortOrder,
@@ -56,7 +96,7 @@ export function AdminServices({ token }: { token: string }) {
       setEditing(null);
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      setError((e as Error).message || "Could not save this service.");
     } finally {
       setBusy(false);
     }
@@ -64,8 +104,12 @@ export function AdminServices({ token }: { token: string }) {
 
   async function remove(id: string) {
     if (!confirm("Delete this service?")) return;
-    await adminApi.del(`/admin/services/${id}`, token);
-    await load();
+    try {
+      await adminApi.del(`/admin/services/${id}`, token);
+      await load();
+    } catch (e) {
+      setError((e as Error).message || "Could not delete this service.");
+    }
   }
 
   const input =
@@ -76,7 +120,10 @@ export function AdminServices({ token }: { token: string }) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Services</h1>
         <button
-          onClick={() => setEditing({ ...empty })}
+          onClick={() => {
+            setError(null);
+            setEditing({ ...empty });
+          }}
           className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-zinc-950 transition hover:brightness-110"
         >
           + New service
@@ -121,6 +168,77 @@ export function AdminServices({ token }: { token: string }) {
               ))}
             </select>
           </div>
+          <div>
+            <label className="mb-1 block text-xs text-zinc-400">{t("admin_service_image")}</label>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) uploadFile(f);
+              }}
+              onClick={() => fileRef.current?.click()}
+              className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed p-3 transition ${
+                dragOver ? "border-accent bg-accent/10" : "border-white/10 hover:border-accent/40"
+              }`}
+            >
+              {editing.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-thumbnail dimensions need plain img
+                <img src={editing.imageUrl} alt="" className="h-16 w-24 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <UploadCloud className="h-7 w-7 shrink-0 text-zinc-500" />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs text-zinc-500">{busy ? t("admin_logos_uploading") : t("admin_service_image_hint")}</p>
+                {editing.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing({ ...editing, imageUrl: "" });
+                    }}
+                    className="mt-1 rounded-full border border-red-500/30 px-3 py-0.5 text-xs text-red-400 transition hover:border-red-500/60"
+                  >
+                    {t("admin_service_remove_image")}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadFile(f);
+                }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-zinc-400">{t("admin_service_linked_post")}</label>
+            <select
+              className={input}
+              value={editing.linkedPostSlug ?? ""}
+              onChange={(e) => setEditing({ ...editing, linkedPostSlug: e.target.value })}
+            >
+              <option value="">{t("admin_service_linked_post_none")}</option>
+              {/* A stored slug can outlive its post (deletion doesn't clean up links) — keep it visible so editing doesn't silently drop it */}
+              {editing.linkedPostSlug && !(posts ?? []).some((p) => p.slug === editing.linkedPostSlug) && (
+                <option value={editing.linkedPostSlug}>{editing.linkedPostSlug} (missing)</option>
+              )}
+              {(posts ?? []).map((p) => (
+                <option key={p.id} value={p.slug}>
+                  {p.titleEn}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm text-zinc-300">
               <input type="checkbox" checked={!!editing.published} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} />
@@ -131,13 +249,18 @@ export function AdminServices({ token }: { token: string }) {
               Featured
             </label>
           </div>
-          <div className="flex items-end gap-3">
+          <div className="flex items-center gap-3">
             <button type="submit" disabled={busy} className="rounded-full bg-accent px-6 py-2 text-sm font-bold text-zinc-950 disabled:opacity-50">
               {editing.id ? "Save" : "Create"}
             </button>
             <button type="button" onClick={() => setEditing(null)} className="rounded-full border border-white/10 px-5 py-2 text-sm text-zinc-400">
               Cancel
             </button>
+            {error && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
           </div>
         </form>
       )}
@@ -148,7 +271,13 @@ export function AdminServices({ token }: { token: string }) {
             <p className="font-semibold">{s.nameEn}</p>
             <p className="mt-1 text-sm text-zinc-400">{s.priceEn}</p>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setEditing({ ...s })} className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-zinc-300 hover:text-accent">
+              <button
+                onClick={() => {
+                  setError(null);
+                  setEditing({ ...s });
+                }}
+                className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-zinc-300 hover:text-accent"
+              >
                 Edit
               </button>
               <button onClick={() => remove(s.id)} className="rounded-full border border-red-500/30 px-4 py-1.5 text-xs text-red-400">

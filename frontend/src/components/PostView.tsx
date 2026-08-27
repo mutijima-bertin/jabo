@@ -75,7 +75,7 @@ export function PostView({ post }: { post: PostFull }) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/book"
-            className="inline-block rounded-full bg-brass px-8 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark"
+            className="inline-block rounded-full bg-brass-deep px-8 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark"
           >
             {t("blog_cta")}
           </Link>

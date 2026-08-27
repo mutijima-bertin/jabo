@@ -13,7 +13,7 @@ export function Nav() {
   const links = [
     { href: "/", label: t("nav_home") },
     { href: "/#services", label: t("nav_services") },
-    { href: "/#portfolio", label: t("nav_portfolio") },
+    { href: "/portfolio", label: t("nav_portfolio") },
     { href: "/blog", label: t("nav_blog") },
   ];
 
@@ -36,7 +36,7 @@ export function Nav() {
         <div className="hidden items-center gap-4 md:flex">
           <Link
             href="/book"
-            className="rounded-full bg-brass px-4 py-2 text-sm font-semibold text-cream transition hover:bg-brass-dark"
+            className="rounded-full bg-brass-deep px-4 py-2 text-sm font-semibold text-cream transition hover:bg-brass-dark"
           >
             {t("nav_book")}
           </Link>
@@ -81,7 +81,7 @@ export function Nav() {
             <Link
               href="/book"
               onClick={() => setOpen(false)}
-              className="mt-2 rounded-full bg-brass px-4 py-2.5 text-center text-sm font-semibold text-cream transition hover:bg-brass-dark"
+              className="mt-2 rounded-full bg-brass-deep px-4 py-2.5 text-center text-sm font-semibold text-cream transition hover:bg-brass-dark"
             >
               {t("nav_book")}
             </Link>

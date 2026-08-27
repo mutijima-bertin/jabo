@@ -9,6 +9,7 @@
   --ink: #1f1d1a;
   --brass: #b08d57;
   --brass-dark: #8f6f3e;
+  --brass-deep: #7a5c30;
   --green: #3f5a46;
   --green-deep: #2b4034;
   --sand: #ece4d3;
@@ -23,6 +24,7 @@
   --color-ink: var(--ink);
   --color-brass: var(--brass);
   --color-brass-dark: var(--brass-dark);
+  --color-brass-deep: var(--brass-deep);
   --color-green: var(--green);
   --color-green-deep: var(--green-deep);
   --color-sand: var(--sand);
@@ -84,4 +86,28 @@ body {
 .kenburns {
   animation: kenburns 11s ease-out both;
   will-change: transform;
+}
+
+/* Insurance for headline legibility on bright photo slides (blueprint §4.2). */
+.hero-title-shadow {
+  text-shadow: 0 1px 24px rgb(0 0 0 / 0.35);
+}
+
+/* Respect prefers-reduced-motion: kill the cinematic motion, keep the layout.
+   Hero autoplay is additionally gated in JS (HeroSection). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .kenburns,
+  .fade-up {
+    animation: none;
+  }
+}
+
+/* Global brass focus ring (blueprint §2). brass-dark clears 3:1 on cream
+   surfaces; dark hero controls keep their own cream borders for visibility. */
+:focus-visible {
+  outline: 2px solid var(--brass-dark);
+  outline-offset: 2px;
 }

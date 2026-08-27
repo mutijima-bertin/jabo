@@ -59,7 +59,7 @@ export function BookingForm({ services }: Props) {
         </p>
         <a
           href={result.trackUrl}
-          className="mt-8 inline-block rounded-full bg-brass px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+          className="mt-8 inline-block rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
         >
           {locale === "rw" ? "Kurikirana umurimo" : "Track your production"}
         </a>
@@ -146,7 +146,7 @@ export function BookingForm({ services }: Props) {
         <button
           type="submit"
           disabled={submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-brass px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-brass-deep px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark disabled:opacity-60"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           {submitting ? t("book_processing") : t("book_submit")}

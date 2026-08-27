@@ -18,11 +18,16 @@ const empty = {
   sortOrder: 0,
 };
 
+/** The public portfolio taxonomy (backend validates against this exact list). */
+const CATEGORIES = ["Weddings", "Events", "Corporate", "Concerts", "Documentaries", "Portraits"] as const;
+
 export function AdminPortfolio({ token }: { token: string }) {
   const [items, setItems] = useState<PortfolioItem[] | null>(null);
   const [editing, setEditing] = useState<Partial<PortfolioItem> | null>(null);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  /** Save/validation error shown inline instead of a raw alert. */
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const fetchItems = useCallback(() => adminApi.get<PortfolioItem[]>("/admin/portfolio", token), [token]);
@@ -57,6 +62,7 @@ export function AdminPortfolio({ token }: { token: string }) {
     e.preventDefault();
     if (!editing) return;
     setBusy(true);
+    setError(null);
     try {
       const body = {
         titleEn: editing.titleEn,
@@ -75,7 +81,8 @@ export function AdminPortfolio({ token }: { token: string }) {
       setEditing(null);
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      // Backend rejects non-canonical categories with VALIDATION + message — show it inline.
+      setError((e as Error).message || "Could not save this item.");
     } finally {
       setBusy(false);
     }
@@ -83,8 +90,12 @@ export function AdminPortfolio({ token }: { token: string }) {
 
   async function remove(id: string) {
     if (!confirm("Delete this portfolio item?")) return;
-    await adminApi.del(`/admin/portfolio/${id}`, token);
-    await load();
+    try {
+      await adminApi.del(`/admin/portfolio/${id}`, token);
+      await load();
+    } catch (e) {
+      setError((e as Error).message || "Could not delete this portfolio item.");
+    }
   }
 
   const input = "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
@@ -94,7 +105,10 @@ export function AdminPortfolio({ token }: { token: string }) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Portfolio</h1>
         <button
-          onClick={() => setEditing({ ...empty })}
+          onClick={() => {
+            setError(null);
+            setEditing({ ...empty });
+          }}
           className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-zinc-950 transition hover:brightness-110"
         >
           + Add work
@@ -149,7 +163,22 @@ export function AdminPortfolio({ token }: { token: string }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Category *</label>
-              <input required className={input} value={editing.category ?? ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="Weddings / Corporate / Events" />
+              <select
+                required
+                className={input}
+                value={editing.category ?? "Events"}
+                onChange={(e) => setEditing({ ...editing, category: e.target.value })}
+              >
+                {/* Keep a legacy value selectable so it displays when editing old rows */}
+                {editing.category && !(CATEGORIES as readonly string[]).includes(editing.category) && (
+                  <option value={editing.category}>{editing.category} (legacy)</option>
+                )}
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Client</label>
@@ -180,6 +209,11 @@ export function AdminPortfolio({ token }: { token: string }) {
             <button type="button" onClick={() => setEditing(null)} className="rounded-full border border-white/10 px-5 py-2 text-sm text-zinc-400">
               Cancel
             </button>
+            {error && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
           </div>
         </form>
       )}
@@ -192,7 +226,7 @@ export function AdminPortfolio({ token }: { token: string }) {
               <p className="text-sm font-semibold">{i.titleEn}</p>
               <p className="text-xs text-zinc-400">{i.category}</p>
               <div className="mt-2 flex gap-2">
-                <button onClick={() => setEditing({ ...i })} className="rounded-full border border-white/20 px-3 py-1 text-xs hover:text-accent">
+                <button onClick={() => { setError(null); setEditing({ ...i }); }} className="rounded-full border border-white/20 px-3 py-1 text-xs hover:text-accent">
                   Edit
                 </button>
                 <button onClick={() => remove(i.id)} className="rounded-full border border-red-500/40 px-3 py-1 text-xs text-red-400">

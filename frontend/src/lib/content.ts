@@ -1,4 +1,4 @@
-import { api, type PostFull, type PostSummary, type Service, type PortfolioItem, type SiteSetting, type Testimonial } from "./api";
+import { api, type PostFull, type PostSummary, type Service, type PortfolioItem, type SiteSetting, type Testimonial, type ClientLogo } from "./api";
 
 export type SettingsMap = Map<string, string>;
 
@@ -43,6 +43,15 @@ export async function fetchPosts(): Promise<PostSummary[]> {
 export async function fetchTestimonials(): Promise<Testimonial[]> {
   try {
     return await api.get<Testimonial[]>("/public/testimonials");
+  } catch {
+    return [];
+  }
+}
+
+/** Client-logo wall for the homepage — empty array when unreachable (section hides itself). */
+export async function fetchLogos(): Promise<ClientLogo[]> {
+  try {
+    return await api.get<ClientLogo[]>("/public/logos");
   } catch {
     return [];
   }

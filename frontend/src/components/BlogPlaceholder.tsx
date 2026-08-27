@@ -24,7 +24,7 @@ export function BlogPlaceholder() {
       <p className="mt-3 text-sm leading-relaxed text-ink/50">{t("blog_body")}</p>
       <Link
         href="/book"
-        className="mt-10 inline-block rounded-full bg-brass px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark"
+        className="mt-10 inline-block rounded-full bg-brass-deep px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark"
       >
         {t("blog_cta")}
       </Link>
