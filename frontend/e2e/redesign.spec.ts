@@ -166,8 +166,8 @@ test.describe("redesign journeys", () => {
     // Every canonical category currently holds ≥1 item, so manufacture the
     // empty condition: move the Portraits item into Events for the duration
     // of this test, then restore it verbatim.
-    const items = await apiGet<Record<string, unknown>>(request, "/admin/portfolio");
-    const portraits = items.find((i) => i.category === "Portraits");
+    const items = await apiGet<{ id: string; category: string }[]>(request, "/admin/portfolio");
+    const portraits = items.find((i: { category: string }) => i.category === "Portraits");
     expect(portraits, "precondition: a Portraits item exists").toBeTruthy();
     movedItem = { id: String(portraits!.id), originalCategory: "Portraits" };
     try {
@@ -199,8 +199,8 @@ test.describe("redesign journeys", () => {
       await expect(gridRoot.getByText("No work in this category yet")).toHaveCount(0);
     } finally {
       // Restore the owner row even on assertion failure.
-      const fresh = await apiGet<Record<string, unknown>>(request, "/admin/portfolio");
-      const row = fresh.find((i) => i.id === movedItem!.id);
+      const fresh = await apiGet<{ id: string; category: string }[]>(request, "/admin/portfolio");
+      const row = fresh.find((r: { id: string; category: string }) => r.id === movedItem!.id);
       if (row && row.category !== movedItem.originalCategory) {
         await putPortfolioCategory(request, row, movedItem.originalCategory);
       }
