@@ -123,10 +123,11 @@ jobs:
         run: npm run start &
       - name: Wait for services
         run: |
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             curl -sf http://localhost:4000/api/health && curl -sf http://localhost:3000/ > /dev/null && exit 0
             sleep 2
           done
+          echo "Services failed to start within 120 seconds"
           exit 1
       - run: npx playwright test
         working-directory: frontend
