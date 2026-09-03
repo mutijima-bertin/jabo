@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16
         env:
           POSTGRES_USER: css
           POSTGRES_PASSWORD: css123
@@ -19,9 +19,10 @@ jobs:
           - "5432:5432"
         options: >-
           --health-cmd "pg_isready -U css -d creativesoundstudio"
-          --health-interval 5s
+          --health-interval 10s
           --health-timeout 5s
-          --health-retries: 10
+          --health-retries: 20
+          --health-start-period: 30s
     env:
       DATABASE_URL: postgresql://css:css123@localhost:5432/creativesoundstudio
       APP_URL: http://localhost:3000
