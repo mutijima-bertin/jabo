@@ -5,10 +5,10 @@ import { ArrowLeft, Calendar, Eye, Heart } from "lucide-react";
 import { useI18n, postTypeKey } from "@/lib/i18n";
 import type { PostFull } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { PostCover } from "@/components/PostCover";
-import { PostBody } from "@/components/PostBody";
-import { PostLikeButton } from "@/components/PostLikeButton";
-import { WhatsAppIcon } from "@/components/social-icons";
+import { PostCover } from "@/components/site/PostCover";
+import { PostBody } from "@/components/site/PostBody";
+import { PostLikeButton } from "@/components/site/PostLikeButton";
+import { WhatsAppIcon } from "@/components/shared/social-icons";
 
 const WHATSAPP_URL = "https://wa.me/250783269951";
 
@@ -86,7 +86,7 @@ export function PostView({ post }: { post: PostFull }) {
             className="inline-flex items-center gap-2 rounded-full border border-cream/30 px-8 py-3.5 text-sm font-bold text-cream transition hover:border-brass hover:bg-brass"
           >
             <WhatsAppIcon className="h-4 w-4" aria-hidden />
-            WhatsApp
+            {t("social_whatsapp")}
           </a>
         </div>
       </section>

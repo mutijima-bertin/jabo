@@ -7,10 +7,8 @@ import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { setClientToken } from "@/lib/client";
 import { useI18n } from "@/lib/i18n";
-import { Logo } from "@/components/Logo";
-
-const inputCls =
-  "w-full rounded-xl border border-ink/15 bg-white/80 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/40 focus:border-brass";
+import { inputCls, labelCls } from "@/lib/ui";
+import { Logo } from "@/components/shared/Logo";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -102,7 +100,7 @@ function LoginInner() {
               </div>
             )}
             <div>
-              <label className="mb-2 block text-sm font-medium text-ink/70" htmlFor="login-email">
+              <label className={labelCls} htmlFor="login-email">
                 {t("client_login_email")}
               </label>
               <input

@@ -200,9 +200,10 @@ test.describe("phase 8 admin features", () => {
   test("testimonial approval journey reaches the homepage and back", async ({ page, request }) => {
     expect(token, "runs after the beforeAll login").toBeTruthy();
 
-    // Homepage starts with NO testimonials section (baseline is zero published).
+    // Homepage starts without OUR testimonial (owner-published quotes may exist,
+    // so never assert the whole section is absent — assert on the run-unique quote).
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "What clients say" })).toHaveCount(0);
+    await expect(page.getByText(AUTHOR)).toHaveCount(0);
     await expect(page.getByText(QUOTE)).toHaveCount(0);
 
     // Admin creates a PUBLISHED testimonial through the Settings tab.
@@ -234,7 +235,7 @@ test.describe("phase 8 admin features", () => {
     await expect(page.getByText(QUOTE)).toBeVisible();
     await expect(page.getByText(AUTHOR)).toBeVisible();
 
-    // Unpublish → section disappears again.
+    // Unpublish it (draft) and verify the quote leaves the homepage.
     await page.goto("/admin");
     await openAdminTab(page, "Settings");
     const rowAgain = page.locator("tbody tr").filter({ hasText: AUTHOR });
@@ -242,18 +243,20 @@ test.describe("phase 8 admin features", () => {
     await rowAgain.getByRole("button", { name: "Unpublish" }).click();
     await expect(rowAgain).toContainText("Draft", { timeout: 10000 });
 
+    // Unpublish → our quote disappears from the homepage again.
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "What clients say" })).toHaveCount(0);
     await expect(page.getByText(QUOTE)).toHaveCount(0);
+    await expect(page.getByText(AUTHOR)).toHaveCount(0);
 
-    // Delete → admin list is empty again.
+    // Delete → our row is gone and the list returns to baseline (owner
+    // testimonials may remain, so don't assert the literal empty state).
     await page.goto("/admin");
     await openAdminTab(page, "Settings");
     page.on("dialog", (d) => void d.accept());
     const rowFinal = page.locator("tbody tr").filter({ hasText: AUTHOR });
     await expect(rowFinal).toBeVisible({ timeout: 10000 });
     await rowFinal.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText("No testimonials yet.")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody tr").filter({ hasText: AUTHOR })).toHaveCount(0, { timeout: 10000 });
     expect(await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).toHaveLength(baselineTestimonials);
   });
 
@@ -284,17 +287,16 @@ test.describe("phase 8 admin features", () => {
 
     // Drafts stay off the public site entirely.
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "What clients say" })).toHaveCount(0);
     await expect(page.getByText(`Unpublished draft quote ${RUN}.`)).toHaveCount(0);
 
-    // Clean up through the UI (confirm dialog) → back to an empty list.
+    // Clean up through the UI (confirm dialog) → our row is gone.
     await page.goto("/admin");
     await openAdminTab(page, "Settings");
     page.on("dialog", (d) => void d.accept());
     const rowFinal = page.locator("tbody tr").filter({ hasText: AUTHOR });
     await expect(rowFinal).toBeVisible({ timeout: 10000 });
     await rowFinal.getByRole("button", { name: "Delete" }).click();
-    await expect(page.getByText("No testimonials yet.")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("tbody tr").filter({ hasText: AUTHOR })).toHaveCount(0, { timeout: 10000 });
     expect(await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).toHaveLength(baselineTestimonials);
   });
 });

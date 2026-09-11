@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { adminApi } from "@/lib/admin";
+import { adminInputCls } from "@/lib/ui";
 import type { AdminPost, Service } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -112,9 +113,6 @@ export function AdminServices({ token }: { token: string }) {
     }
   }
 
-  const input =
-    "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
-
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -134,35 +132,35 @@ export function AdminServices({ token }: { token: string }) {
         <form onSubmit={save} className="mt-6 grid gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Name (EN) *</label>
-            <input required className={input} value={editing.nameEn ?? ""} onChange={(e) => setEditing({ ...editing, nameEn: e.target.value })} />
+            <input required className={adminInputCls} value={editing.nameEn ?? ""} onChange={(e) => setEditing({ ...editing, nameEn: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Name (RW) *</label>
-            <input required className={input} value={editing.nameRw ?? ""} onChange={(e) => setEditing({ ...editing, nameRw: e.target.value })} />
+            <input required className={adminInputCls} value={editing.nameRw ?? ""} onChange={(e) => setEditing({ ...editing, nameRw: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Description (EN)</label>
-            <textarea className={input} rows={2} value={editing.descriptionEn ?? ""} onChange={(e) => setEditing({ ...editing, descriptionEn: e.target.value })} />
+            <textarea className={adminInputCls} rows={2} value={editing.descriptionEn ?? ""} onChange={(e) => setEditing({ ...editing, descriptionEn: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Description (RW)</label>
-            <textarea className={input} rows={2} value={editing.descriptionRw ?? ""} onChange={(e) => setEditing({ ...editing, descriptionRw: e.target.value })} />
+            <textarea className={adminInputCls} rows={2} value={editing.descriptionRw ?? ""} onChange={(e) => setEditing({ ...editing, descriptionRw: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Price (EN) *</label>
-            <input required className={input} value={editing.priceEn ?? ""} onChange={(e) => setEditing({ ...editing, priceEn: e.target.value })} placeholder="From 150,000 RWF" />
+            <input required className={adminInputCls} value={editing.priceEn ?? ""} onChange={(e) => setEditing({ ...editing, priceEn: e.target.value })} placeholder="From 150,000 RWF" />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Price (RW) *</label>
-            <input required className={input} value={editing.priceRw ?? ""} onChange={(e) => setEditing({ ...editing, priceRw: e.target.value })} placeholder="Uhereye kuri 150,000 RWF" />
+            <input required className={adminInputCls} value={editing.priceRw ?? ""} onChange={(e) => setEditing({ ...editing, priceRw: e.target.value })} placeholder="Uhereye kuri 150,000 RWF" />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Category</label>
-            <input className={input} value={editing.category ?? ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
+            <input className={adminInputCls} value={editing.category ?? ""} onChange={(e) => setEditing({ ...editing, category: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">Icon</label>
-            <select className={input} value={editing.icon ?? "camera"} onChange={(e) => setEditing({ ...editing, icon: e.target.value })}>
+            <select className={adminInputCls} value={editing.icon ?? "camera"} onChange={(e) => setEditing({ ...editing, icon: e.target.value })}>
               {["camera", "video", "broadcast", "drone", "photo", "edit", "ad"].map((i) => (
                 <option key={i} value={i}>{i}</option>
               ))}
@@ -223,7 +221,7 @@ export function AdminServices({ token }: { token: string }) {
           <div>
             <label className="mb-1 block text-xs text-zinc-400">{t("admin_service_linked_post")}</label>
             <select
-              className={input}
+              className={adminInputCls}
               value={editing.linkedPostSlug ?? ""}
               onChange={(e) => setEditing({ ...editing, linkedPostSlug: e.target.value })}
             >

@@ -24,7 +24,9 @@ export default function AdminLoginPage() {
       router.replace("/admin");
       router.refresh();
     } catch (err) {
-      setError((err as Error).message === "INVALID_CREDENTIALS" ? "Invalid email or password" : (err as Error).message);
+      setError(
+        (err as Error).message === "INVALID_CREDENTIALS" ? t("admin_login_invalid") : (err as Error).message,
+      );
     } finally {
       setBusy(false);
     }

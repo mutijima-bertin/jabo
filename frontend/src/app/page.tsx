@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { fetchSettings, fetchServices, fetchPortfolio, fetchTestimonials, fetchLogos, s } from "@/lib/content";
-import { ServiceBento } from "@/components/ServiceBento";
-import { PortfolioGrid } from "@/components/PortfolioGrid";
-import { HeroSection } from "@/components/HeroSection";
-import { SectionTitle } from "@/components/SectionTitle";
-import { TrustBand } from "@/components/TrustBand";
-import { TestimonialsSection } from "@/components/TestimonialsSection";
-import { ClientsWall } from "@/components/ClientsWall";
-import { AboutSection } from "@/components/AboutSection";
+import { ServiceBento } from "@/components/site/ServiceBento";
+import { PortfolioGrid } from "@/components/site/PortfolioGrid";
+import { HeroSection } from "@/components/site/HeroSection";
+import { HomeCta } from "@/components/site/HomeCta";
+import { SectionTitle } from "@/components/shared/SectionTitle";
+import { TrustBand } from "@/components/site/TrustBand";
+import { TestimonialsSection } from "@/components/site/TestimonialsSection";
+import { ClientsWall } from "@/components/site/ClientsWall";
+import { AboutSection } from "@/components/site/AboutSection";
 
 export default async function HomePage() {
   const [settings, services, portfolio, testimonials, logos] = await Promise.all([
@@ -61,22 +61,7 @@ export default async function HomePage() {
       />
 
       {/* CTA */}
-      <section className="bg-green">
-        <div className="mx-auto max-w-3xl px-4 py-24 text-center">
-          <h2 className="font-serif text-3xl font-semibold text-cream md:text-4xl">
-            Ready to capture your story?
-          </h2>
-          <p className="mt-4 text-cream/70">
-            Book in minutes. You&apos;ll receive a confirmation and a personal tracking link — no calls needed.
-          </p>
-          <Link
-            href="/book"
-            className="mt-8 inline-block rounded-full bg-brass-deep px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark"
-          >
-            Book a production
-          </Link>
-        </div>
-      </section>
+      <HomeCta />
     </>
   );
 }

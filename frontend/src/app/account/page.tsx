@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, LogOut, Mail, MapPin, Package, Phone, User } from "lucide-react";
 import { clearClientToken, clientFetch, getClientToken, type ClientAccount } from "@/lib/client";
 import { statusKey, useI18n } from "@/lib/i18n";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@/components/shared/Logo";
 
 // Status badge palette adapted from the admin table (dark zinc) to the cream
 // theme — PENDING amber, CONFIRMED/DELIVERED/COMPLETED green, IN_PRODUCTION

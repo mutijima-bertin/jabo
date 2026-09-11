@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
-import { SectionTitle } from "@/components/SectionTitle";
+import { SectionTitle } from "@/components/shared/SectionTitle";
 
 /**
  * Homepage About section (blueprint §4.9): compact brass-framed identity

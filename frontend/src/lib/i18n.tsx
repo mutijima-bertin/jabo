@@ -185,7 +185,44 @@ const en = {
   admin_service_linked_post_none: "No blog post",
   testimonials_sub: "What partners and clients say about working with the studio.",
   footer_rights: "All rights reserved.",
+  page_services_title: "Services",
+  page_services_sub:
+    "Every production includes professional editing, online delivery, and a personal tracking link from booking to final delivery.",
+  page_portfolio_title: "Portfolio",
+  page_portfolio_sub:
+    "A selection of recent work — weddings, corporate documentaries, live events, and institutional coverage.",
+  track_page_title: "Track a production",
+  track_page_sub:
+    "Use the personal tracking link you received by email or WhatsApp. If you lost it, contact us and we'll send a new one.",
+  home_cta_body:
+    "Book in minutes. You'll receive a confirmation and a personal tracking link — no calls needed.",
+  page_book_sub:
+    "Fill in the form and you'll receive a confirmation plus a personal tracking link by email and WhatsApp — no calls needed. We'll reply with a price confirmation shortly after.",
+  about_page_story:
+    "Every production — a wedding, a documentary, a live congress, a corporate film — is treated as a story worth telling properly. We plan, shoot, edit and deliver on time, and we keep our clients informed at every step with a personal tracking link, from the moment a booking is confirmed to final delivery.",
+  about_contact: "Contact",
+  about_location: "Location",
+  about_email: "Email",
+  about_phone: "Phone / WhatsApp",
+  footer_sub:
+    "Photography · Videography · Livestreaming — Kigali, Rwanda. We tell your story with professional craft and on-time delivery.",
+  footer_links: "Links",
+  footer_contact: "Contact",
+  footer_track: "Track a production",
+  footer_caption: "Captured in Kigali, told in every language.",
+  notfound_title: "This page is out of frame",
+  notfound_body:
+    "The page you're looking for doesn't exist or has been moved. Head back home or browse our latest stories.",
+  notfound_back_home: "Back home",
+  notfound_read_blog: "Read the blog",
+  admin_blog: "Blog",
+  admin_login_invalid: "Invalid email or password",
+  admin_area: "Admin area",
+  admin_area_sub: "Sign in to manage bookings, services and content.",
+  book_track_link: "Track your production",
 };
+
+export type DictKey = keyof typeof en;
 
 const rw: Record<keyof typeof en, string> = {
   nav_home: "Ahabanza",
@@ -368,6 +405,39 @@ const rw: Record<keyof typeof en, string> = {
   admin_service_linked_post_none: "Nta nkuru ihuza",
   testimonials_sub: "Ibyo abafatanyabikorwa n'abakiriya bavuga ku bijyanye natwe.",
   footer_rights: "Uburenganzira bwose burakingiwe.",
+  page_services_title: "Serivisi",
+  page_services_sub:
+    "Buri murimo urimo gutunganya amashusho, gutanga online, n'urugero rwo gukurikirana kuva mu kwandikisha kugeza ku gutanga.",
+  page_portfolio_title: "Amafoto",
+  page_portfolio_sub:
+    "Urugero rw'imirimo y'igihe gishaje — ubukwe, documentaire z'ibigo, ibirori biriho, n'iby'inzego.",
+  track_page_title: "Gukurikirana umurimo",
+  track_page_sub:
+    "Koresha urugero rwawe rwo gukurikirana wahawe kuri imeyili cyangwa WhatsApp. Niba warutakaje, twandikire tuzohereza urundi rushya.",
+  home_cta_body: "Andikisha mu minota. Uzaherwa icyemezo n'urugero rwo gukurikirana — nta guhamagara birakenewe.",
+  page_book_sub:
+    "Uzuza ifishi, uzaherwa icyemezo n'urugero rwo gukurikirana kuri imeyili na WhatsApp — nta guhamagara birakenewe. Tuzaherwe igisubizo cy'igiciro mu kanya gato.",
+  about_page_story:
+    "Buri umurimo — ubukwe, documentaire, ikoraniro ririho, filime y'ikigo — dufata nk'inkuru ikwiriye kuvugwa neza. Dutegura, dufata amafoto, dutunganya kandi dutange ku gihe, kandi tumenyesha abakiriya byose ku maradiro yose ukoresheje urugero rwo gukurikirana, kuva icyifuzo cyemejwe kugeza ku gutanga.",
+  about_contact: "Aho duherereye",
+  about_location: "Aho biherereye",
+  about_email: "Imeyili",
+  about_phone: "Telefoni / WhatsApp",
+  footer_sub: "Amafoto · Amashusho · Kwerekana ibirori mu mubare mubanza — Kigali, u Rwanda.",
+  footer_links: "Ihuza",
+  footer_contact: "Aho duherereye",
+  footer_track: "Gukurikirana umurimo",
+  footer_caption: "Byafashwe i Kigali, bivugwa mu ndimi zose.",
+  notfound_title: "Iyi paji nta shusho irimo",
+  notfound_body:
+    "Ipaji urimo ushaka ntabwo ibaho cyangwa yarahinduwe. Subira ahabanza cyangwa urebe inkuru zacu zishya.",
+  notfound_back_home: "Subira ahabanza",
+  notfound_read_blog: "Soma blog",
+  admin_blog: "Blog",
+  admin_login_invalid: "Imeyili cyangwa ijambobanga ntibikoreshwa",
+  admin_area: "Agace ka admin",
+  admin_area_sub: "Injira kugira ngo ucungire ibyifuzo, serivisi n'ibikubiyemo.",
+  book_track_link: "Kurikirana umurimo",
 };
 
 const dicts: Record<Locale, Record<keyof typeof en, string>> = { en, rw };

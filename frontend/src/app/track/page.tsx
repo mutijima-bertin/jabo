@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { Logo } from "@/components/Logo";
+import { BRAND } from "@/lib/constants";
+import { Logo } from "@/components/shared/Logo";
+import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
-  title: "Track a Production — Creative Sound Studio",
+  title: `Track a Production — ${BRAND}`,
   description: "Track the status of your production — from booking confirmation to final delivery.",
 };
 
@@ -10,10 +12,7 @@ export default function TrackHomePage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-24 text-center">
       <Logo className="mx-auto h-14 w-auto" />
-      <h1 className="mt-10 font-serif text-3xl font-semibold leading-tight">Track a production</h1>
-      <p className="mt-4 text-ink/60">
-        Use the personal tracking link you received by email or WhatsApp. If you lost it, contact us and we&apos;ll send a new one.
-      </p>
+      <PageHeading title="track_page_title" sub="track_page_sub" titleCls="mt-10 font-serif text-3xl font-semibold leading-tight" />
       <p className="mt-8 text-sm text-ink/45">hello@creativesoundstudio.rw · +250 700 000 000</p>
     </div>
   );

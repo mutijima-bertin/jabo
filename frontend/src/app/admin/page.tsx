@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutDashboard, CalendarCheck, Images, Settings, LogOut, ChevronRight, Loader2, Newspaper, Users } from "lucide-react";
+import { BRAND } from "@/lib/constants";
 import { useAdminAuth, clearToken } from "@/lib/admin";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, type DictKey } from "@/lib/i18n";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminBookings } from "@/components/admin/AdminBookings";
 import { AdminServices } from "@/components/admin/AdminServices";
@@ -15,20 +16,15 @@ import { AdminSettings } from "@/components/admin/AdminSettings";
 
 type Tab = "dashboard" | "bookings" | "services" | "portfolio" | "blog" | "clients" | "settings";
 
-const tabs: Array<{ id: Tab; label: string; icon: typeof LayoutDashboard }> = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "bookings", label: "Bookings", icon: CalendarCheck },
-  { id: "services", label: "Services", icon: ChevronRight },
-  { id: "portfolio", label: "Portfolio", icon: Images },
-  { id: "blog", label: "Blog", icon: Newspaper },
-  { id: "clients", label: "", icon: Users },
-  { id: "settings", label: "Settings", icon: Settings },
+const tabs: Array<{ id: Tab; label: DictKey; icon: typeof LayoutDashboard }> = [
+  { id: "dashboard", label: "admin_dashboard", icon: LayoutDashboard },
+  { id: "bookings", label: "admin_bookings", icon: CalendarCheck },
+  { id: "services", label: "admin_services", icon: ChevronRight },
+  { id: "portfolio", label: "admin_portfolio", icon: Images },
+  { id: "blog", label: "admin_blog", icon: Newspaper },
+  { id: "clients", label: "admin_clients_title", icon: Users },
+  { id: "settings", label: "admin_settings", icon: Settings },
 ];
-
-/** Newer tabs carry bilingual labels via i18n; legacy tabs keep their hardcoded English. */
-function tabLabel(id: Tab, fallback: string, t: (k: "admin_clients_title") => string): string {
-  return id === "clients" ? t("admin_clients_title") : fallback;
-}
 
 export default function AdminPage() {
   const { t } = useI18n();
@@ -47,8 +43,8 @@ export default function AdminPage() {
   if (!token) {
     return (
       <div className="mx-auto max-w-sm px-4 py-40 text-center">
-        <h1 className="text-2xl font-bold">Admin area</h1>
-        <p className="mt-3 text-zinc-400">Sign in to manage bookings, services and content.</p>
+        <h1 className="text-2xl font-bold">{t("admin_area")}</h1>
+        <p className="mt-3 text-zinc-400">{t("admin_area_sub")}</p>
         <button
           onClick={() => router.push("/admin/login")}
           className="mt-8 rounded-full bg-accent px-7 py-3 text-sm font-bold text-zinc-950 transition hover:brightness-110"
@@ -67,7 +63,7 @@ export default function AdminPage() {
   return (
     <div className="mx-auto flex max-w-6xl gap-8 px-4 py-10">
       <aside className="hidden w-56 shrink-0 flex-col gap-1 md:flex">
-        <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">Creative Sound Studio</p>
+        <p className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">{BRAND}</p>
         {tabs.map((tb) => {
           const Icon = tb.icon;
           return (
@@ -79,7 +75,7 @@ export default function AdminPage() {
               }`}
             >
               <Icon className="h-4 w-4" />
-              {tabLabel(tb.id, tb.label, t)}
+              {t(tb.label)}
             </button>
           );
         })}
@@ -102,7 +98,7 @@ export default function AdminPage() {
                 tab === tb.id ? "bg-accent text-zinc-950" : "border border-white/10 text-zinc-400"
               }`}
             >
-              {tabLabel(tb.id, tb.label, t)}
+              {t(tb.label)}
             </button>
           ))}
         </div>

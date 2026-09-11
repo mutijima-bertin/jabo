@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { adminApi } from "@/lib/admin";
+import { adminInputCls } from "@/lib/ui";
 import type { SiteSetting, AdminLogo, AdminTestimonial } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -36,8 +37,6 @@ export function AdminSettings({ token }: { token: string }) {
   const setValue = (key: string, locale: string, value: string) =>
     setSettings((prev) => prev?.map((s) => (s.key === key && s.locale === locale ? { ...s, value } : s)) ?? null);
 
-  const input = "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
-
   return (
     <div>
       <h1 className="text-2xl font-bold">Site settings</h1>
@@ -55,7 +54,7 @@ export function AdminSettings({ token }: { token: string }) {
                     <label className="mb-1 block text-xs text-zinc-400">{loc === "en" ? "English" : "Kinyarwanda"}</label>
                     <textarea
                       rows={key === "about_story" ? 4 : 2}
-                      className={input}
+                      className={adminInputCls}
                       value={current?.value ?? ""}
                       onChange={(e) => setValue(key, loc, e.target.value)}
                     />
@@ -270,9 +269,6 @@ function TestimonialsSection({ token }: { token: string }) {
     }
   }
 
-  const input =
-    "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
-
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -290,17 +286,17 @@ function TestimonialsSection({ token }: { token: string }) {
         <form onSubmit={save} className="mt-6 grid gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_author")}</label>
-            <input required className={input} value={editing.author} onChange={(e) => setEditing({ ...editing, author: e.target.value })} />
+            <input required className={adminInputCls} value={editing.author} onChange={(e) => setEditing({ ...editing, author: e.target.value })} />
           </div>
           <div>
             <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_role")}</label>
-            <input className={input} value={editing.role} onChange={(e) => setEditing({ ...editing, role: e.target.value })} />
+            <input className={adminInputCls} value={editing.role} onChange={(e) => setEditing({ ...editing, role: e.target.value })} />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_quote_en")}</label>
             <textarea
               required
-              className={input}
+              className={adminInputCls}
               rows={3}
               value={editing.contentEn}
               onChange={(e) => setEditing({ ...editing, contentEn: e.target.value })}
@@ -309,7 +305,7 @@ function TestimonialsSection({ token }: { token: string }) {
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_quote_rw")}</label>
             <textarea
-              className={input}
+              className={adminInputCls}
               rows={3}
               value={editing.contentRw}
               onChange={(e) => setEditing({ ...editing, contentRw: e.target.value })}

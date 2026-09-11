@@ -1,4 +1,5 @@
 import type { SVGProps } from "react";
+import { BRAND } from "@/lib/constants";
 
 /**
  * Creative Sound Studio logo — "CSS" monogram in a brass badge with a
@@ -13,10 +14,10 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      aria-label="Creative Sound Studio"
+      aria-label={BRAND}
       {...props}
     >
-      <title>Creative Sound Studio</title>
+      <title>{BRAND}</title>
 
       {/* Badge ring */}
       <circle cx="32" cy="32" r="25.5" stroke="url(#logo-brass)" strokeWidth="1.5" opacity="0.9" />

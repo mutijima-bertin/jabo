@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
-import { portfolioTitle, Lightbox } from "@/components/Lightbox";
+import { portfolioTitle, Lightbox } from "@/components/site/Lightbox";
 import type { PortfolioItem } from "@/lib/api";
 
 interface Filter {

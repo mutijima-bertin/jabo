@@ -40,17 +40,19 @@ interface PortfolioRow {
   category: string | null;
   clientName?: string | null;
 }
-interface ServiceRow {
-  id: string;
-  nameEn: string;
-  priceEn: string | null;
-}
 
 let token: string;
 let baselineCategories: string[] = []; // multiset of item categories before the run
+let baselineTestimonials = -1; // testimonial count before the run (owner content may exist)
 let movedItem: { id: string; originalCategory: string } | null = null; // transient re-categorize (test 2)
 
 const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
+
+// E2E-authored testimonial rows belong to the parallel admin-features spec
+// (they self-clean in its afterAll). Exclude them from this spec's drift
+// checks so the cross-checks are race-free under fullyParallel workers.
+const isE2eAuthored = (t: { author: string; role: string | null }) =>
+  t.author === "E2E Checker" || (t.role ?? "").startsWith("E2E ");
 
 async function adminLogin(request: APIRequestContext): Promise<string> {
   const res = await request.post(`${API}/auth/login`, {
@@ -100,6 +102,9 @@ test.describe("redesign journeys", () => {
     token = await adminLogin(request); // exactly one admin API login per run
     const items = await apiGet<PortfolioRow[]>(request, "/admin/portfolio");
     baselineCategories = items.map((i) => i.category ?? "");
+    baselineTestimonials = (
+      await apiGet<Array<{ author: string; role: string | null }>>(request, "/admin/testimonials")
+    ).filter((t) => !isE2eAuthored(t)).length;
   });
 
   test.afterAll(async ({ request }, workerInfo) => {
@@ -131,8 +136,13 @@ test.describe("redesign journeys", () => {
     expect(items.every((i) => CANONICAL_CATEGORIES.includes(i.category as never))).toBe(true);
 
     // No testimonial/e2e-blog drift either (cheap cross-checks for the report).
-    const testimonials = await apiGet<unknown[]>(request, "/admin/testimonials");
-    expect(testimonials, "testimonials must stay at baseline (0)").toHaveLength(0);
+    // Parallel specs legitimately create/delete E2E-authored testimonials, so
+    // compare ONLY the non-E2E catalog (the part this spec must not disturb).
+    const testimonials = await apiGet<Array<{ author: string; role: string | null }>>(request, "/admin/testimonials");
+    expect(
+      testimonials.filter((t) => !isE2eAuthored(t)),
+      "non-E2E testimonials must return to baseline",
+    ).toHaveLength(baselineTestimonials);
     const posts = await apiGet<Array<{ slug: string }>>(request, "/admin/posts");
     expect(posts.filter((p) => p.slug.startsWith("e2e-")), "no e2e blog posts may leak").toHaveLength(0);
   });
@@ -239,14 +249,18 @@ test.describe("redesign journeys", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-  test("services bento renders prices and placeholder cards", async ({ page }) => {
+  test("services bento renders prices and placeholder cards", async ({ page, request }) => {
     await page.goto("/");
     const bento = page.locator("#services");
     await expect(bento.getByRole("heading", { name: "Services & pricing" })).toBeVisible();
 
-    // All 10 seed services render as bento cards.
+    // All published services render as bento cards (count from the live catalog,
+    // never hardcoded — the persisted DB may legitimately hold extra services).
+    const services = await apiGet<Array<{ id: string; imageUrl: string | null }>>(request, "/public/services");
+    const expectedCount = services.length;
+    const imaged = services.filter((s) => s.imageUrl).length;
     const cards = bento.locator("ol > li");
-    await expect(cards).toHaveCount(10);
+    await expect(cards).toHaveCount(expectedCount);
 
     // Price lines come verbatim from priceEn ("From X RWF").
     const prices = bento.getByText(/^From [\d,]+ RWF/);
@@ -254,12 +268,13 @@ test.describe("redesign journeys", () => {
     await expect(prices.first()).toBeVisible();
 
     // Every card carries its Book-now chip.
-    await expect(bento.getByRole("link", { name: "Book now" })).toHaveCount(10);
+    await expect(bento.getByRole("link", { name: "Book now" })).toHaveCount(expectedCount);
 
-    // Baseline truth: no service has an image yet → placeholder skin, so the
-    // bento must not contain any photo elements. Soft-assert so the test
-    // degrades gracefully once the owner starts uploading real images.
-    expect.soft(await bento.locator("img").count(), "[soft] no images yet → placeholder skin").toBe(0);
+    // One <img> per service that owns an uploaded image (from the live
+    // catalog); services without an image must render the placeholder skin
+    // instead — so the count not only matches but also proves the placeholder
+    // cards emit no photo element.
+    expect(await bento.locator("img").count()).toBe(imaged);
   });
 
   test("admin portfolio category dropdown saves canonical value", async ({ page, request }) => {

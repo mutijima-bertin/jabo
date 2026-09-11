@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
-import { serviceIcon } from "@/components/service-icons";
+import { serviceIcon } from "@/components/shared/service-icons";
 import type { Service } from "@/lib/api";
 
 /**

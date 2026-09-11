@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { adminApi } from "@/lib/admin";
+import { adminInputCls } from "@/lib/ui";
 import type { PortfolioItem } from "@/lib/api";
 
 const empty = {
@@ -98,8 +99,6 @@ export function AdminPortfolio({ token }: { token: string }) {
     }
   }
 
-  const input = "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
-
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -155,17 +154,17 @@ export function AdminPortfolio({ token }: { token: string }) {
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Title (EN) *</label>
-              <input required className={input} value={editing.titleEn ?? ""} onChange={(e) => setEditing({ ...editing, titleEn: e.target.value })} />
+              <input required className={adminInputCls} value={editing.titleEn ?? ""} onChange={(e) => setEditing({ ...editing, titleEn: e.target.value })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Title (RW)</label>
-              <input className={input} value={editing.titleRw ?? ""} onChange={(e) => setEditing({ ...editing, titleRw: e.target.value })} />
+              <input className={adminInputCls} value={editing.titleRw ?? ""} onChange={(e) => setEditing({ ...editing, titleRw: e.target.value })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Category *</label>
               <select
                 required
-                className={input}
+                className={adminInputCls}
                 value={editing.category ?? "Events"}
                 onChange={(e) => setEditing({ ...editing, category: e.target.value })}
               >
@@ -182,11 +181,11 @@ export function AdminPortfolio({ token }: { token: string }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Client</label>
-              <input className={input} value={editing.clientName ?? ""} onChange={(e) => setEditing({ ...editing, clientName: e.target.value })} />
+              <input className={adminInputCls} value={editing.clientName ?? ""} onChange={(e) => setEditing({ ...editing, clientName: e.target.value })} />
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Media type</label>
-              <select className={input} value={editing.mediaType ?? "image"} onChange={(e) => setEditing({ ...editing, mediaType: e.target.value as "image" | "video" })}>
+              <select className={adminInputCls} value={editing.mediaType ?? "image"} onChange={(e) => setEditing({ ...editing, mediaType: e.target.value as "image" | "video" })}>
                 <option value="image">Image</option>
                 <option value="video">Video</option>
               </select>
@@ -194,7 +193,7 @@ export function AdminPortfolio({ token }: { token: string }) {
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Tags (comma separated)</label>
               <input
-                className={input}
+                className={adminInputCls}
                 defaultValue={(editing.tags ?? []).join(", ")}
                 onBlur={(e) =>
                   setEditing({ ...editing, tags: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })

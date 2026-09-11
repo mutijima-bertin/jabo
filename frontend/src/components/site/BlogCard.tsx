@@ -5,7 +5,7 @@ import { Eye, Heart } from "lucide-react";
 import { useI18n, postTypeKey } from "@/lib/i18n";
 import type { PostSummary } from "@/lib/api";
 import { formatDate } from "@/lib/format";
-import { PostCover } from "@/components/PostCover";
+import { PostCover } from "@/components/site/PostCover";
 
 /** Blog list card: cover, content-type pill, locale title/excerpt, date + views + likes. */
 export function BlogCard({ post }: { post: PostSummary }) {

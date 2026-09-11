@@ -1,7 +1,7 @@
 "use client";
 
 import type { ClientLogo } from "@/lib/api";
-import { SectionTitle } from "@/components/SectionTitle";
+import { SectionTitle } from "@/components/shared/SectionTitle";
 
 /**
  * Client-logo wall (blueprint §4.5): server-fed from GET /public/logos via

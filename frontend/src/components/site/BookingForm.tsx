@@ -4,13 +4,11 @@ import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { api, type Service } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
+import { inputCls, labelCls } from "@/lib/ui";
 
 interface Props {
   services: Service[];
 }
-
-const inputCls =
-  "w-full rounded-xl border border-ink/15 bg-white/80 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/40 focus:border-brass";
 
 export function BookingForm({ services }: Props) {
   const { t, locale } = useI18n();
@@ -61,7 +59,7 @@ export function BookingForm({ services }: Props) {
           href={result.trackUrl}
           className="mt-8 inline-block rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
         >
-          {locale === "rw" ? "Kurikirana umurimo" : "Track your production"}
+          {t("book_track_link")}
         </a>
       </div>
     );
@@ -70,7 +68,7 @@ export function BookingForm({ services }: Props) {
   return (
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_service")} *</label>
+        <label className={labelCls}>{t("book_service")} *</label>
         <select required value={form.serviceId} onChange={(e) => set("serviceId", e.target.value)} className={inputCls}>
           <option value="">—</option>
           {services.map((s) => (
@@ -82,7 +80,7 @@ export function BookingForm({ services }: Props) {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_name")} *</label>
+        <label className={labelCls}>{t("book_name")} *</label>
         <input
           required
           value={form.contactName}
@@ -92,7 +90,7 @@ export function BookingForm({ services }: Props) {
         />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_email")} *</label>
+        <label className={labelCls}>{t("book_email")} *</label>
         <input
           required
           type="email"
@@ -103,7 +101,7 @@ export function BookingForm({ services }: Props) {
         />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_phone")}</label>
+        <label className={labelCls}>{t("book_phone")}</label>
         <input
           value={form.contactPhone}
           onChange={(e) => set("contactPhone", e.target.value)}
@@ -112,15 +110,15 @@ export function BookingForm({ services }: Props) {
         />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_date")}</label>
+        <label className={labelCls}>{t("book_date")}</label>
         <input type="date" value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} className={inputCls} />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_location")}</label>
+        <label className={labelCls}>{t("book_location")}</label>
         <input value={form.location} onChange={(e) => set("location", e.target.value)} className={inputCls} placeholder="Kigali" />
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_budget")}</label>
+        <label className={labelCls}>{t("book_budget")}</label>
         <input
           value={form.budgetRange}
           onChange={(e) => set("budgetRange", e.target.value)}
@@ -130,7 +128,7 @@ export function BookingForm({ services }: Props) {
       </div>
 
       <div className="sm:col-span-2">
-        <label className="mb-2 block text-sm font-medium text-ink/70">{t("book_details")}</label>
+        <label className={labelCls}>{t("book_details")}</label>
         <textarea
           rows={4}
           value={form.details}

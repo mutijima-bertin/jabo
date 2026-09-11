@@ -22,5 +22,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/public ./public
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.ts ./next.config.ts
+# Non-root: ensure the node user can write .next cache at runtime.
+RUN chown -R node:node /app
 EXPOSE 3000
+USER node
 CMD ["npm", "start"]

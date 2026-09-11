@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { api, type Booking } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@/components/shared/Logo";
 
 export default function TrackPage() {
   const { token } = useParams<{ token: string }>();

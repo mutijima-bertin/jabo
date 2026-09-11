@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/lib/i18n";
 import type { Testimonial } from "@/lib/api";
-import { SectionTitle } from "@/components/SectionTitle";
+import { SectionTitle } from "@/components/shared/SectionTitle";
 
 /**
  * Homepage social proof: published client testimonials as elegant cream cards.

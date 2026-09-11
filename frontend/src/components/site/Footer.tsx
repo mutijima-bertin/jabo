@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Languages, MapPin } from "lucide-react";
+import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
-import { Logo } from "@/components/Logo";
-import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/social-icons";
+import { Logo } from "@/components/shared/Logo";
+import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/social-icons";
 
 const WHATSAPP_URL = "https://wa.me/250783269951";
 
@@ -34,13 +35,11 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1.3fr]">
           {/* Brand */}
           <div>
-            <Link href="/" aria-label="Creative Sound Studio — home">
+            <Link href="/" aria-label={`${BRAND} — home`}>
               <Logo className="h-12 w-auto" />
             </Link>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink/60">
-              {locale === "rw"
-                ? "Amafoto · Amashusho · Kwerekana ibirori mu mubare mubanza — Kigali, u Rwanda"
-                : "Photography · Videography · Livestreaming — Kigali, Rwanda. We tell your story with professional craft and on-time delivery."}
+              {t("footer_sub")}
             </p>
 
             {/* Social icons */}
@@ -66,7 +65,7 @@ export function Footer() {
                 {t("client_login_title")}
               </Link>
               <Link href="/track" className="w-fit underline-offset-2 transition hover:text-brass hover:underline">
-                {locale === "rw" ? "Gukurikirana umurimo" : "Track a production"}
+                {t("footer_track")}
               </Link>
             </div>
           </div>
@@ -74,7 +73,7 @@ export function Footer() {
           {/* Quick links */}
           <nav aria-label="Footer" className="text-sm">
             <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brass">
-              {locale === "rw" ? "Ihuza" : "Links"}
+              {t("footer_links")}
             </h2>
             <ul className="mt-4 space-y-2.5">
               {quickLinks.map((l) => (
@@ -90,7 +89,7 @@ export function Footer() {
           {/* Contact + language */}
           <div className="text-sm">
             <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brass">
-              {locale === "rw" ? "Aho duherereye" : "Contact"}
+              {t("footer_contact")}
             </h2>
             <ul className="mt-4 space-y-2.5 text-ink/65">
               <li className="flex items-center gap-2.5">
@@ -122,10 +121,10 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ink/10 pt-6 text-xs text-ink/50 sm:flex-row">
           <p>
-            © {year} Creative Sound Studio. {t("footer_rights")}
+            © {year} {BRAND}. {t("footer_rights")}
           </p>
           <p className="font-serif text-xs italic tracking-wide text-ink/45">
-            Captured in Kigali, told in every language.
+            {t("footer_caption")}
           </p>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { UploadCloud, Eye, Heart } from "lucide-react";
 import { adminApi } from "@/lib/admin";
+import { adminInputCls } from "@/lib/ui";
 import type { AdminPost, PostContentType } from "@/lib/api";
 
 const empty: Partial<AdminPost> = {
@@ -100,9 +101,6 @@ export function AdminBlog({ token }: { token: string }) {
     await load();
   }
 
-  const input =
-    "w-full rounded-xl border border-white/10 bg-zinc-950/60 px-3 py-2 text-sm outline-none focus:border-accent/60";
-
   if (posts === null) return <p className="py-10 text-center text-zinc-500">Loading…</p>;
 
   return (
@@ -165,17 +163,17 @@ export function AdminBlog({ token }: { token: string }) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs text-zinc-400">Title (EN) *</label>
-                <input required className={input} value={editing.titleEn ?? ""} onChange={(e) => setEditing({ ...editing, titleEn: e.target.value })} />
+                <input required className={adminInputCls} value={editing.titleEn ?? ""} onChange={(e) => setEditing({ ...editing, titleEn: e.target.value })} />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-zinc-400">Excerpt (EN)</label>
-                <input className={input} value={editing.excerptEn ?? ""} onChange={(e) => setEditing({ ...editing, excerptEn: e.target.value })} placeholder="Short summary shown in post cards" />
+                <input className={adminInputCls} value={editing.excerptEn ?? ""} onChange={(e) => setEditing({ ...editing, excerptEn: e.target.value })} placeholder="Short summary shown in post cards" />
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs text-zinc-400">Content (EN) *</label>
                 <textarea
                   required
-                  className={input}
+                  className={adminInputCls}
                   rows={8}
                   value={editing.contentEn ?? ""}
                   onChange={(e) => setEditing({ ...editing, contentEn: e.target.value })}
@@ -190,17 +188,17 @@ export function AdminBlog({ token }: { token: string }) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs text-zinc-400">Title (RW) *</label>
-                <input required className={input} value={editing.titleRw ?? ""} onChange={(e) => setEditing({ ...editing, titleRw: e.target.value })} />
+                <input required className={adminInputCls} value={editing.titleRw ?? ""} onChange={(e) => setEditing({ ...editing, titleRw: e.target.value })} />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-zinc-400">Excerpt (RW)</label>
-                <input className={input} value={editing.excerptRw ?? ""} onChange={(e) => setEditing({ ...editing, excerptRw: e.target.value })} />
+                <input className={adminInputCls} value={editing.excerptRw ?? ""} onChange={(e) => setEditing({ ...editing, excerptRw: e.target.value })} />
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs text-zinc-400">Content (RW) *</label>
                 <textarea
                   required
-                  className={input}
+                  className={adminInputCls}
                   rows={8}
                   value={editing.contentRw ?? ""}
                   onChange={(e) => setEditing({ ...editing, contentRw: e.target.value })}
@@ -214,7 +212,7 @@ export function AdminBlog({ token }: { token: string }) {
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Type</label>
               <select
-                className={input}
+                className={adminInputCls}
                 value={editing.contentType ?? "PROJECT_RECAP"}
                 onChange={(e) => setEditing({ ...editing, contentType: e.target.value as PostContentType })}
               >
@@ -227,7 +225,7 @@ export function AdminBlog({ token }: { token: string }) {
             </div>
             <div>
               <label className="mb-1 block text-xs text-zinc-400">Slug</label>
-              <input className={input} value={editing.slug ?? ""} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} placeholder="auto-generated" />
+              <input className={adminInputCls} value={editing.slug ?? ""} onChange={(e) => setEditing({ ...editing, slug: e.target.value })} placeholder="auto-generated" />
             </div>
             <div className="flex items-end">
               <label className="flex items-center gap-2 text-sm text-zinc-300">

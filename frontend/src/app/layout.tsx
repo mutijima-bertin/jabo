@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
-import { Nav } from "@/components/Nav";
-import { Footer } from "@/components/Footer";
-import { WhatsAppFab } from "@/components/WhatsAppFab";
+import { Nav } from "@/components/site/Nav";
+import { Footer } from "@/components/site/Footer";
+import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,9 +24,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Creative Sound Studio — Photography, Videography & Livestreaming in Kigali",
-  description:
-    "Creative Sound Studio is a Kigali-based media production company by video journalist Nkurunziza Jabo — photography, videography, livestreaming and aerial coverage for events, media houses, and institutions including FAO, The New Times and Kigali Today.",
+  title: `${BRAND} — Photography, Videography & Livestreaming in Kigali`,
+  description: `${BRAND} is a Kigali-based media production company by video journalist Nkurunziza Jabo — photography, videography, livestreaming and aerial coverage for events, media houses, and institutions including FAO, The New Times and Kigali Today.`,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

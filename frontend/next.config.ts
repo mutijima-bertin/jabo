@@ -24,6 +24,37 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/uploads/:path*", destination: `${API_ORIGIN}/uploads/:path*` }];
   },
+  async headers() {
+    return [
+      {
+        // Apply CSP to every route (public site + admin).
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              // Next.js injects inline hydration / RSC bootstrap scripts;
+              // without a nonce infrastructure, 'unsafe-inline' is required.
+              "script-src 'self' 'unsafe-inline'",
+              // Next inlines critical CSS; Tailwind uses external files but
+              // inline styles may appear in SSR output.
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob:",
+              "media-src 'self' blob:",
+              // Browser→API direct calls. In Docker the browser reaches the API
+              // at localhost:4000 — prod must set the public API origin here.
+              "connect-src 'self' http://localhost:4000",
+              "font-src 'self'",
+              "frame-ancestors 'self'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

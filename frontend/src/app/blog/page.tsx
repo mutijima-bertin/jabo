@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/constants";
 import { api, type PostSummary } from "@/lib/api";
-import { BlogList } from "@/components/BlogList";
+import { BlogList } from "@/components/site/BlogList";
 
 export const metadata: Metadata = {
-  title: "Blog — Creative Sound Studio",
-  description:
-    "Notes, highlights and client stories from behind the lens at Creative Sound Studio — Kigali, Rwanda.",
+  title: `Blog — ${BRAND}`,
+  description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
 };
 
 export default async function BlogPage() {

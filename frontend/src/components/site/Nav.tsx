@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
-import { Logo } from "@/components/Logo";
+import { Logo } from "@/components/shared/Logo";
 
 export function Nav() {
   const { t } = useI18n();
@@ -20,7 +21,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-cream/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" aria-label="Creative Sound Studio — home" className="shrink-0">
+        <Link href="/" aria-label={`${BRAND} — home`} className="shrink-0">
           <Logo className="h-10 w-auto" />
         </Link>
 

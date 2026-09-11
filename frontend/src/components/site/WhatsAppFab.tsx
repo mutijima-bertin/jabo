@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
-import { WhatsAppIcon } from "@/components/social-icons";
+import { WhatsAppIcon } from "@/components/shared/social-icons";
 
 const WHATSAPP_URL = "https://wa.me/250783269951";
 

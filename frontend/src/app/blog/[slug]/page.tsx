@@ -1,8 +1,9 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BRAND } from "@/lib/constants";
 import { fetchPost } from "@/lib/content";
-import { PostView } from "@/components/PostView";
+import { PostView } from "@/components/site/PostView";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -21,10 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // uses the English defaults — the in-page copy is locale-aware.
   if (!post) notFound();
   return {
-    title: `${post.titleEn} — Creative Sound Studio`,
+    title: `${post.titleEn} — ${BRAND}`,
     description: post.excerptEn ?? post.titleEn,
     openGraph: {
-      title: `${post.titleEn} — Creative Sound Studio`,
+      title: `${post.titleEn} — ${BRAND}`,
       description: post.excerptEn ?? post.titleEn,
       type: "article",
     },

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Camera } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import type { PostSummary } from "@/lib/api";
-import { BlogCard } from "@/components/BlogCard";
+import { BlogCard } from "@/components/site/BlogCard";
 
 /**
  * Blog index — header, responsive card grid, and a tasteful empty state
@@ -19,7 +19,7 @@ export function BlogList({ posts }: { posts: PostSummary[] | null }) {
       <header className="mx-auto max-w-2xl text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-brass/30 bg-brass/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-brass">
           <Camera className="h-3.5 w-3.5" />
-          Blog
+          {t("nav_blog")}
         </span>
         <h1 className="mt-6 font-serif text-4xl font-semibold leading-tight text-ink md:text-5xl">{t("blog_title")}</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink/60">{t("blog_subtitle")}</p>
