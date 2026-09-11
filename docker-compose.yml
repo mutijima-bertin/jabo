@@ -19,6 +19,7 @@ services:
 
   backend:
     build: ./backend
+    image: jabo-backend:latest
     container_name: css-backend
     restart: unless-stopped
     depends_on:
@@ -50,6 +51,7 @@ services:
       args:
         # Inlined into next.config.ts at build time for the /uploads rewrite.
         BACKEND_URL: http://backend:4000
+    image: jabo-frontend:latest
     container_name: css-frontend
     restart: unless-stopped
     depends_on:

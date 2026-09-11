@@ -15,7 +15,7 @@ jobs:
       JWT_SECRET: ci-e2e-secret
       MAGIC_LINK_TTL_HOURS: "168"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Start Postgres
         run: |
           docker run -d \
@@ -36,7 +36,7 @@ jobs:
           echo "Postgres failed to start"
           docker logs postgres
           exit 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -53,8 +53,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -79,7 +79,7 @@ jobs:
       MAGIC_LINK_TTL_HOURS: "168"
       BACKEND_LOG_FILE: /tmp/backend.log
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Start Postgres
         run: |
           docker run -d \
@@ -100,7 +100,7 @@ jobs:
           echo "Postgres failed to start"
           docker logs postgres
           exit 1
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -142,7 +142,7 @@ jobs:
         working-directory: frontend
       - name: Upload Playwright traces on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-traces
           path: frontend/test-results/

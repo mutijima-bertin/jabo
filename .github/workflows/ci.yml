@@ -14,8 +14,8 @@ jobs:
       JWT_SECRET: ci-secret
       MAGIC_LINK_TTL_HOURS: "168"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -40,11 +40,6 @@ jobs:
           echo "Postgres failed to start"
           docker logs postgres
           exit 1
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
       - run: npm ci
         working-directory: backend
       - run: npx prisma generate
@@ -57,8 +52,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -69,3 +64,63 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+
+  # -----------------------------------------------------------------------
+  # Docker-build guarantee: proves the compose build works on every push/PR.
+  # Does NOT run the full stack — that's the nightly job's job.
+  # -----------------------------------------------------------------------
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate docker-compose.yml
+        env:
+          # Required by compose's ${ADMIN_EMAIL:?…} / ${JWT_SECRET:?…}
+          ADMIN_EMAIL: ci@example.com
+          ADMIN_PASSWORD: ci-password
+          JWT_SECRET: ci-secret
+        run: docker compose config --quiet
+      - name: Build backend and frontend images
+        env:
+          ADMIN_EMAIL: ci@example.com
+          ADMIN_PASSWORD: ci-password
+          JWT_SECRET: ci-secret
+        run: docker compose build backend frontend
+
+  # -----------------------------------------------------------------------
+  # GHCR publish: pushes images on every merge to main.
+  # Non-blocking (continue-on-error) so a permissions / network issue never
+  # fails the commit check — CI stays green.  If it passes, you get real
+  # Docker release tags at ghcr.io/<owner>/jabo-backend and jabo-frontend.
+  # -----------------------------------------------------------------------
+  publish-images:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    continue-on-error: true   # non-blocking: GHCR push failure won't fail CI on main
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      # Build with explicit tags straight from the compose build contexts
+      # (./backend + ./frontend, same Dockerfiles) — no compose-name inference.
+      - name: Build backend image
+        run: |
+          docker build \
+            -t "ghcr.io/${{ github.repository_owner }}/jabo-backend:main" \
+            -t "ghcr.io/${{ github.repository_owner }}/jabo-backend:sha-${GITHUB_SHA::7}" \
+            ./backend
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg BACKEND_URL=http://backend:4000 \
+            -t "ghcr.io/${{ github.repository_owner }}/jabo-frontend:main" \
+            -t "ghcr.io/${{ github.repository_owner }}/jabo-frontend:sha-${GITHUB_SHA::7}" \
+            ./frontend
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Push backend image
+        run: docker push --all-tags "ghcr.io/${{ github.repository_owner }}/jabo-backend"
+      - name: Push frontend image
+        run: docker push --all-tags "ghcr.io/${{ github.repository_owner }}/jabo-frontend"
