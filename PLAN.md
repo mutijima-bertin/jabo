@@ -1,6 +1,6 @@
 # Creative Sound Studio — Project Plan (v1)
 
-> Status: IN BUILD — phases 1–6 done (booking engine, client portal, cream redesign, showcase-first redesign DEPLOYED 2026-08-20, e2e 9/9, review clean). Next: blog engine, admin panel completion, CI/CD. Last updated: 2026-08-20
+> Status: IN BUILD — phases 1–9 done (booking engine, client portal, cream + showcase-first redesign, blog engine, admin panel completion, CI fast+nightly split). Phase 10 mostly done: security review complete + high-value fixes applied; remaining = commit & push → CI green, content (owner-blocked), deploy. Last updated: 2026-09-11
 
 ## Company & Founder Context
 - **Company**: Creative Sound Studio — Kigali, Rwanda. Media production: livestreaming, photography, videography (sound may be re-added later; name is legacy).
@@ -66,10 +66,10 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
 4. ✅ Public site EN/RW: home, services, portfolio, about, clients (cream redesign 08-18)
 5. ✅ Booking engine: smart form, magic links, client dashboard, admin dashboard (e2e 9/9)
 6. ✅ Showcase-first redesign (DONE, DEPLOYED 2026-08-20): portfolio-leads home (Hero → PortfolioGrid → TrustBand → ClientsWall → Services → About → CTA), nav Home·Services·Portfolio·Blog + Book CTA (login → footer/mobile), services page (Itara-style numbered blocks), blog page placeholder ("Stories from the studio"). Services catalog expanded to 10 (seed, idempotent): 5 kept + Documentary Production / Corporate & Institutional / Commercial & Advertising / Music Videos / Location Scouting & Fixer (category Production, "From X RWF", flagships 600k). Real pictures wiring still BLOCKED on founder confirmation of the 5 NEED-FOUNDER picture items + portrait consent (see Research above) — captions/categories only, not layout.
-7. Blog engine: BlogPost model (EN/RW, views+likes), admin CRUD + drag-drop images, public /blog + post pages
-8. Admin panel completion: all CRUD + drag-and-drop upload (portfolio + blog)
-9. Docker + compose + GitHub Actions CI/CD
-10. Security review, e2e, verify, deploy prep
+7. ✅ Blog engine: BlogPost model (EN/RW, views+likes), admin CRUD + drag-drop images, public /blog + post pages
+8. ✅ Admin panel completion: all CRUD + drag-and-drop upload (portfolio + blog), clients/logos/testimonials managers, WebP pipeline (commit 11d2c03)
+9. ✅ Docker + compose + GitHub Actions CI/CD (fast lint/build split from nightly full e2e; hosting deploy still pending — NO external deployment yet, session 2026-09-11)
+10. 🔄 Security review + hardening + frontend org — MOSTLY DONE (2026-09-11): security review complete — all cheap/high-value findings fixed & verified (C1 critical fixed, HS256 pin, atomic token consume, input validation, rate limits, CSP, non-root containers, npm audit 0); e2e green 25+1 on hardened stack (3× today); frontend org done (dead code removed, i18n drift closed, BRAND constant, UI primitives, components grouped). Remaining: commit & push close-out diff → CI green (incl. nightly #9); content (owner-blocked, see PENDING USER in project.md); deploy (VPS+compose per user decision).
 
 ## Secrets (never commit)
 - ZAVU_API_KEY (live) — user provided, keep in backend/.env (gitignored)

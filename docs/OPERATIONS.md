@@ -1,6 +1,6 @@
 # Creative Sound Studio — Operations Manual
 
-**Last updated:** 2026-08-24
+**Last updated:** 2026-09-11
 **Audience:** the site owner. Plain language, no assumed expertise beyond basic terminal use.
 **Companion doc:** [docs/DATABASE.md](DATABASE.md) — full database table map. This file does not repeat it.
 
@@ -294,7 +294,7 @@ cd frontend && npm run build
 # lint, then end-to-end suite (needs the docker stack UP)
 cd frontend && npm run lint
 
-# 16 tests: booking.spec.ts (6) + clients.spec.ts (3) + blog.spec.ts (7)
+# 26 tests: booking.spec.ts (6) + clients.spec.ts (3) + blog.spec.ts (7) + admin-features.spec.ts (4) + redesign.spec.ts (6)
 cd frontend && npx playwright test
 ```
 
@@ -302,9 +302,15 @@ Playwright facts (`frontend/playwright.config.ts`): base URL `http://localhost:3
 failed tests retried once, traces kept for failures. Tests drive the **real** site at :3000 and
 API at :4000 — start docker first (`docker compose up -d`), then test.
 
-**Rate-limit caveat:** `/api/clients/login-request` allows **5 requests per IP per 10 minutes**
-(anti-enumeration, by design). The suite uses exactly two calls, but back-to-back full runs can
-flake those tests on HTTP 429. Wait ~10 minutes between full reruns.
+**Rate-limit caveat:** two login-endpoint limiters guard against enumeration —
+`/api/clients/login-request` at **5 req / 10 min / IP** and `/api/auth/login` at **10 req / 10 min / IP**
+(`TOO_MANY_ATTEMPTS`). The suite stays under budget, but back-to-back full runs within 10 minutes can
+flake on HTTP 429 from either. Wait ~10 minutes between full reruns.
+
+**Security posture (2026-09-11):** admin uploads rate-limited to 20/hr/IP, post views/likes to 240/hr/IP;
+all three containers run as non-root (uid 1000, uploads dir chowned);
+a Content-Security-Policy header is served on every frontend route — in production the `connect-src`
+directive must point at the public API origin, not `http://localhost:4000`.
 
 ---
 
