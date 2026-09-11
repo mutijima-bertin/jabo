@@ -22,10 +22,24 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
 }
 
 // ---------- Bookings ----------
+// Canonical status values — mirrors BookingStatus in prisma/schema.prisma.
+// Query params must be validated against this list; a raw cast to the DB
+// driver used to 500 on anything else.
+const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "IN_PRODUCTION", "DELIVERED", "COMPLETED", "CANCELLED"] as const;
+const bookingStatusEnum = z.enum(BOOKING_STATUSES);
+
 export async function listBookings(req: Request, res: Response): Promise<void> {
-  const status = req.query.status as string | undefined;
-  const bookings = await bookingModel.listForAdmin(status);
-  res.json(bookings);
+  const rawStatus = req.query.status;
+  if (rawStatus !== undefined) {
+    const parsed = bookingStatusEnum.safeParse(rawStatus);
+    if (!parsed.success) {
+      res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+      return;
+    }
+    res.json(await bookingModel.listForAdmin(parsed.data));
+    return;
+  }
+  res.json(await bookingModel.listForAdmin());
 }
 
 export async function getBooking(req: Request, res: Response): Promise<void> {
@@ -38,7 +52,7 @@ export async function getBooking(req: Request, res: Response): Promise<void> {
 }
 
 const statusSchema = z.object({
-  status: z.enum(["PENDING", "CONFIRMED", "IN_PRODUCTION", "DELIVERED", "COMPLETED", "CANCELLED"]),
+  status: bookingStatusEnum,
   note: z.string().max(500).optional(),
 });
 

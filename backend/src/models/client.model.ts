@@ -49,16 +49,15 @@ export function setLoginToken(id: string, hash: string, expiresAt: Date) {
   });
 }
 
-export function clearLoginToken(id: string) {
-  return prisma.client.update({
-    where: { id },
-    data: { loginTokenHash: null, loginTokenExpiresAt: null },
-  });
-}
-
-export function findByValidLoginTokenHash(hash: string, now: Date) {
-  return prisma.client.findFirst({
+/**
+ * Atomic single-use consume of a magic login token: UPDATE ... WHERE hash AND
+ * not expired RETURNING *. The row is cleared and returned in one statement, so
+ * two racing exchanges can never both match — the loser gets 0 rows (→ null).
+ */
+export function consumeLoginToken(hash: string, now: Date) {
+  return prisma.client.updateManyAndReturn({
     where: { loginTokenHash: hash, loginTokenExpiresAt: { gt: now } },
+    data: { loginTokenHash: null, loginTokenExpiresAt: null },
   });
 }
 

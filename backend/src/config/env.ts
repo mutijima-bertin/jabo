@@ -8,9 +8,9 @@ function required(name: string): string {
   return value;
 }
 
-export function requiredWithGuard(name: string, forbiddenValues: string[] = []): string {
+export function requiredWithGuard(name: string, forbiddenValues: string[] = [], minLength = 0): string {
   const value = required(name);
-  if (forbiddenValues.includes(value)) {
+  if (forbiddenValues.includes(value) || value.length < minLength) {
     throw new Error(`Environment variable ${name} is set to a known-insecure value; refusing to start.`);
   }
   return value;
@@ -34,7 +34,7 @@ export const env = {
   apiUrl: process.env.API_URL ?? "http://localhost:4000",
   frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
   magicLinkTtlHours: Number(process.env.MAGIC_LINK_TTL_HOURS ?? 168),
-  jwtSecret: requiredWithGuard("JWT_SECRET", ["change-me-in-production"]),
+  jwtSecret: requiredWithGuard("JWT_SECRET", ["change-me-in-production"], 32),
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? "http://localhost:3000",
   adminEmail: process.env.ADMIN_EMAIL ?? "",
   adminPassword: process.env.ADMIN_PASSWORD ?? "",

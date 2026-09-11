@@ -23,5 +23,8 @@ COPY --from=build /app/src ./src
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY package.json prisma.config.ts ./
+# Non-root: uploads dir must be writable by the node user (uid 1000).
+RUN mkdir -p /app/uploads && chown -R node:node /app
 EXPOSE 4000
+USER node
 CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/index.js"]

@@ -10,6 +10,9 @@ const createBookingLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 30, messag
 const trackLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 240, message: "TOO_MANY_REQUESTS" });
 // Feed/news-adjacent endpoints are unauthenticated → same 240/hr per-IP cap as tracking.
 const postLikeLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 240, message: "TOO_MANY_REQUESTS" });
+// Post views increment `views` per hit without auth — throttle per-IP like likes
+// (240/hr) so the counter can't be inflated by a scraper.
+const postViewLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 240, message: "RATE_LIMITED" });
 
 publicRouter.get("/public/services", publicController.listServices);
 publicRouter.get("/public/portfolio", publicController.listPortfolio);
@@ -27,5 +30,5 @@ publicRouter.get("/bookings/track/:token", trackLimiter, bookingsController.trac
 
 // ---------- Blog ----------
 publicRouter.get("/public/posts", postsController.listPosts);
-publicRouter.get("/public/posts/:slug", postsController.getPostBySlug);
+publicRouter.get("/public/posts/:slug", postViewLimiter, postsController.getPostBySlug);
 publicRouter.post("/public/posts/:id/like", postLikeLimiter, postsController.likePost);

@@ -28,10 +28,10 @@ export function findRecentWithService(take: number) {
   });
 }
 
-/** Admin list; optional status filter. */
-export function listForAdmin(status?: string) {
+/** Admin list; optional status filter (callers must pass a validated BookingStatus). */
+export function listForAdmin(status?: BookingStatus) {
   return prisma.booking.findMany({
-    where: status ? { status: status as BookingStatus } : undefined,
+    where: status ? { status } : undefined,
     orderBy: { createdAt: "desc" },
     include: {
       service: { select: { nameEn: true, nameRw: true } },

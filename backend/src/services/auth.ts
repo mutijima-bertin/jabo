@@ -14,7 +14,7 @@ export function signAdminToken(userId: string): string {
 
 export function verifyAdminToken(token: string): { sub: string } | null {
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { sub: string; role?: string };
+    const payload = jwt.verify(token, env.jwtSecret, { algorithms: ["HS256"] }) as { sub: string; role?: string };
     return payload.role === "admin" ? { sub: payload.sub } : null;
   } catch {
     return null;
@@ -27,7 +27,7 @@ export function signClientToken(clientId: string): string {
 
 export function verifyClientToken(token: string): { sub: string } | null {
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as { sub: string; type?: string };
+    const payload = jwt.verify(token, env.jwtSecret, { algorithms: ["HS256"] }) as { sub: string; type?: string };
     return payload.type === "client" ? { sub: payload.sub } : null;
   } catch {
     return null;

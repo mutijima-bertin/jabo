@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAdmin } from "../middleware/auth";
+import { limiter } from "../middleware/rateLimit";
 import * as adminBookings from "../controllers/adminBookings.controller";
 import * as adminCatalog from "../controllers/adminCatalog.controller";
 import * as adminPosts from "../controllers/adminPosts.controller";
@@ -8,6 +9,10 @@ import * as adminClients from "../controllers/adminClients.controller";
 export const adminRouter = Router();
 
 adminRouter.use(requireAdmin);
+
+// The single admin uploads in bursts (drag-and-drop base64 files); a per-IP cap
+// keeps a stolen admin token from being used to flood the disk.
+const uploadsLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 20, message: "RATE_LIMITED" });
 
 // ---------- Dashboard ----------
 adminRouter.get("/admin/dashboard", adminBookings.dashboard);
@@ -31,7 +36,7 @@ adminRouter.put("/admin/portfolio/:id", adminCatalog.updatePortfolioItem);
 adminRouter.delete("/admin/portfolio/:id", adminCatalog.deletePortfolioItem);
 
 // ---------- Uploads (drag-and-drop) ----------
-adminRouter.post("/admin/uploads", adminCatalog.upload);
+adminRouter.post("/admin/uploads", uploadsLimiter, adminCatalog.upload);
 
 // ---------- Client logos ----------
 adminRouter.get("/admin/logos", adminCatalog.listLogos);

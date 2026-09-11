@@ -15,10 +15,12 @@ const postSchema = z.object({
   contentEn: z.string().min(1),
   contentRw: z.string().min(1),
   contentType: z.enum(POST_CONTENT_TYPES).default("PROJECT_RECAP"),
+  // UI sends "" to mean "no cover" — normalise to undefined (NULL in DB) before regex check.
   coverImageUrl: z
-    .string()
-    .regex(/^\/uploads\//, "must be an uploaded /uploads/ path")
-    .optional(), // NOTE: rejects null by contract — the UI sends "" instead.
+    .preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.string().regex(/^\/uploads\//, "must be an uploaded /uploads/ path").optional(),
+    ),
   published: z.boolean().default(false),
 });
 
@@ -32,7 +34,10 @@ const postPatchSchema = z
     contentEn: z.string().min(1).optional(),
     contentRw: z.string().min(1).optional(),
     contentType: z.enum(POST_CONTENT_TYPES).optional(),
-    coverImageUrl: z.string().optional(),
+    coverImageUrl: z.preprocess(
+      (v) => (v === "" ? null : v),
+      z.string().nullable().optional(),
+    ),
     published: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "At least one field is required" });

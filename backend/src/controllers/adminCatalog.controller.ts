@@ -26,7 +26,11 @@ const serviceSchema = z.object({
   // Same contract as BlogPost.coverImageUrl: rejects null by design — the UI sends "" to clear.
   // Must be an uploaded /uploads/... path — external/garbage URLs would crash
   // next/image rendering on the public site (admin-trusted input, still bounded).
-  imageUrl: z.string().regex(/^\/uploads\//, "must be an uploaded /uploads/ path").optional(), // picture for the public services bento cards
+  // "" is normalised to null (NULL in DB) so the regex only sees real paths.
+  imageUrl: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.string().regex(/^\/uploads\//, "must be an uploaded /uploads/ path").nullable().optional(),
+  ),
   linkedPostSlug: z.string().max(160).optional(), // deep-dive BlogPost slug; no FK by design
   featured: z.boolean().default(false),
   published: z.boolean().default(true),
@@ -88,7 +92,12 @@ const portfolioSchema = z.object({
   category: portfolioCategorySchema,
   clientName: z.string().optional(),
   tags: z.array(z.string()).default([]),
-  coverUrl: z.string().min(1),
+  // Same contract as the posts cover: only uploaded /uploads/ paths are allowed.
+  // "" is normalised to undefined so the regex only sees real values.
+  coverUrl: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().regex(/^\/uploads\//, "must be an uploaded /uploads/ path"),
+  ),
   mediaUrls: z.array(z.string()).default([]),
   mediaType: z.enum(["image", "video"]).default("image"),
   published: z.boolean().default(true),
@@ -167,7 +176,17 @@ export async function upload(req: Request, res: Response): Promise<void> {
 }
 
 // ---------- Client logos ----------
-const logoSchema = z.object({ name: z.string().min(1), url: z.string().optional(), imageUrl: z.string().optional(), sortOrder: z.number().default(0) });
+// Logos may legitimately be hosted externally (http/https) OR live on /uploads/;
+// "" is normalised to undefined (NULL in DB) so clearing an image still works.
+const logoSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().optional(),
+  imageUrl: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().regex(/^(\/uploads\/|https?:\/\/)/, "must be an uploaded /uploads/ path or an http(s) URL").optional(),
+  ),
+  sortOrder: z.number().default(0),
+});
 
 export async function listLogos(_req: Request, res: Response): Promise<void> {
   res.json(await clientLogoModel.listAll());

@@ -23,10 +23,10 @@ export async function createClientLoginToken(client: { id: string }): Promise<st
 /** Resolve a raw login token to its client; tokens are single-use and cleared after a successful match. */
 export async function getClientByLoginToken(rawToken: string): Promise<Client | null> {
   const hash = hashLoginToken(rawToken);
-  const client = await clientModel.findByValidLoginTokenHash(hash, new Date());
-  if (!client) return null;
-  await clientModel.clearLoginToken(client.id);
-  return client;
+  // Atomic consume: the UPDATE ... WHERE hash AND not-expired RETURNING * is the
+  // gate, so a concurrent replay of the same token sees 0 rows and resolves null.
+  const [client] = await clientModel.consumeLoginToken(hash, new Date());
+  return client ?? null;
 }
 
 /** Sign a client JWT (same secret as admin, 7d expiry). */
