@@ -13,6 +13,39 @@
   --green: #3f5a46;
   --green-deep: #2b4034;
   --sand: #ece4d3;
+
+  /* ============================================================
+     ADMIN PANEL — dark theme tokens (brand-faithful extension)
+     Namespaced `admin-*` so the cream public theme stays untouched.
+     Values + contrast rationale: docs/design/admin-interface-spec.md §2.
+     ============================================================ */
+  /* Surfaces — warm near-black derived from ink #1f1d1a, not cool zinc */
+  --admin-base: #0e0c0a; /* page background          */
+  --admin-panel: #161310; /* cards                     */
+  --admin-raised: #1e1a15; /* headers, dropdowns, hover */
+  --admin-scrim: #0e0c0a; /* modal backdrop (used w/ /70) */
+
+  /* Hairlines */
+  --admin-border: #26211b; /* card edges, table frames               */
+  --admin-line: rgb(245 242 236 / 0.1); /* row dividers           */
+  --admin-line-strong: rgb(245 242 236 / 0.16); /* inputs, stronger */
+
+  /* Text — cream family dimmed for dark (AA on base AND panel) */
+  --admin-text: #f2ede3; /* primary (~15:1 on base)          */
+  --admin-muted: #a49a8d; /* secondary (7.3:1 on panel)       */
+  --admin-faint: #8a7f72; /* tertiary, placeholders (4.7:1)   */
+
+  /* Semantic accents (AA on dark panels) */
+  --admin-danger: #f87171; /* 6.7:1 */
+  --admin-warning: #fbbf24; /* 10.6:1 */
+  --admin-success: #34d399; /* 9.6:1  */
+
+  /* Brass on dark surfaces (10:1 on base) for hover + focus */
+  --brass-light: #c9a86f;
+
+  /* Focus ring color is context-switched: cream site = brass-dark,
+     dark admin shell (.admin-shell) = brass-light. */
+  --focus-ring: var(--brass-dark);
 }
 
 @theme inline {
@@ -25,9 +58,25 @@
   --color-brass: var(--brass);
   --color-brass-dark: var(--brass-dark);
   --color-brass-deep: var(--brass-deep);
+  --color-brass-light: var(--brass-light);
   --color-green: var(--green);
   --color-green-deep: var(--green-deep);
   --color-sand: var(--sand);
+
+  /* Admin dark theme */
+  --color-admin-base: var(--admin-base);
+  --color-admin-panel: var(--admin-panel);
+  --color-admin-raised: var(--admin-raised);
+  --color-admin-scrim: var(--admin-scrim);
+  --color-admin-border: var(--admin-border);
+  --color-admin-line: var(--admin-line);
+  --color-admin-line-strong: var(--admin-line-strong);
+  --color-admin-text: var(--admin-text);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-faint: var(--admin-faint);
+  --color-admin-danger: var(--admin-danger);
+  --color-admin-warning: var(--admin-warning);
+  --color-admin-success: var(--admin-success);
   --font-sans: var(--font-geist-sans);
   --font-serif: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
@@ -94,20 +143,94 @@ body {
 }
 
 /* Respect prefers-reduced-motion: kill the cinematic motion, keep the layout.
-   Hero autoplay is additionally gated in JS (HeroSection). */
+   Hero autoplay is additionally gated in JS (HeroSection); admin dialogs and
+   skeletons stop animating and drop in statically. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .kenburns,
-  .fade-up {
+  .fade-up,
+  .animate-admin-fade,
+  .animate-admin-pop,
+  .skeleton-shimmer {
     animation: none;
+  }
+  .skeleton-shimmer {
+    background-image: none;
   }
 }
 
-/* Global brass focus ring (blueprint §2). brass-dark clears 3:1 on cream
-   surfaces; dark hero controls keep their own cream borders for visibility. */
+/* Global focus ring (blueprint §2). Color context-switches via --focus-ring:
+   brass-dark clears 3:1 on cream surfaces; the dark admin shell re-declares
+   it as brass-light (10:1 on zinc-950-class surfaces). */
 :focus-visible {
-  outline: 2px solid var(--brass-dark);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* ============================================================
+   ADMIN SHELL — dark context root
+   Phase B applies this class to the /admin and /admin/login page
+   wrappers. It namespaces the focus-ring switch, forces the dark
+   canvas, dims native controls, and neutralizes the cream body.
+   ============================================================ */
+.admin-shell {
+  --focus-ring: var(--brass-light);
+  color-scheme: dark;
+  background-color: var(--admin-base);
+  color: var(--admin-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+/* ---- Admin motion: fast, subtle (100-150ms), never bouncy ---- */
+@keyframes admin-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes admin-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-admin-fade {
+  animation: admin-fade-in 120ms ease-out both;
+}
+
+.animate-admin-pop {
+  animation: admin-pop 140ms ease-out both;
+}
+
+/* ---- Skeleton shimmer for loading rows/cards ---- */
+@keyframes admin-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background-color: var(--admin-raised);
+  background-image: linear-gradient(
+    90deg,
+    var(--admin-raised) 35%,
+    var(--admin-panel) 50%,
+    var(--admin-raised) 65%
+  );
+  background-size: 200% 100%;
+  animation: admin-shimmer 1.4s linear infinite;
 }
