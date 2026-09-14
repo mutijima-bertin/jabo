@@ -1,103 +1,149 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import { adminApi } from "@/lib/admin";
+import { useState } from "react";
+import { Inbox, Search } from "lucide-react";
+import { useAdminFetch } from "@/lib/admin";
 import type { AdminClient } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import {
+  adminInputCls,
+  cx,
+  emptyState,
+  emptyStateBody,
+  emptyStateIcon,
+  emptyStateIconWrap,
+  emptyStateTitle,
+  errorBanner,
+  iconBtnGhost,
+  loadingState,
+  pageHeader,
+  pageTitle,
+  sectionLabel,
+  skeletonRows,
+  table,
+  tableScrollWrap,
+  tbody,
+  tdCls,
+  tdMuted,
+  theadRow,
+  thCls,
+  tbodyRow,
+} from "@/lib/ui";
 
-/** Newest booking date across a client's bookings (ISO strings compare lexicographically). */
-function lastBookingAt(client: AdminClient): string | null {
-  return client.bookings.reduce<string | null>(
-    (acc, b) => (acc === null || b.createdAt > acc ? b.createdAt : acc),
-    null,
-  );
-}
-
-/** Read-only directory of portal clients (they are created automatically from bookings). */
 export function AdminClients({ token }: { token: string }) {
-  const { t } = useI18n();
-  const [clients, setClients] = useState<AdminClient[] | null>(null);
+  const { t, locale } = useI18n();
+  const { data: clients, error, loading, reload } = useAdminFetch<AdminClient[]>("/admin/clients", token);
   const [query, setQuery] = useState("");
-  const [error, setError] = useState("");
 
-  const fetchClients = useCallback(() => adminApi.get<AdminClient[]>("/admin/clients", token), [token]);
-
-  // Initial load subscribes via .then rather than calling load() directly —
-  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
-  useEffect(() => {
-    fetchClients()
-      .then((data) => {
-        setClients(data);
-        setError("");
-      })
-      .catch((e) => setError((e as Error).message));
-  }, [fetchClients]);
-
-  const filtered = useMemo(() => {
-    if (!clients) return null;
-    const q = query.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(
-      (c) => c.name.toLowerCase().includes(q) || (c.email ?? "").toLowerCase().includes(q),
-    );
-  }, [clients, query]);
-
-  if (error) return <p className="py-10 text-center text-red-400">{error}</p>;
-  if (!filtered) return <p className="py-10 text-center text-zinc-500">{t("admin_loading")}</p>;
+  const q = query.trim().toLowerCase();
+  const filtered =
+    clients === null
+      ? null
+      : q === ""
+        ? clients
+        : clients.filter(
+            (c) =>
+              c.name.toLowerCase().includes(q) ||
+              (c.email ?? "").toLowerCase().includes(q) ||
+              (c.phone ?? "").toLowerCase().includes(q),
+          );
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">
-        {t("admin_clients_title")}
-        {filtered.length > 0 && <span className="ml-3 text-sm font-normal text-zinc-500">{filtered.length}</span>}
-      </h1>
-
-      <div className="relative mt-6 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("admin_clients_search")}
-          className="w-full rounded-xl border border-white/10 bg-zinc-950/60 py-2 pl-9 pr-3 text-sm outline-none focus:border-accent/60"
-        />
+      <div className={pageHeader}>
+        <h1 className={pageTitle}>{t("admin_clients_title")}</h1>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-white/5">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500">
-            <tr>
-              <th className="px-4 py-3">{t("admin_clients_col_name")}</th>
-              <th className="px-4 py-3">{t("admin_clients_col_email")}</th>
-              <th className="px-4 py-3">{t("admin_clients_col_whatsapp")}</th>
-              <th className="px-4 py-3">{t("admin_clients_col_bookings")}</th>
-              <th className="px-4 py-3">{t("admin_clients_col_last_booking")}</th>
-              <th className="px-4 py-3">{t("admin_clients_col_created")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {filtered.map((c) => {
-              const last = lastBookingAt(c);
-              return (
-                <tr key={c.id} className="bg-zinc-950/40 transition hover:bg-zinc-900/60">
-                  <td className="px-4 py-3 font-semibold">{c.name}</td>
-                  <td className="px-4 py-3 text-zinc-400">{c.email ?? "—"}</td>
-                  <td className="px-4 py-3 text-zinc-400">{c.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-accent">{c.bookings.length}</td>
-                  <td className="px-4 py-3 text-zinc-400">{last ? new Date(last).toLocaleDateString() : "—"}</td>
-                  <td className="px-4 py-3 text-zinc-500">{new Date(c.createdAt).toLocaleString()}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <p className="py-16 text-center text-zinc-500">
-            {(clients?.length ?? 0) === 0 ? t("admin_clients_empty") : t("admin_clients_no_match")}
-          </p>
-        )}
-      </div>
+      {error && (
+        <div className="mt-6">
+          <div className={errorBanner} role="alert">
+            <span className="min-w-0 flex-1">{error}</span>
+            <button type="button" className={iconBtnGhost} onClick={reload}>
+              {t("admin_retry")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className={loadingState}>{skeletonRows(5).map((c, i) => (
+          <div key={i} className={c} />
+        ))}</div>
+      ) : (
+        <>
+          <div className="mt-6 w-full max-w-sm">
+            <label className={sectionLabel} htmlFor="clients-search">
+              {t("admin_clients_search")}
+            </label>
+            <div className="relative mt-2">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-faint" />
+              <input
+                id="clients-search"
+                className={cx(adminInputCls, "pl-9")}
+                placeholder={t("admin_clients_search")}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {filtered !== null && filtered.length === 0 ? (
+            <div className={emptyState}>
+              <div className={emptyStateIconWrap}>
+                <Inbox className={emptyStateIcon} />
+              </div>
+              <p className={emptyStateTitle}>
+                {q === "" ? t("admin_clients_empty") : t("admin_clients_no_match")}
+              </p>
+              {q !== "" && <p className={emptyStateBody}>{t("admin_clients_no_match_hint")}</p>}
+            </div>
+          ) : (
+            <div className={cx(tableScrollWrap, "mt-6")}>
+              <table className={table}>
+                <thead className={theadRow}>
+                  <tr>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_name")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_email")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_whatsapp")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_bookings")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_last_booking")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_created")}</th>
+                  </tr>
+                </thead>
+                <tbody className={tbody}>
+                  {filtered?.map((c) => {
+                    const last = [...c.bookings].sort(
+                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+                    )[0];
+                    return (
+                      <tr key={c.id} className={tbodyRow}>
+                        <td className={tdCls}>
+                          <p className="font-medium">{c.name}</p>
+                        </td>
+                        <td className={cx(tdCls, tdMuted)}>{c.email ?? "—"}</td>
+                        <td className={cx(tdCls, tdMuted)}>{c.phone ?? "—"}</td>
+                        <td className={tdCls}>{c.bookings.length}</td>
+                        <td className={cx(tdCls, tdMuted)}>
+                          {last ? (
+                            <span>
+                              {last.reference}
+                              <span className="ml-2">{formatDate(last.createdAt, locale)}</span>
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className={cx(tdCls, tdMuted)}>{formatDate(c.createdAt, locale)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

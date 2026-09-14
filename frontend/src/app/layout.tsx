@@ -3,9 +3,6 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
-import { Nav } from "@/components/site/Nav";
-import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,6 +25,9 @@ export const metadata: Metadata = {
   description: `${BRAND} is a Kigali-based media production company by video journalist Nkurunziza Jabo — photography, videography, livestreaming and aerial coverage for events, media houses, and institutions including FAO, The New Times and Kigali Today.`,
 };
 
+// Root layout holds only shared chrome (fonts, i18n, dark/cream canvas).
+// The public site chrome (Nav / Footer / WhatsApp FAB) lives in the `(site)`
+// route group, and the admin panel renders chrome-free under `admin/` — QA #2.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -38,12 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="referrer" content="no-referrer" />
       </head>
       <body className="flex min-h-full flex-col bg-cream font-sans text-ink">
-        <I18nProvider>
-          <Nav />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <WhatsAppFab />
-        </I18nProvider>
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

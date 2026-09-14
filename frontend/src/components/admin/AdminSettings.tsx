@@ -1,63 +1,162 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { UploadCloud } from "lucide-react";
-import { adminApi } from "@/lib/admin";
-import { adminInputCls } from "@/lib/ui";
-import type { SiteSetting, AdminLogo, AdminTestimonial } from "@/lib/api";
+import { useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Inbox, Loader2, Pencil, Plus, UploadCloud } from "lucide-react";
+import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
+import type { AdminLogo, AdminTestimonial, SiteSetting } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import {
+  adminInputCls,
+  adminTextareaCls,
+  badgeBrass,
+  badgeMuted,
+  btnPrimary,
+  btnSecondary,
+  checkboxCls,
+  cardHeaderTitle,
+  cx,
+  dropzoneCls,
+  dropzoneHint,
+  dropzoneIcon,
+  dropzoneTitle,
+  emptyState,
+  emptyStateIcon,
+  emptyStateIconWrap,
+  emptyStateTitle,
+  errorBanner,
+  iconBtnGhostSm,
+  loadingState,
+  pageHeader,
+  pageSub,
+  pageTitle,
+  pubPill,
+  rowActionBrass,
+  rowActionDefault,
+  skeletonCard,
+  skeletonRows,
+  successBanner,
+  table,
+  tableScrollWrap,
+  tbodyRow,
+  tdCls,
+  tdMuted,
+  theadRow,
+  thCls,
+  tbody,
+} from "@/lib/ui";
+import { DeleteButton, Field, putCollectionOrder, uploadImage } from "@/components/admin/shared/CollectionManager";
+
+/* ---------------------------------------------------------------------------
+ * AdminSettings — three independent sections, each a real <form>:
+ *   1. Site settings (dynamic key list, en/rw textareas)
+ *   2. Client logo wall (upload → POST /admin/logos, delete)
+ *   3. Testimonials (create/edit + publish toggle + delete)
+ * ------------------------------------------------------------------------- */
 
 export function AdminSettings({ token }: { token: string }) {
-  const [settings, setSettings] = useState<SiteSetting[] | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { t } = useI18n();
+  return (
+    <div>
+      <div className={pageHeader}>
+        <div>
+          <h1 className={pageTitle}>{t("admin_settings_title")}</h1>
+          <p className={pageSub}>{t("admin_settings_sub")}</p>
+        </div>
+      </div>
+
+      <section className="mt-8">
+        <SiteSettingsSection token={token} />
+      </section>
+
+      <section className="mt-14 border-t border-admin-line pt-10">
+        <LogosSection token={token} />
+      </section>
+
+      <section className="mt-14 border-t border-admin-line pt-10">
+        <TestimonialsSection token={token} />
+      </section>
+    </div>
+  );
+}
+
+/* ----------------------------- Site settings ----------------------------- */
+
+function SiteSettingsSection({ token }: { token: string }) {
+  const { t } = useI18n();
+  const handleSessionExpired = useSessionGuard();
+  const { data: settings, error, loading, reload, setData } = useAdminFetch<SiteSetting[]>("/admin/settings", token);
+
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState("");
 
-  useEffect(() => {
-    adminApi.get<SiteSetting[]>("/admin/settings", token).then(setSettings).catch((e) => alert(e.message));
-  }, [token]);
-
-  async function save() {
-    if (!settings) return;
-    setBusy(true);
+  const setValue = (key: string, locale: string, value: string) => {
+    setDirty(true);
     setSaved(false);
+    setData(
+      (prev) =>
+        prev?.map((s) => (s.key === key && s.locale === locale ? { ...s, value } : s)) ?? prev,
+    );
+  };
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!settings) return;
+    setSaving(true);
+    setFormError("");
     try {
       await adminApi.put("/admin/settings", token, { settings });
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch (e) {
-      alert((e as Error).message);
+      setDirty(false);
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      setFormError((err as Error).message || t("admin_error_generic"));
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   }
 
-  if (!settings) return <p className="py-10 text-center text-zinc-500">Loading…</p>;
+  if (loading) {
+    return <div className={loadingState}>{skeletonRows(3).map((c, i) => <div key={i} className={c} />)}</div>;
+  }
 
-  const keys = Array.from(new Set(settings.map((s) => s.key)));
-  const setValue = (key: string, locale: string, value: string) =>
-    setSettings((prev) => prev?.map((s) => (s.key === key && s.locale === locale ? { ...s, value } : s)) ?? null);
+  if (error) {
+    return (
+      <div>
+        <div className={errorBanner} role="alert">
+          <span className="min-w-0 flex-1">{error}</span>
+          <button type="button" className={btnSecondary} onClick={reload}>{t("admin_retry")}</button>
+        </div>
+      </div>
+    );
+  }
+
+  const keys = Array.from(new Set((settings ?? []).map((s) => s.key)));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Site settings</h1>
-      <p className="mt-2 text-sm text-zinc-400">These values power the public website hero, about section, and contact details.</p>
-
-      <div className="mt-6 space-y-5">
+    <form onSubmit={save}>
+      <div className="space-y-5">
         {keys.map((key) => (
-          <div key={key} className="rounded-2xl border border-white/5 bg-zinc-900/60 p-5">
-            <p className="mb-3 font-mono text-xs uppercase tracking-wider text-zinc-500">{key}</p>
+          <div key={key} className={cx("rounded-2xl border border-admin-border bg-admin-panel p-5")}>
+            <p className="mb-3 font-mono text-xs uppercase tracking-wider text-admin-faint">{key}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {(["en", "rw"] as const).map((loc) => {
-                const current = settings.find((s) => s.key === key && s.locale === loc);
+                const current = settings?.find((s) => s.key === key && s.locale === loc);
                 return (
                   <div key={loc}>
-                    <label className="mb-1 block text-xs text-zinc-400">{loc === "en" ? "English" : "Kinyarwanda"}</label>
-                    <textarea
-                      rows={key === "about_story" ? 4 : 2}
-                      className={adminInputCls}
-                      value={current?.value ?? ""}
-                      onChange={(e) => setValue(key, loc, e.target.value)}
-                    />
+                    <Field label={t(loc === "en" ? "admin_lang_en" : "admin_lang_rw")}>
+                      <textarea
+                        rows={key === "about_story" ? 4 : 2}
+                        className={adminTextareaCls}
+                        value={current?.value ?? ""}
+                        onChange={(e) => setValue(key, loc, e.target.value)}
+                      />
+                    </Field>
                   </div>
                 );
               })}
@@ -66,26 +165,240 @@ export function AdminSettings({ token }: { token: string }) {
         ))}
       </div>
 
-      <button
-        onClick={save}
-        disabled={busy}
-        className="mt-6 rounded-full bg-accent px-7 py-3 text-sm font-bold text-zinc-950 transition hover:brightness-110 disabled:opacity-50"
+      {saved && (
+        <div className="mt-5" role="status">
+          <div className={successBanner}>{t("admin_saved")}</div>
+        </div>
+      )}
+      {formError && (
+        <div className="mt-5">
+          <div className={errorBanner} role="alert">
+            <span className="min-w-0 flex-1">{formError}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <button
+          type="submit"
+          disabled={!dirty || saving}
+          className={cx(btnPrimary, "disabled:opacity-50")}
+        >
+          {saving ? t("admin_saving") : t("admin_settings_save")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ------------------------------ Client logos ----------------------------- */
+
+function LogosSection({ token }: { token: string }) {
+  const { t } = useI18n();
+  const handleSessionExpired = useSessionGuard();
+  const { data: logos, loading, reload, setData } = useAdminFetch<AdminLogo[]>("/admin/logos", token);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  /** Non-null while a reorder PUT is in flight: all arrows disabled, clicked one spins. */
+  const [orderBusy, setOrderBusy] = useState<{ id: string; dir: -1 | 1 } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    setBusy(true);
+    setError("");
+    try {
+      // uploadImage (shared) does FileReader → dataUrl → POST /admin/uploads.
+      const { url } = await uploadImage(token, file);
+      // Backend zod requires a non-empty name; derive it from the filename.
+      const name = file.name.replace(/\.[^.]+$/, "").trim() || "Logo";
+      await adminApi.post("/admin/logos", token, { name, imageUrl: url });
+      reload();
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      const raw = (err as Error).message || t("admin_error_generic");
+      setError(raw === "RATE_LIMITED" ? t("admin_upload_rate_limited") : raw);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(id: string) {
+    setDeletingId(id);
+    setError("");
+    try {
+      await adminApi.del(`/admin/logos/${id}`, token);
+      reload();
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      setError((err as Error).message || t("admin_error_generic"));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  /** Non-optimistic reorder: swap in a copy, PUT the full collection, adopt the canonical 200 as state. */
+  async function move(id: string, dir: -1 | 1) {
+    if (!logos || orderBusy) return;
+    const from = logos.findIndex((l) => l.id === id);
+    const to = from + dir;
+    if (from === -1 || to < 0 || to >= logos.length) return;
+    setOrderBusy({ id, dir });
+    setError("");
+    try {
+      const next = await putCollectionOrder("/admin/logos/order", token, logos, from, to);
+      setData(next);
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      if (msg === "STALE_COLLECTION") {
+        setError(t("admin_reorder_stale"));
+        reload();
+        return;
+      }
+      setError(msg || t("admin_error_generic"));
+    } finally {
+      setOrderBusy(null);
+    }
+  }
+
+  const list = logos ?? [];
+
+  return (
+    <div>
+      <h2 className={cardHeaderTitle}>{t("admin_logos_title")}</h2>
+      <p className="mt-1 text-sm text-admin-muted">{t("admin_logos_sub")}</p>
+
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label={t("admin_logos_drop")}
+        className={cx(dropzoneCls, "mt-6")}
+        onClick={() => fileRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            fileRef.current?.click();
+          }
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const f = e.dataTransfer.files?.[0];
+          if (f) upload(f);
+        }}
       >
-        {saved ? "Saved ✓" : busy ? "Saving…" : "Save settings"}
-      </button>
+        <UploadCloud className={dropzoneIcon} />
+        <span className={dropzoneTitle}>{busy ? t("admin_logos_uploading") : t("admin_logos_drop")}</span>
+        <span className={dropzoneHint}>{t("admin_service_image_hint")}</span>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) upload(f);
+          }}
+        />
+      </div>
 
-      {/* ---------- Client logos ---------- */}
-      <section className="mt-14 border-t border-white/10 pt-10">
-        <LogosSection token={token} />
-      </section>
+      {error && (
+        <div className="mt-5">
+          <div className={errorBanner} role="alert">
+            <span className="min-w-0 flex-1">{error}</span>
+          </div>
+        </div>
+      )}
 
-      {/* ---------- Testimonials ---------- */}
-      <section className="mt-14 border-t border-white/10 pt-10">
-        <TestimonialsSection token={token} />
-      </section>
+      {loading ? (
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className={skeletonCard} />
+          ))}
+        </div>
+      ) : logos && logos.length === 0 ? (
+        <div className={emptyState}>
+          <div className={emptyStateIconWrap}>
+            <Inbox className={emptyStateIcon} />
+          </div>
+          <p className={emptyStateTitle}>{t("admin_logos_empty")}</p>
+          <button type="button" className={btnPrimary} onClick={() => fileRef.current?.click()}>
+            <UploadCloud className="h-4 w-4" />
+            {t("admin_logos_add")}
+          </button>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {list.map((logo, idx) => (
+            <div
+              key={logo.id}
+              className="flex flex-col items-center gap-3 rounded-2xl border border-admin-border bg-admin-panel px-4 py-6 text-center"
+            >
+              {logo.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail */
+                <img src={logo.imageUrl} alt={logo.name} className="h-14 w-auto max-w-full object-contain" loading="lazy" />
+              ) : (
+                <span className="rounded-full border border-admin-line-strong px-4 py-2 font-serif text-sm tracking-wide text-admin-muted">
+                  {logo.name}
+                </span>
+              )}
+              <p className="truncate text-xs text-admin-faint">{logo.name}</p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  aria-label={t("admin_reorder_up")}
+                  disabled={orderBusy !== null || idx === 0}
+                  className={iconBtnGhostSm}
+                  onClick={() => move(logo.id, -1)}
+                >
+                  {orderBusy?.id === logo.id && orderBusy?.dir === -1 ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ChevronUp className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  aria-label={t("admin_reorder_down")}
+                  disabled={orderBusy !== null || idx === list.length - 1}
+                  className={iconBtnGhostSm}
+                  onClick={() => move(logo.id, 1)}
+                >
+                  {orderBusy?.id === logo.id && orderBusy?.dir === 1 ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+                <DeleteButton
+                  busy={deletingId === logo.id}
+                  onConfirm={() => remove(logo.id)}
+                  confirmLabel={t("admin_logos_delete_confirm")}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+/* ------------------------------ Testimonials ----------------------------- */
 
 const emptyTestimonial = {
   author: "",
@@ -95,232 +408,176 @@ const emptyTestimonial = {
   published: true,
 };
 
-/** Client-logo wall management: dropzone upload + delete. */
-function LogosSection({ token }: { token: string }) {
-  const { t } = useI18n();
-  const [logos, setLogos] = useState<AdminLogo[] | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+type TestimonialForm = typeof emptyTestimonial & { id?: string };
 
-  const fetchLogos = useCallback(() => adminApi.get<AdminLogo[]>("/admin/logos", token), [token]);
-
-  // Initial load subscribes via .then rather than calling load() directly —
-  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
-  useEffect(() => {
-    fetchLogos().then(setLogos).catch((e) => alert(e.message));
-  }, [fetchLogos]);
-
-  const load = useCallback(async () => setLogos(await fetchLogos()), [fetchLogos]);
-
-  async function uploadLogo(file: File) {
-    setBusy(true);
-    try {
-      const reader = new FileReader();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      const { url } = await adminApi.post<{ url: string }>("/admin/uploads", token, { dataUrl });
-      // Backend zod requires a non-empty name; derive it from the filename.
-      const name = file.name.replace(/\.[^.]+$/, "").trim() || "Logo";
-      await adminApi.post("/admin/logos", token, { name, imageUrl: url });
-      await load();
-    } catch (err) {
-      alert((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(id: string) {
-    if (!confirm(t("admin_logos_delete_confirm"))) return;
-    try {
-      await adminApi.del(`/admin/logos/${id}`, token);
-      await load();
-    } catch (e) {
-      alert((e as Error).message);
-    }
-  }
-
-  return (
-    <div>
-      <h2 className="text-xl font-bold">{t("admin_logos_title")}</h2>
-      <p className="mt-2 text-sm text-zinc-400">{t("admin_logos_sub")}</p>
-
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOver(true);
-        }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOver(false);
-          const f = e.dataTransfer.files?.[0];
-          if (f) uploadLogo(f);
-        }}
-        onClick={() => fileRef.current?.click()}
-        className={`mt-6 flex cursor-pointer items-center justify-center gap-4 rounded-2xl border-2 border-dashed p-6 transition ${
-          dragOver ? "border-accent bg-accent/10" : "border-white/10 hover:border-accent/40"
-        }`}
-      >
-        <UploadCloud className="h-8 w-8 shrink-0 text-zinc-500" />
-        <p className="text-sm text-zinc-400">{busy ? t("admin_logos_uploading") : t("admin_logos_drop")}</p>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) uploadLogo(f);
-          }}
-        />
-      </div>
-
-      {logos !== null && logos.length === 0 ? (
-        <p className="py-10 text-center text-zinc-500">{t("admin_logos_empty")}</p>
-      ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {logos?.map((logo) => (
-            <div
-              key={logo.id}
-              className="flex flex-col items-center gap-3 rounded-2xl border border-white/5 bg-zinc-900/60 px-4 py-6 text-center"
-            >
-              {logo.imageUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail; matches AdminPortfolio/AdminBlog */
-                <img src={logo.imageUrl} alt={logo.name} className="h-14 w-auto max-w-full object-contain" loading="lazy" />
-              ) : (
-                <span className="rounded-full border border-white/10 px-4 py-2 font-serif text-sm tracking-wide text-zinc-400">
-                  {logo.name}
-                </span>
-              )}
-              <p className="truncate text-xs text-zinc-500">{logo.name}</p>
-              <button
-                onClick={() => remove(logo.id)}
-                className="rounded-full border border-red-500/30 px-4 py-1.5 text-xs text-red-400 transition hover:bg-red-500/10"
-              >
-                {t("admin_form_delete")}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Testimonials management: create form + list with publish toggle and delete. */
 function TestimonialsSection({ token }: { token: string }) {
-  const { t } = useI18n();
-  const [items, setItems] = useState<AdminTestimonial[] | null>(null);
-  const [editing, setEditing] = useState<typeof emptyTestimonial | null>(null);
+  const { t, locale } = useI18n();
+  const handleSessionExpired = useSessionGuard();
+  const { data: items, loading, reload } = useAdminFetch<AdminTestimonial[]>("/admin/testimonials", token);
+
+  const [form, setForm] = useState<TestimonialForm | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const fetchItems = useCallback(() => adminApi.get<AdminTestimonial[]>("/admin/testimonials", token), [token]);
-
-  // Initial load subscribes via .then rather than calling load() directly —
-  // react-hooks/set-state-in-effect rejects component-scope calls that setState.
-  useEffect(() => {
-    fetchItems().then(setItems).catch((e) => alert(e.message));
-  }, [fetchItems]);
-
-  const load = useCallback(async () => setItems(await fetchItems()), [fetchItems]);
+  const set = (patch: Partial<TestimonialForm>) => setForm((prev) => ({ ...(prev ?? emptyTestimonial), ...patch }));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!editing) return;
+    if (!form) return;
     setBusy(true);
+    setError("");
     try {
-      await adminApi.post("/admin/testimonials", token, {
-        author: editing.author,
-        role: editing.role,
-        contentEn: editing.contentEn,
-        contentRw: editing.contentRw,
-        published: editing.published,
-      });
-      setEditing(null);
-      await load();
+      const body = {
+        author: form.author,
+        role: form.role,
+        contentEn: form.contentEn,
+        contentRw: form.contentRw,
+        published: form.published,
+      };
+      if (form.id) await adminApi.put(`/admin/testimonials/${form.id}`, token, body);
+      else await adminApi.post("/admin/testimonials", token, body);
+      setForm(null);
+      reload();
     } catch (err) {
-      alert((err as Error).message);
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      setError((err as Error).message || t("admin_error_generic"));
     } finally {
       setBusy(false);
     }
   }
 
   async function togglePublished(item: AdminTestimonial) {
+    setRowBusy(item.id);
+    setError("");
     try {
       await adminApi.patch(`/admin/testimonials/${item.id}`, token, { published: !item.published });
-      await load();
-    } catch (e) {
-      alert((e as Error).message);
+      reload();
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      setError((err as Error).message || t("admin_error_generic"));
+    } finally {
+      setRowBusy(null);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm(t("admin_testimonials_delete_confirm"))) return;
+    setDeletingId(id);
+    setError("");
     try {
       await adminApi.del(`/admin/testimonials/${id}`, token);
-      await load();
-    } catch (e) {
-      alert((e as Error).message);
+      reload();
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      setError((err as Error).message || t("admin_error_generic"));
+    } finally {
+      setDeletingId(null);
     }
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">{t("admin_testimonials_title")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className={cardHeaderTitle}>{t("admin_testimonials_title")}</h2>
+          <p className="mt-1 text-sm text-admin-muted">{t("admin_testimonials_sub")}</p>
+        </div>
         <button
-          onClick={() => setEditing({ ...emptyTestimonial })}
-          className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-zinc-950 transition hover:brightness-110"
+          type="button"
+          onClick={() => setForm({ ...emptyTestimonial })}
+          className={btnPrimary}
         >
-          + {t("admin_testimonials_new")}
+          <Plus className="h-4 w-4" />
+          {t("admin_testimonials_new")}
         </button>
       </div>
-      <p className="mt-2 text-sm text-zinc-400">{t("admin_testimonials_sub")}</p>
 
-      {editing && (
-        <form onSubmit={save} className="mt-6 grid gap-4 rounded-2xl border border-white/10 bg-zinc-900/60 p-6 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_author")}</label>
-            <input required className={adminInputCls} value={editing.author} onChange={(e) => setEditing({ ...editing, author: e.target.value })} />
+      {error && (
+        <div className="mt-5">
+          <div className={errorBanner} role="alert">
+            <span className="min-w-0 flex-1">{error}</span>
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_role")}</label>
-            <input className={adminInputCls} value={editing.role} onChange={(e) => setEditing({ ...editing, role: e.target.value })} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_quote_en")}</label>
-            <textarea
+        </div>
+      )}
+
+      {form && (
+        <form
+          onSubmit={save}
+          className="mt-6 grid gap-4 rounded-2xl border border-admin-border bg-admin-panel p-6 sm:grid-cols-2"
+        >
+          <Field label={t("admin_testimonials_author")} htmlFor="tm-author">
+            <input
+              id="tm-author"
               required
               className={adminInputCls}
-              rows={3}
-              value={editing.contentEn}
-              onChange={(e) => setEditing({ ...editing, contentEn: e.target.value })}
+              value={form.author}
+              onChange={(e) => set({ author: e.target.value })}
             />
+          </Field>
+          <Field label={t("admin_testimonials_role")} htmlFor="tm-role">
+            <input
+              id="tm-role"
+              className={adminInputCls}
+              value={form.role}
+              onChange={(e) => set({ role: e.target.value })}
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label={t("admin_testimonials_quote_en")} htmlFor="tm-quote-en">
+              <textarea
+                id="tm-quote-en"
+                required
+                rows={3}
+                className={adminTextareaCls}
+                value={form.contentEn}
+                onChange={(e) => set({ contentEn: e.target.value })}
+              />
+            </Field>
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs text-zinc-400">{t("admin_testimonials_quote_rw")}</label>
-            <textarea
-              className={adminInputCls}
-              rows={3}
-              value={editing.contentRw}
-              onChange={(e) => setEditing({ ...editing, contentRw: e.target.value })}
-            />
+            <Field label={t("admin_testimonials_quote_rw")} htmlFor="tm-quote-rw">
+              <textarea
+                id="tm-quote-rw"
+                rows={3}
+                className={adminTextareaCls}
+                value={form.contentRw}
+                onChange={(e) => set({ contentRw: e.target.value })}
+              />
+            </Field>
           </div>
-          <div className="flex items-end justify-between gap-3 sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm text-zinc-300">
-              <input type="checkbox" checked={editing.published} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} />
+          <div className="flex flex-wrap items-center justify-between gap-3 sm:col-span-2">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-admin-text">
+              <input
+                type="checkbox"
+                className={checkboxCls}
+                checked={form.published}
+                onChange={(e) => set({ published: e.target.checked })}
+              />
               {t("admin_testimonials_published")}
             </label>
-            <div className="flex items-center gap-3">
-              <button type="submit" disabled={busy} className="rounded-full bg-accent px-6 py-2 text-sm font-bold text-zinc-950 disabled:opacity-50">
-                {t("admin_form_create")}
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={busy}
+                className={cx(btnPrimary, "disabled:opacity-50")}
+              >
+                {busy ? t("admin_saving") : form.id ? t("admin_save") : t("admin_form_create")}
               </button>
-              <button type="button" onClick={() => setEditing(null)} className="rounded-full border border-white/10 px-5 py-2 text-sm text-zinc-400">
+              <button
+                type="button"
+                onClick={() => setForm(null)}
+                className={btnSecondary}
+              >
                 {t("admin_form_cancel")}
               </button>
             </div>
@@ -328,64 +585,107 @@ function TestimonialsSection({ token }: { token: string }) {
         </form>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-white/5">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500">
-            <tr>
-              <th className="px-4 py-3">{t("admin_testimonials_col_quote")}</th>
-              <th className="px-4 py-3">{t("admin_testimonials_col_author")}</th>
-              <th className="px-4 py-3">{t("admin_testimonials_col_status")}</th>
-              <th className="px-4 py-3">{t("admin_testimonials_col_created")}</th>
-              <th className="px-4 py-3 text-right">{t("admin_testimonials_col_actions")}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {items?.map((item) => (
-              <tr key={item.id} className={`bg-zinc-950/40 transition hover:bg-zinc-900/60 ${item.published ? "" : "opacity-60"}`}>
-                <td className="max-w-xs px-4 py-3 text-zinc-300">
-                  <p className="truncate">{item.contentEn}</p>
-                  {item.contentRw && <p className="truncate text-xs text-zinc-600">{item.contentRw}</p>}
-                </td>
-                <td className="px-4 py-3">
-                  <p className="font-semibold">{item.author}</p>
-                  {item.role && <p className="text-xs text-zinc-500">{item.role}</p>}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                      item.published ? "border-accent/40 bg-accent/10 text-accent" : "border-white/10 bg-white/5 text-zinc-500"
-                    }`}
-                  >
-                    {item.published ? t("admin_testimonials_published") : t("admin_testimonials_draft")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-zinc-400">{new Date(item.createdAt).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => togglePublished(item)}
-                      disabled={busy}
-                      className="rounded-full border border-white/10 px-4 py-1.5 text-xs text-zinc-300 transition hover:text-accent disabled:opacity-50"
-                    >
-                      {item.published ? t("admin_testimonials_unpublish") : t("admin_testimonials_publish")}
-                    </button>
-                    <button
-                      onClick={() => remove(item.id)}
-                      disabled={busy}
-                      className="rounded-full border border-red-500/30 px-4 py-1.5 text-xs text-red-400 disabled:opacity-50"
-                    >
-                      {t("admin_form_delete")}
-                    </button>
-                  </div>
-                </td>
+      {loading ? (
+        <div className={cx(loadingState, "mt-0")}>
+          {skeletonRows(3).map((c, i) => (
+            <div key={i} className={c} />
+          ))}
+        </div>
+      ) : items && items.length === 0 ? (
+        <div className={emptyState}>
+          <div className={emptyStateIconWrap}>
+            <Inbox className={emptyStateIcon} />
+          </div>
+          <p className={emptyStateTitle}>{t("admin_testimonials_empty")}</p>
+          <button type="button" className={btnPrimary} onClick={() => setForm({ ...emptyTestimonial })}>
+            <Plus className="h-4 w-4" />
+            {t("admin_testimonials_new")}
+          </button>
+        </div>
+      ) : (
+        <div className={cx(tableScrollWrap, "mt-6")}>
+          <table className={table}>
+            <thead className={theadRow}>
+              <tr>
+                <th scope="col" className={thCls}>{t("admin_testimonials_col_quote")}</th>
+                <th scope="col" className={thCls}>{t("admin_testimonials_col_author")}</th>
+                <th scope="col" className={thCls}>{t("admin_testimonials_col_status")}</th>
+                <th scope="col" className={thCls}>{t("admin_testimonials_col_source")}</th>
+                <th scope="col" className={thCls}>{t("admin_testimonials_col_created")}</th>
+                <th scope="col" className={thCls} aria-hidden="true"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {items !== null && items.length === 0 && (
-          <p className="py-16 text-center text-zinc-500">{t("admin_testimonials_empty")}</p>
-        )}
-      </div>
+            </thead>
+            <tbody className={tbody}>
+              {(items ?? []).map((item) => (
+                <tr key={item.id} className={tbodyRow}>
+                  <td className={cx(tdCls, "max-w-xs")}>
+                    <p className="truncate">{item.contentEn}</p>
+                    {item.contentRw && <p className={cx(tdMuted, "mt-0.5 truncate text-xs")}>{item.contentRw}</p>}
+                  </td>
+                  <td className={tdCls}>
+                    <p className="font-medium">{item.author}</p>
+                    {item.role && <p className={cx(tdMuted, "text-xs")}>{item.role}</p>}
+                  </td>
+                  <td className={tdCls}>
+                    <span className={pubPill(item.published)}>
+                      {item.published ? t("admin_testimonials_published") : t("admin_testimonials_draft")}
+                    </span>
+                  </td>
+                  <td className={tdCls}>
+                    <span className={item.source === "CLIENT" ? badgeBrass : badgeMuted}>
+                      {item.source === "CLIENT"
+                        ? t("client_testimonials_source_client")
+                        : t("client_testimonials_source_admin")}
+                    </span>
+                    {item.source === "CLIENT" && item.client && (
+                      <div className="mt-1 space-y-0.5 text-xs">
+                        <p className="font-medium text-admin-text">{item.client.name}</p>
+                        <p className={tdMuted}>{item.client.email}</p>
+                      </div>
+                    )}
+                  </td>
+                  <td className={cx(tdCls, tdMuted)}>{formatDate(item.createdAt, locale)}</td>
+                  <td className={tdCls}>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        disabled={rowBusy === item.id}
+                        className={item.published ? rowActionDefault : rowActionBrass}
+                        onClick={() => togglePublished(item)}
+                      >
+                        {rowBusy === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        {item.published ? t("admin_testimonials_unpublish") : t("admin_testimonials_publish")}
+                      </button>
+                      <button
+                        type="button"
+                        className={rowActionBrass}
+                        onClick={() =>
+                          setForm({
+                            id: item.id,
+                            author: item.author,
+                            role: item.role ?? "",
+                            contentEn: item.contentEn,
+                            contentRw: item.contentRw ?? "",
+                            published: item.published,
+                          })
+                        }
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t("admin_testimonials_edit")}
+                      </button>
+                      <DeleteButton
+                        busy={deletingId === item.id}
+                        onConfirm={() => remove(item.id)}
+                        confirmLabel={t("admin_testimonials_delete_confirm")}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
