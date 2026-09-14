@@ -1,10 +1,12 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import * as serviceModel from "../models/service.model";
 import * as portfolioModel from "../models/portfolioItem.model";
 import * as clientLogoModel from "../models/clientLogo.model";
 import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
+import { ReorderError } from "../models/errors";
 import { isAllowedMime, saveDataUrl } from "../services/storage";
 import {
   PORTFOLIO_CATEGORIES,
@@ -12,6 +14,52 @@ import {
   type PortfolioCategory,
 } from "../config/constants";
 import { pathParam } from "./params";
+
+// ---------- Whole-list reorder (shared by services / portfolio / logos) ----------
+// The client sends the FULL list as a raw array (no wrapper): dense sortOrder
+// 0..n-1 ascending by array position. Any failure → nothing is written.
+const CUID = z.string().regex(/^c[a-z0-9]{24}$/, "Invalid id");
+
+const reorderSchema = z
+  .array(z.object({ id: CUID, sortOrder: z.number().int().min(0) }))
+  .max(500, "Too many entries")
+  .refine((entries) => new Set(entries.map((e) => e.id)).size === entries.length, {
+    message: "Duplicate id",
+  })
+  .refine((entries) => new Set(entries.map((e) => e.sortOrder)).size === entries.length, {
+    message: "Duplicate sortOrder",
+  })
+  .refine((entries) => entries.every((e, i) => e.sortOrder === i), {
+    message: "sortOrder must be 0..n-1 ascending by array position",
+  });
+
+// Mirrors the per-id P2025 catch: model-layer labeled errors map to 404/409,
+// anything unexpected propagates to the global JSON error handler (500).
+function mapReorderError(res: Response, err: unknown): void {
+  if (err instanceof ReorderError) {
+    if (err.kind === "NOT_FOUND") {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    res.status(409).json({ error: "STALE_COLLECTION", message: err.message });
+    return;
+  }
+  // SERIALIZABLE isolation: two racing reorders abort with P2034 — the client's
+  // view is exactly as stale as the STALE_COLLECTION label, so it gets the same
+  // 409 envelope (frontend reload + banner) and self-heals.
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2034") {
+    res.status(409).json({
+      error: "STALE_COLLECTION",
+      message: "Collection changed since load — refetch and retry",
+    });
+    return;
+  }
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  throw err;
+}
 
 // ---------- Services ----------
 const serviceSchema = z.object({
@@ -71,6 +119,19 @@ export async function deleteService(req: Request, res: Response): Promise<void> 
     res.json({ ok: true });
   } catch {
     res.status(404).json({ error: "NOT_FOUND" });
+  }
+}
+
+export async function reorderServices(req: Request, res: Response): Promise<void> {
+  const parsed = reorderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  try {
+    res.json(await serviceModel.reorder(parsed.data));
+  } catch (err) {
+    mapReorderError(res, err);
   }
 }
 
@@ -141,10 +202,26 @@ export async function deletePortfolioItem(req: Request, res: Response): Promise<
   }
 }
 
+export async function reorderPortfolio(req: Request, res: Response): Promise<void> {
+  const parsed = reorderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  try {
+    res.json(await portfolioModel.reorder(parsed.data));
+  } catch (err) {
+    mapReorderError(res, err);
+  }
+}
+
 // ---------- Uploads (drag-and-drop) ----------
 export async function upload(req: Request, res: Response): Promise<void> {
-  const { dataUrl } = req.body as { dataUrl?: string };
-  if (!dataUrl) {
+  const { dataUrl } = req.body as { dataUrl?: unknown };
+  // dataUrl must be a string; a truthy non-string ({"dataUrl":123}) would throw on
+  // .match() below and surface as a 500 — guard it into the same 400 VALIDATION
+  // envelope as the missing-field branch.
+  if (typeof dataUrl !== "string" || dataUrl === "") {
     res.status(400).json({ error: "VALIDATION" });
     return;
   }
@@ -210,6 +287,19 @@ export async function deleteLogo(req: Request, res: Response): Promise<void> {
   }
 }
 
+export async function reorderLogos(req: Request, res: Response): Promise<void> {
+  const parsed = reorderSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  try {
+    res.json(await clientLogoModel.reorder(parsed.data));
+  } catch (err) {
+    mapReorderError(res, err);
+  }
+}
+
 // ---------- Testimonials ----------
 const testimonialSchema = z.object({
   author: z.string().min(1),
@@ -248,6 +338,38 @@ export async function patchTestimonial(req: Request, res: Response): Promise<voi
     res.json(testimonial);
   } catch {
     res.status(404).json({ error: "NOT_FOUND" });
+  }
+}
+
+// Full replace from the admin panel — spec §8 lets the founder edit
+// author/role/contentEn/contentRw/published together, so PUT sends the whole
+// field set (published omitted → true, same default as create).
+const testimonialEditSchema = z.object({
+  author: z.string().min(1),
+  role: z.string().optional(),
+  contentEn: z.string().min(1),
+  contentRw: z.string().optional(),
+  published: z.boolean().default(true),
+});
+
+export async function putTestimonial(req: Request, res: Response): Promise<void> {
+  const parsed = testimonialEditSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  try {
+    const testimonial = await testimonialModel.update(pathParam(req, "id"), parsed.data);
+    res.json(testimonial);
+  } catch (err) {
+    // A missing row is the only expected mid-write failure (P2025 → 404). Anything
+    // else (connection loss, constraint, serialization abort) is a genuine server
+    // error — rethrow so the global JSON handler returns 500, never a fake 404.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    throw err;
   }
 }
 

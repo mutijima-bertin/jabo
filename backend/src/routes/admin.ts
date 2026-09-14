@@ -26,12 +26,16 @@ adminRouter.post("/admin/bookings/:id/revoke-token", adminBookings.revokeToken);
 // ---------- Services ----------
 adminRouter.get("/admin/services", adminCatalog.listServices);
 adminRouter.post("/admin/services", adminCatalog.createService);
+// Whole-list reorder — MUST precede the per-id routes or "/order" would match ":id".
+adminRouter.put("/admin/services/order", adminCatalog.reorderServices);
 adminRouter.put("/admin/services/:id", adminCatalog.updateService);
 adminRouter.delete("/admin/services/:id", adminCatalog.deleteService);
 
 // ---------- Portfolio ----------
 adminRouter.get("/admin/portfolio", adminCatalog.listPortfolio);
 adminRouter.post("/admin/portfolio", adminCatalog.createPortfolioItem);
+// Whole-list reorder — MUST precede the per-id routes.
+adminRouter.put("/admin/portfolio/order", adminCatalog.reorderPortfolio);
 adminRouter.put("/admin/portfolio/:id", adminCatalog.updatePortfolioItem);
 adminRouter.delete("/admin/portfolio/:id", adminCatalog.deletePortfolioItem);
 
@@ -41,12 +45,15 @@ adminRouter.post("/admin/uploads", uploadsLimiter, adminCatalog.upload);
 // ---------- Client logos ----------
 adminRouter.get("/admin/logos", adminCatalog.listLogos);
 adminRouter.post("/admin/logos", adminCatalog.createLogo);
+// Whole-list reorder — MUST precede the per-id routes.
+adminRouter.put("/admin/logos/order", adminCatalog.reorderLogos);
 adminRouter.delete("/admin/logos/:id", adminCatalog.deleteLogo);
 
 // ---------- Testimonials ----------
 adminRouter.get("/admin/testimonials", adminCatalog.listTestimonials);
 adminRouter.post("/admin/testimonials", adminCatalog.createTestimonial);
 adminRouter.patch("/admin/testimonials/:id", adminCatalog.patchTestimonial);
+adminRouter.put("/admin/testimonials/:id", adminCatalog.putTestimonial);
 adminRouter.delete("/admin/testimonials/:id", adminCatalog.deleteTestimonial);
 
 // ---------- Site settings ----------

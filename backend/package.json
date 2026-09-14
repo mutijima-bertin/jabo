@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "content:import": "tsx scripts/import-content.ts",
     "test": "vitest run"
   },
   "prisma": {
@@ -40,7 +41,8 @@
     "@types/nodemailer": "^8.0.1",
     "prisma": "^7.9.1",
     "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   },
   "overrides": {
     "fast-uri": "3.1.7",

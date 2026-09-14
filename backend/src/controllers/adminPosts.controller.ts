@@ -1,13 +1,21 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { prisma } from "../config/db";
 import * as blogPostModel from "../models/blogPost.model";
+import * as serviceModel from "../models/service.model";
 import { pathParam } from "./params";
 
 const POST_CONTENT_TYPES = ["PROJECT_RECAP", "CLIENT_STORY", "EDUCATIONAL", "STUDIO_NEWS"] as const;
 
 const postSchema = z.object({
-  slug: z.string().max(160).optional(),
+  // UI sends "" when the slug field is untouched — treat it the same way the cover
+  // field treats "" (normalize to undefined) so the titleEn-derived slug runs;
+  // explicit slugs still pass through unchanged. slugify is applied afterwards.
+  slug: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.string().max(160).optional(),
+  ),
   titleEn: z.string().min(1),
   titleRw: z.string().min(1),
   excerptEn: z.string().optional(),
@@ -103,20 +111,46 @@ export async function patchPost(req: Request, res: Response): Promise<void> {
     return;
   }
   const update: Prisma.BlogPostUncheckedUpdateInput = { ...data };
+  let finalSlug: string | undefined;
   if (data.slug !== undefined) {
-    update.slug = await blogPostModel.findFreeSlug(blogPostModel.slugify(data.slug), existing.id);
+    finalSlug = await blogPostModel.findFreeSlug(blogPostModel.slugify(data.slug), existing.id);
+    update.slug = finalSlug;
   }
   // First publish: set publishedAt. Unpublish or already-published → never touch it.
   if (data.published === true && existing.publishedAt === null) {
     update.publishedAt = new Date();
   }
-  const post = await blogPostModel.updateById(existing.id, update);
+  // Keep the deep-dive Service links in sync with the post lifecycle:
+  // unpublish clears every link (and wins over a simultaneous re-slug);
+  // a slug rename repoints links onto the final free-slug value. Everything
+  // else (first publish/republish, content edits) leaves links untouched.
+  const serviceWrites: Prisma.PrismaPromise<Prisma.BatchPayload>[] = [];
+  if (data.published === false && existing.published === true) {
+    serviceWrites.push(serviceModel.clearLinkedPostSlug(existing.slug));
+  } else if (data.slug !== undefined && finalSlug !== undefined && existing.slug !== finalSlug && data.published !== false) {
+    serviceWrites.push(serviceModel.repointLinkedPostSlug(existing.slug, finalSlug));
+  }
+  // Post write MUST be first — atomic with the service cleanup.
+  const [post] = await prisma.$transaction([
+    blogPostModel.updateById(existing.id, update),
+    ...serviceWrites,
+  ]);
   res.json(post);
 }
 
 export async function deletePost(req: Request, res: Response): Promise<void> {
+  const post = await blogPostModel.findById(pathParam(req, "id"));
+  if (!post) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
   try {
-    await blogPostModel.deleteById(pathParam(req, "id"));
+    // delete + link cleanup commit atomically; a concurrent delete still trips
+    // P2025 below (404), and the catch-back covers check-then-act races.
+    await prisma.$transaction([
+      blogPostModel.deleteById(post.id),
+      serviceModel.clearLinkedPostSlug(post.slug),
+    ]);
     res.json({ ok: true });
   } catch {
     res.status(404).json({ error: "NOT_FOUND" });
