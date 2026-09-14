@@ -158,8 +158,25 @@ export interface Testimonial {
   contentRw: string | null;
 }
 
+/** Who authored a testimonial — written by studio staff or submitted by a client. */
+export type TestimonialSource = "ADMIN" | "CLIENT";
+
+/** A client's own testimonial — GET /clients/testimonials/me and POST /clients/testimonials. */
+export interface ClientTestimonial {
+  id: string;
+  author: string;
+  role: string | null;
+  contentEn: string;
+  contentRw: string | null;
+  source: TestimonialSource;
+  published: boolean;
+  createdAt: string;
+}
+
 /** Full admin testimonial row (incl. drafts) — GET/POST/DELETE + PATCH {published} /admin/testimonials. */
 export interface AdminTestimonial extends Testimonial {
+  source: TestimonialSource;
+  client: { name: string; email: string } | null;
   published: boolean;
   createdAt: string;
 }
