@@ -30,6 +30,11 @@ enum NotificationKind {
   MAGIC_LINK
 }
 
+enum TestimonialSource {
+  ADMIN
+  CLIENT
+}
+
 enum PostContentType {
   PROJECT_RECAP
   CLIENT_STORY
@@ -57,6 +62,7 @@ model Client {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
   bookings            Booking[]
+  testimonials        Testimonial[]
 }
 
 model Service {
@@ -156,13 +162,18 @@ model ClientLogo {
 }
 
 model Testimonial {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   author    String
   role      String?
   contentEn String
   contentRw String?
-  published Boolean  @default(true)
-  createdAt DateTime @default(now())
+  published Boolean           @default(true)
+  source    TestimonialSource @default(ADMIN)
+  clientId  String?
+  client    Client?           @relation(fields: [clientId], references: [id])
+  createdAt DateTime          @default(now())
+
+  @@index([clientId])
 }
 
 model SiteSetting {

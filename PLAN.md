@@ -1,6 +1,6 @@
 # Creative Sound Studio — Project Plan (v1)
 
-> Status: IN BUILD — phases 1–9 done (booking engine, client portal, cream + showcase-first redesign, blog engine, admin panel completion, CI fast+nightly split). Phase 10 mostly done: security review complete + high-value fixes applied; remaining = commit & push → CI green, content (owner-blocked), deploy. Last updated: 2026-09-11
+> Status: IN BUILD — phases 1–12 done. Admin overhaul + content import + client testimonials all verified-by-dev — awaiting 3-part phased commit & push (user-approved) → CI green. Last updated: 2026-09-14
 
 ## Company & Founder Context
 - **Company**: Creative Sound Studio — Kigali, Rwanda. Media production: livestreaming, photography, videography (sound may be re-added later; name is legacy).
@@ -69,7 +69,9 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
 7. ✅ Blog engine: BlogPost model (EN/RW, views+likes), admin CRUD + drag-drop images, public /blog + post pages
 8. ✅ Admin panel completion: all CRUD + drag-and-drop upload (portfolio + blog), clients/logos/testimonials managers, WebP pipeline (commit 11d2c03)
 9. ✅ Docker + compose + GitHub Actions CI/CD (fast lint/build split from nightly full e2e; hosting deploy still pending — NO external deployment yet, session 2026-09-11)
-10. 🔄 Security review + hardening + frontend org — MOSTLY DONE (2026-09-11): security review complete — all cheap/high-value findings fixed & verified (C1 critical fixed, HS256 pin, atomic token consume, input validation, rate limits, CSP, non-root containers, npm audit 0); e2e green 25+1 on hardened stack (3× today); frontend org done (dead code removed, i18n drift closed, BRAND constant, UI primitives, components grouped). Remaining: commit & push close-out diff → CI green (incl. nightly #9); content (owner-blocked, see PENDING USER in project.md); deploy (VPS+compose per user decision).
+10. ✅ Security review + hardening + frontend org (2026-09-11): all cheap/high-value findings fixed & verified (C1 critical fixed, HS256 pin, atomic token consume, input validation, rate limits, CSP, non-root containers, npm audit 0); e2e green 25+1; frontend org done. Commit & push pending user approval (combined with admin overhaul).
+11. ✅ Admin overhaul — DONE, VERIFIED SHIPPABLE (2026-09-12): design language + full UI kit (globals.css tokens + lib/ui.ts), shell + tab architecture (?tab= URL routing, chrome-free admin via (site) route group, useAdminFetch/useSessionGuard), reorder API (PUT /admin/{services,portfolio,logos}/order — full-set raw array, dense sortOrder==index, SERIALIZABLE tx, 404/409), PUT /admin/testimonials/:id full edit, vitest toolchain (49/49 tests), full EN+RW i18n (~117 new admin keys, typed), 7 rewritten admin tabs + shared CollectionManager/AdminDialog, backend patches (slug normalization, upload guard, P2034→409), 36 e2e pass / 3 skip / 0 fail.
+12. ✅ Content import + Client testimonials (2026-09-14, verified-by-dev): (P1) `import-content.ts` — 25 logos (FAO→KC2, names pending founder), 6 portfolio items (7→13), founder image set, /app/uploads 79→111 files; (P2) `client_testimonials` schema + POST /clients/testimonials (5/hr/IP, duplicate→409) + GET /me + admin listAll with client join + /account 3-state form + admin Source badge + ~16 i18n keys. Backend 57/57, e2e 40/3/0. **Remaining: commit & push (3-part phased, user-approved) → CI green.**
 
 ## Secrets (never commit)
 - ZAVU_API_KEY (live) — user provided, keep in backend/.env (gitignored)
