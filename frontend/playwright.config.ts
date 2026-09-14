@@ -26,5 +26,11 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // "setup" logs in ONCE and writes e2e/.auth/admin.json (see e2e/auth.ts for
+  // the rate-limiter rationale). All spec files read that token instead of
+  // logging in per-file, so retries can never exhaust the 10/10min/IP budget.
+  projects: [
+    { name: "setup", testMatch: /admin\.auth\.setup\.ts/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+  ],
 });

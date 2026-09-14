@@ -1,4 +1,5 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import { API, getAdminToken } from "./auth";
 
 /**
  * redesign.spec.ts — E2E coverage for the picture-first redesign (Phase A+B).
@@ -18,7 +19,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * testimonials and e2e-post counts match their baselines.
  */
 
-const API = "http://localhost:4000/api";
 // Credentials from the environment (root .env via playwright.config.ts, or CI
 // env) — never hardcoded. Same contract as the other specs.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -44,7 +44,10 @@ interface PortfolioRow {
 let token: string;
 let baselineCategories: string[] = []; // multiset of item categories before the run
 let baselineTestimonials = -1; // testimonial count before the run (owner content may exist)
-let movedItem: { id: string; originalCategory: string } | null = null; // transient re-categorize (test 2)
+// Transient re-categorize (test 2): the import added several rows per
+// category, so the empty condition is manufactured by moving EVERY row of the
+// sparsest PUBLISHED canonical category → all of them must come back verbatim.
+let movedItems: { id: string; originalCategory: string }[] = [];
 
 const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
 
@@ -54,14 +57,13 @@ const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
 const isE2eAuthored = (t: { author: string; role: string | null }) =>
   t.author === "E2E Checker" || (t.role ?? "").startsWith("E2E ");
 
-async function adminLogin(request: APIRequestContext): Promise<string> {
-  const res = await request.post(`${API}/auth/login`, {
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-  });
-  if (!res.ok()) throw new Error(`admin login failed: ${res.status()} ${await res.text()}`);
-  return (await res.json()).token as string;
-}
+// Same idea for the admin-overhaul.mobile fixture: it creates a transient
+// E2E-titled portfolio item (published: false) while THIS spec runs in the
+// same worker pool. The owner catalog is what this spec must not disturb, so
+// the portfolio baselines compare ONLY non-"E2E " rows.
+const isE2ePortfolio = (i: { titleEn: string }) => i.titleEn.startsWith("E2E ");
 
+// Logins happen ONCE per suite in the "setup" project (e2e/admin.auth.setup.ts).
 async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
   const res = await request.get(`${API}${path}`, { headers: AUTH(token) });
   if (!res.ok()) throw new Error(`GET ${path} failed: ${res.status()} ${await res.text()}`);
@@ -99,9 +101,9 @@ test.describe("redesign journeys", () => {
   test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, "ADMIN_EMAIL/ADMIN_PASSWORD not set");
 
   test.beforeAll(async ({ request }) => {
-    token = await adminLogin(request); // exactly one admin API login per run
+    token = getAdminToken(); // logged in once by the "setup" project
     const items = await apiGet<PortfolioRow[]>(request, "/admin/portfolio");
-    baselineCategories = items.map((i) => i.category ?? "");
+    baselineCategories = items.filter((i) => !isE2ePortfolio(i)).map((i) => i.category ?? "");
     baselineTestimonials = (
       await apiGet<Array<{ author: string; role: string | null }>>(request, "/admin/testimonials")
     ).filter((t) => !isE2eAuthored(t)).length;
@@ -110,30 +112,34 @@ test.describe("redesign journeys", () => {
   test.afterAll(async ({ request }, workerInfo) => {
     if (!token) return; // suite skipped before login — nothing to verify
 
-    // Defensive restore: if the transient re-categorize leaked past its
+    // Defensive restore: if a transient re-categorize leaked past its
     // finally block (hard failure between mutate and restore), undo it here.
-    if (movedItem) {
+    for (const m of movedItems) {
       const items = await apiGet<Array<Record<string, unknown>>>(request, "/admin/portfolio");
-      const row = items.find((i) => i.id === movedItem!.id);
-      if (row && row.category !== movedItem.originalCategory) {
+      const row = items.find((i) => i.id === m.id);
+      if (row && row.category !== m.originalCategory) {
         console.warn(
           `[redesign.spec] afterAll restoring drifted category on "${row.titleEn}" ` +
-            `${String(row.category)} → ${movedItem.originalCategory}`,
+            `${String(row.category)} → ${m.originalCategory}`,
         );
-        await putPortfolioCategory(request, row, movedItem.originalCategory);
+        await putPortfolioCategory(request, row, m.originalCategory);
       }
     }
+    movedItems = [];
 
-    // Baseline confirmation: catalog size + category multiset untouched.
+    // Baseline confirmation: catalog size + category multiset untouched —
+    // over the OWNER rows only (parallel specs may hold a transient "E2E "
+    // fixture at this exact moment, which must not skew the drift check).
     const items = await apiGet<PortfolioRow[]>(request, "/admin/portfolio");
-    expect(items, `portfolio count must stay at baseline (${baselineCategories.length})`).toHaveLength(
+    const ownerItems = items.filter((i) => !isE2ePortfolio(i));
+    expect(ownerItems, `owner portfolio count must stay at baseline (${baselineCategories.length})`).toHaveLength(
       baselineCategories.length,
     );
     expect(
-      [...items.map((i) => i.category ?? "")].sort(),
+      [...ownerItems.map((i) => i.category ?? "")].sort(),
       "category multiset must be restored exactly",
     ).toEqual([...baselineCategories].sort());
-    expect(items.every((i) => CANONICAL_CATEGORIES.includes(i.category as never))).toBe(true);
+    expect(ownerItems.every((i) => CANONICAL_CATEGORIES.includes(i.category as never))).toBe(true);
 
     // No testimonial/e2e-blog drift either (cheap cross-checks for the report).
     // Parallel specs legitimately create/delete E2E-authored testimonials, so
@@ -143,8 +149,17 @@ test.describe("redesign journeys", () => {
       testimonials.filter((t) => !isE2eAuthored(t)),
       "non-E2E testimonials must return to baseline",
     ).toHaveLength(baselineTestimonials);
-    const posts = await apiGet<Array<{ slug: string }>>(request, "/admin/posts");
-    expect(posts.filter((p) => p.slug.startsWith("e2e-")), "no e2e blog posts may leak").toHaveLength(0);
+    // blog.spec (running in parallel) cleans its own e2e-* posts in ITS
+    // afterAll — poll briefly instead of asserting instantly (cross-spec race).
+    await expect
+      .poll(
+        async () => {
+          const latest = await apiGet<Array<{ slug: string }>>(request, "/admin/posts");
+          return latest.filter((p) => p.slug.startsWith("e2e-")).length;
+        },
+        { timeout: 15000, intervals: [250, 500, 1000, 2000, 2000, 2000, 3000, 4000] },
+      )
+      .toBe(0);
   });
 
   test("hero renders full-viewport with visible controls", async ({ page }) => {
@@ -172,32 +187,95 @@ test.describe("redesign journeys", () => {
     expect(await hero.getByRole("button", { name: /^Slide \d+ \/ \d+$/ }).count()).toBeGreaterThanOrEqual(2);
   });
 
+  test("live content import: clients wall logos, full portfolio grid and 5-slide hero", async ({ page, request }) => {
+    // HARDENING vs the content import: the DB now ships 40 client logos
+    // (incl. text-only wordmarks) and 13 published portfolio items. The wall
+    // has NO published flag — /public/logos returns everything, so all rows
+    // must render. Assert dynamically against the live catalog, never literals.
+    const logos = await apiGet<Array<{ id: string; imageUrl: string | null }>>(request, "/public/logos");
+    const imaged = logos.filter((l) => l.imageUrl).length;
+    expect(imaged, "import ships 25+ real logo images").toBeGreaterThanOrEqual(25);
+
+    await page.goto("/");
+
+    const wall = page.locator("section").filter({ has: page.getByRole("heading", { name: "Trusted by" }) });
+    await expect(wall.getByRole("heading", { name: "Trusted by" })).toBeVisible({ timeout: 10000 });
+    expect(await wall.locator("ul > li").count()).toBe(logos.length); // all rows show
+    expect(await wall.locator("img").count()).toBe(imaged); // one <img> per image logo; wordmarks are spans
+    expect(await wall.locator("img").count()).toBeGreaterThanOrEqual(25);
+
+    // Homepage portfolio grid renders every published item (13 post-import).
+    const portfolio = await apiGet<Array<{ titleEn: string }>>(request, "/public/portfolio");
+    expect(portfolio.length).toBeGreaterThanOrEqual(13);
+    const grid = page.locator("#portfolio .grid-cols-1 > button");
+    await expect(grid.first()).toBeVisible({ timeout: 10000 });
+    expect(await grid.count()).toBe(portfolio.length);
+
+    // Spot-check two imported titles are actually on the grid.
+    for (const title of ["Africa Summit", "CEO of AERG — Portrait"]) {
+      await expect(page.getByRole("button", { name: title })).toBeVisible();
+    }
+
+    // The imported covers joined the hero carousel. The hero renders at most
+    // intro + (MAX_SLIDES-2) cover slides, so the live denominator is not
+    // necessarily "05" — assert counter↔slide-button agreement instead of
+    // hardcoding a slide count.
+    const hero = page.locator('section[aria-roledescription="carousel"]');
+    const counter = hero.getByText(/^\d{2} \/ \d{2}$/).first();
+    await expect(counter).toBeVisible();
+    const slideCount = await hero.getByRole("button", { name: /^Slide \d+ \/ \d+$/ }).count();
+    expect(slideCount, "hero carries the intro slide plus imported covers").toBeGreaterThanOrEqual(3);
+    await expect(counter).toHaveText(new RegExp(`^\\d{2} / ${String(slideCount).padStart(2, "0")}$`));
+  });
+
   test("portfolio filter shows honest empty state and recovers", async ({ page, request }) => {
-    // Every canonical category currently holds ≥1 item, so manufacture the
-    // empty condition: move the Portraits item into Events for the duration
-    // of this test, then restore it verbatim.
-    const items = await apiGet<{ id: string; category: string }[]>(request, "/admin/portfolio");
-    const portraits = items.find((i: { category: string }) => i.category === "Portraits");
-    expect(portraits, "precondition: a Portraits item exists").toBeTruthy();
-    movedItem = { id: String(portraits!.id), originalCategory: "Portraits" };
+    // The content import filled every canonical category (Portraits alone now
+    // holds 4 rows), so manufacture the empty condition DYNAMICALLY: take the
+    // sparsest canonical category among the PUBLISHED rows (never the transient
+    // "E2E " admin fixture) and temporarily move ALL of its rows to another
+    // canonical category, then restore them verbatim.
+    const published = await apiGet<Array<{ id: string; titleEn: string; category: string | null }>>(
+      request,
+      "/public/portfolio",
+    );
+    const byCategory = new Map<string, Array<{ id: string; titleEn: string; category: string | null }>>();
+    for (const it of published) {
+      const c = it.category ?? "";
+      if (CANONICAL_CATEGORIES.includes(c as never)) {
+        byCategory.set(c, [...(byCategory.get(c) ?? []), it]);
+      }
+    }
+    const choice = [...byCategory.entries()].sort((a, b) => a[1].length - b[1].length)[0];
+    expect(choice, "precondition: at least one canonical category has published rows").toBeTruthy();
+    if (!choice) return;
+    const [emptyCategory, rowsToMove] = choice;
+    const targetCategory = emptyCategory === "Events" ? "Corporate" : "Events";
+    movedItems = rowsToMove.map((r) => ({ id: r.id, originalCategory: r.category ?? "" }));
+
     try {
-      await putPortfolioCategory(request, portraits!, "Events");
+      for (const r of rowsToMove) {
+        await putPortfolioCategory(request, r, targetCategory);
+      }
 
       // Fresh SSR navigation so the grid sees the updated catalog.
       await page.goto("/portfolio");
       const gridRoot = page.locator("main"); // single PortfolioGrid instance on this page
 
       // All items visible under "All" (the grid is the only .grid-cols-1 on this page).
+      // The expected count comes from /public/portfolio (published rows only):
+      // the ADMIN list may transiently hold an unpublished "E2E " fixture from
+      // the parallel admin-overhaul mobile test, which never renders here.
       const cards = gridRoot.locator(".grid-cols-1 > button");
       await expect(cards.first()).toBeVisible({ timeout: 10000 });
       const total = await cards.count();
-      expect(total).toBe(items.length);
+      const publishedCount = (await apiGet<unknown[]>(request, "/public/portfolio")).length;
+      expect(total).toBe(publishedCount);
 
-      // Click the now-dead "Portraits" pill → honest empty state, NOT a
+      // Click the now-dead category pill → honest empty state, NOT a
       // silent fallback to all items.
-      const portraitsPill = gridRoot.getByRole("button", { name: "Portraits", exact: true });
-      await portraitsPill.click();
-      await expect(portraitsPill).toHaveClass(/bg-brass-deep/); // active-pill styling
+      const deadPill = gridRoot.getByRole("button", { name: emptyCategory, exact: true });
+      await deadPill.click();
+      await expect(deadPill).toHaveClass(/bg-brass-deep/); // active-pill styling
       await expect(gridRoot.getByText("No work in this category yet")).toBeVisible();
       await expect(cards).toHaveCount(0); // honesty: zero cards rendered
 
@@ -208,13 +286,15 @@ test.describe("redesign journeys", () => {
       expect(await cards.count()).toBe(total); // everything back
       await expect(gridRoot.getByText("No work in this category yet")).toHaveCount(0);
     } finally {
-      // Restore the owner row even on assertion failure.
-      const fresh = await apiGet<{ id: string; category: string }[]>(request, "/admin/portfolio");
-      const row = fresh.find((r: { id: string; category: string }) => r.id === movedItem!.id);
-      if (row && row.category !== movedItem.originalCategory) {
-        await putPortfolioCategory(request, row, movedItem.originalCategory);
+      // Restore every owner row even on assertion failure.
+      const fresh = await apiGet<Array<{ id: string; category: string | null }>>(request, "/admin/portfolio");
+      for (const m of movedItems) {
+        const row = fresh.find((r: { id: string; category: string | null }) => r.id === m.id);
+        if (row && row.category !== m.originalCategory) {
+          await putPortfolioCategory(request, row, m.originalCategory);
+        }
       }
-      movedItem = null;
+      movedItems = [];
     }
   });
 
@@ -288,26 +368,34 @@ test.describe("redesign journeys", () => {
     // by [category asc, sortOrder asc], so a successful category save MOVES
     // the card and any positional locator would reopen a different row.
     const rows = await apiGet<Record<string, unknown>[]>(request, "/admin/portfolio");
-    const anchor = rows.find((r) => r.category === "Corporate") ?? rows[0];
-    const anchorTitle = String(anchor.titleEn);
-    const originalCategory = String(anchor.category);
+    // Never anchor the round-trip on a parallel spec's transient "E2E " row
+    // (admin-overhaul mobile creates one under Corporate) — pick real owner
+    // content, with Corporate preferred so the test exercises a canonical save.
+    const anchor =
+      rows.find((r) => r.category === "Corporate" && !String(r.titleEn).startsWith("E2E ")) ??
+      rows.find((r) => !String(r.titleEn).startsWith("E2E "));
+    expect(anchor, "precondition: owner-authored portfolio content exists").toBeTruthy();
+    const anchorTitle = String(anchor!.titleEn);
+    const originalCategory = String(anchor!.category);
     // Round-trip target chosen so the final state equals the starting state.
     const target = originalCategory === "Weddings" ? "Corporate" : "Weddings";
 
-    const card = page
-      .locator(".group")
-      .filter({ has: page.locator(`img[alt="${anchorTitle}"]`) });
+    // The overhauled grid dropped the hover-only `.group` card wrapper (QA #4):
+    // actions are always visible on a scrim/action strip, so anchor the card by
+    // its cover's img[alt=title] and climb to the card div.
+    const card = page.locator(`img[alt="${anchorTitle}"]`).locator("..");
     const editInCard = card.getByRole("button", { name: "Edit", exact: true });
 
     const openEditor = async () => {
       await expect(editInCard).toBeVisible({ timeout: 10000 });
-      await editInCard.hover(); // reveal the hover overlay like a user would
       await editInCard.click();
       await expect(form).toBeVisible();
     };
 
     const form = page.locator("form");
-    const catSelect = form.locator("label", { hasText: "Category *" }).locator("..").locator("select");
+    // The overhauled admin-kit Field renders the label without the asterisk
+    // that the old editor appended for required fields.
+    const catSelect = form.locator("label", { hasText: "Category" }).locator("..").locator("select");
 
     await openEditor();
     await expect(catSelect).toHaveValue(originalCategory);
@@ -320,14 +408,17 @@ test.describe("redesign journeys", () => {
       expect(optionValues, `canonical option ${c} present`).toContain(c);
     }
 
-    // Change → Save → form closes.
+    // Change → Save → the overhauled editor persists with a "Saved" label
+    // (no timers, matches blog/portfolio editors) → dismiss it to reload list.
     await catSelect.selectOption(target);
     await form.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(form).toHaveCount(0, { timeout: 10000 });
+    await expect(form.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 10000 });
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(form).toHaveCount(0);
 
     // Persisted server-side…
     const saved = (await apiGet<Record<string, unknown>[]>(request, "/admin/portfolio")).find(
-      (r) => r.id === anchor.id,
+      (r) => r.id === anchor!.id,
     );
     expect(saved?.category).toBe(target);
 
@@ -338,9 +429,11 @@ test.describe("redesign journeys", () => {
     // Restore the original category (keeps the DB baseline intact).
     await catSelect.selectOption(originalCategory);
     await form.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(form).toHaveCount(0, { timeout: 10000 });
+    await expect(form.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 10000 });
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(form).toHaveCount(0);
     const restored = (await apiGet<Record<string, unknown>[]>(request, "/admin/portfolio")).find(
-      (r) => r.id === anchor.id,
+      (r) => r.id === anchor!.id,
     );
     expect(restored?.category).toBe(originalCategory);
   });

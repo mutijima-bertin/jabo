@@ -1,6 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
-
-const API = "http://localhost:4000/api";
+import { API, getAdminToken } from "./auth";
 // Credentials come from the environment (root .env via playwright.config.ts,
 // or CI env) — never hardcoded. Same contract as blog.spec.ts.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
@@ -36,13 +35,7 @@ let baselineTestimonials = -1;
 
 const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
 
-async function adminLogin(request: APIRequestContext): Promise<string> {
-  const res = await request.post(`${API}/auth/login`, {
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-  });
-  if (!res.ok()) throw new Error(`admin login failed: ${res.status()} ${await res.text()}`);
-  return (await res.json()).token as string;
-}
+// Logins happen ONCE per suite in the "setup" project (e2e/admin.auth.setup.ts).
 
 async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
   const res = await request.get(`${API}${path}`, { headers: AUTH(token) });
@@ -52,6 +45,10 @@ async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
 
 // Remove anything this spec's namespace could have left behind (crashed run,
 // interrupted retry) so the baseline captured afterwards is trustworthy.
+// Only rows THIS spec authors are swept: a broad role.startsWith("E2E ") match
+// would delete live fixtures owned by parallel specs — client-testimonial.spec
+// (role "E2E Client Testimonial …") holds its row across three tests, so it
+// must survive a sweep that runs mid-suite.
 async function sweepE2ECreated(request: APIRequestContext): Promise<void> {
   const logos = await apiGet<AdminLogo[]>(request, "/admin/logos").catch(() => []);
   for (const l of logos) {
@@ -61,11 +58,18 @@ async function sweepE2ECreated(request: APIRequestContext): Promise<void> {
   }
   const testimonials = await apiGet<AdminTestimonial[]>(request, "/admin/testimonials").catch(() => []);
   for (const t of testimonials) {
-    if (t.author === AUTHOR || (t.role ?? "").startsWith("E2E ")) {
+    if (t.author === AUTHOR || (t.role ?? "").includes(`E2E ${RUN}`)) {
       await request.delete(`${API}/admin/testimonials/${t.id}`, { headers: AUTH(token) });
     }
   }
 }
+
+// Parallel specs (client-testimonial.spec role "E2E Client Testimonial …",
+// admin-overhaul.spec role "E2E Overhaul …") create/delete their own rows while
+// this file runs, so testimonial baselines and end-of-test counts must compare
+// ONLY the owner catalog — the same convention redesign.spec's isE2eAuthored uses.
+const isE2eRow = (t: AdminTestimonial): boolean =>
+  t.author === AUTHOR || (t.role ?? "").startsWith("E2E ");
 
 async function adminLoginViaUi(page: Page): Promise<void> {
   await page.goto("/admin/login");
@@ -97,10 +101,11 @@ test.describe("phase 8 admin features", () => {
   test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, "ADMIN_EMAIL/ADMIN_PASSWORD not set");
 
   test.beforeAll(async ({ request }) => {
-    token = await adminLogin(request); // exactly one admin API login per run
+    token = getAdminToken(); // logged in once by the "setup" project
     await sweepE2ECreated(request); // defend against leftovers from a crashed run
     baselineLogos = (await apiGet<AdminLogo[]>(request, "/admin/logos")).length;
-    baselineTestimonials = (await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).length;
+    baselineTestimonials = (await apiGet<AdminTestimonial[]>(request, "/admin/testimonials"))
+      .filter((t) => !isE2eRow(t)).length;
   });
 
   test.afterAll(async ({ request }) => {
@@ -110,7 +115,7 @@ test.describe("phase 8 admin features", () => {
     // Constraint: the suite leaves the catalog exactly at its starting size.
     expect(logos, `"Client logos" must return to baseline (${baselineLogos})`).toHaveLength(baselineLogos);
     expect(
-      testimonials,
+      testimonials.filter((t) => !isE2eRow(t)),
       `"Testimonials" must return to baseline (${baselineTestimonials})`,
     ).toHaveLength(baselineTestimonials);
   });
@@ -189,10 +194,12 @@ test.describe("phase 8 admin features", () => {
       `[soft] uploaded PNG should be stored as .webp — actual imageUrl: ${imageUrl}`,
     ).toBeTruthy();
 
-    // Delete it (window.confirm → auto-accept) and the wall returns to baseline.
-    page.on("dialog", (d) => void d.accept());
+    // Delete it (inline confirm: Delete → "Yes, delete") and the wall returns
+    // to baseline. The admin kit replaced window.confirm with an in-place
+    // confirmation panel, so the old page.on("dialog") hook no longer applies.
     const card = nameEl.locator("xpath=..");
     await card.getByRole("button", { name: "Delete" }).click();
+    await card.getByRole("button", { name: "Yes, delete" }).click();
     await expect(nameEl).toHaveCount(0, { timeout: 10000 });
     expect(await apiGet<AdminLogo[]>(request, "/admin/logos")).toHaveLength(before);
   });
@@ -215,7 +222,7 @@ test.describe("phase 8 admin features", () => {
     const testimonialsSection = adminSection(page, "Testimonials");
     await expect(testimonialsSection.getByRole("heading", { name: "Testimonials" })).toBeVisible({ timeout: 10000 });
 
-    await testimonialsSection.getByRole("button", { name: "+ New testimonial" }).click();
+    await testimonialsSection.getByRole("button", { name: "New testimonial" }).click();
     const form = testimonialsSection.locator("form");
     await expect(formField(form, "Author *")).toBeVisible();
     await formField(form, "Author *").fill(AUTHOR);
@@ -252,12 +259,14 @@ test.describe("phase 8 admin features", () => {
     // testimonials may remain, so don't assert the literal empty state).
     await page.goto("/admin");
     await openAdminTab(page, "Settings");
-    page.on("dialog", (d) => void d.accept());
     const rowFinal = page.locator("tbody tr").filter({ hasText: AUTHOR });
     await expect(rowFinal).toBeVisible({ timeout: 10000 });
     await rowFinal.getByRole("button", { name: "Delete" }).click();
+    await rowFinal.getByRole("button", { name: "Yes, delete" }).click();
     await expect(page.locator("tbody tr").filter({ hasText: AUTHOR })).toHaveCount(0, { timeout: 10000 });
-    expect(await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).toHaveLength(baselineTestimonials);
+    expect(
+      (await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).filter((t) => !isE2eRow(t)),
+    ).toHaveLength(baselineTestimonials);
   });
 
   test("draft testimonial never reaches the homepage", async ({ page, request }) => {
@@ -270,7 +279,7 @@ test.describe("phase 8 admin features", () => {
     const testimonialsSection = adminSection(page, "Testimonials");
     await expect(testimonialsSection.getByRole("heading", { name: "Testimonials" })).toBeVisible({ timeout: 10000 });
 
-    await testimonialsSection.getByRole("button", { name: "+ New testimonial" }).click();
+    await testimonialsSection.getByRole("button", { name: "New testimonial" }).click();
     const form = testimonialsSection.locator("form");
     await expect(formField(form, "Author *")).toBeVisible();
     await formField(form, "Author *").fill(AUTHOR);
@@ -279,24 +288,26 @@ test.describe("phase 8 admin features", () => {
     await form.getByRole("checkbox").uncheck(); // explicitly a draft
     await form.getByRole("button", { name: "Create" }).click();
 
-    // List marks it Draft and dims the row.
+    // List marks it Draft; the row's toggle offers to publish it.
     const row = page.locator("tbody tr").filter({ hasText: AUTHOR });
     await expect(row).toBeVisible({ timeout: 15000 });
     await expect(row).toContainText("Draft");
-    await expect(row).toHaveClass(/opacity-60/);
+    await expect(row.getByRole("button", { name: "Publish" })).toBeVisible();
 
     // Drafts stay off the public site entirely.
     await page.goto("/");
     await expect(page.getByText(`Unpublished draft quote ${RUN}.`)).toHaveCount(0);
 
-    // Clean up through the UI (confirm dialog) → our row is gone.
+    // Clean up through the UI (inline confirm) → our row is gone.
     await page.goto("/admin");
     await openAdminTab(page, "Settings");
-    page.on("dialog", (d) => void d.accept());
     const rowFinal = page.locator("tbody tr").filter({ hasText: AUTHOR });
     await expect(rowFinal).toBeVisible({ timeout: 10000 });
     await rowFinal.getByRole("button", { name: "Delete" }).click();
+    await rowFinal.getByRole("button", { name: "Yes, delete" }).click();
     await expect(page.locator("tbody tr").filter({ hasText: AUTHOR })).toHaveCount(0, { timeout: 10000 });
-    expect(await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).toHaveLength(baselineTestimonials);
+    expect(
+      (await apiGet<AdminTestimonial[]>(request, "/admin/testimonials")).filter((t) => !isE2eRow(t)),
+    ).toHaveLength(baselineTestimonials);
   });
 });

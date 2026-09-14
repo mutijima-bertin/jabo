@@ -1,6 +1,5 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
-
-const API = "http://localhost:4000/api";
+import { API, getAdminToken } from "./auth";
 // Credentials come from the environment (root .env via playwright.config.ts,
 // or CI env) — never hardcoded. The admin account is seeded from these same
 // variables, so CI's placeholder values self-provision.
@@ -31,13 +30,7 @@ let published: PostRow | null = null; // set by the admin-create test
 
 const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
 
-async function adminLogin(request: APIRequestContext): Promise<string> {
-  const res = await request.post(`${API}/auth/login`, {
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-  });
-  if (!res.ok()) throw new Error(`admin login failed: ${res.status()} ${await res.text()}`);
-  return (await res.json()).token as string;
-}
+// Logins happen ONCE per suite in the "setup" project (e2e/admin.auth.setup.ts).
 
 async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
   const res = await request.get(`${API}${path}`, { headers: AUTH(token) });
@@ -50,7 +43,11 @@ async function apiGet<T>(request: APIRequestContext, path: string): Promise<T> {
 async function deleteE2EPosts(request: APIRequestContext): Promise<void> {
   const posts = await apiGet<PostRow[]>(request, "/admin/posts").catch(() => []);
   for (const p of posts) {
-    if (p.slug.startsWith("e2e-")) {
+    // Every row this suite creates carries an "e2e-" slug (explicit or
+    // title-derived now that the backend derives slugs server-side). The
+    // titleEn "E2E " prefix is a belt-and-braces sweep for anything a
+    // pre-fix run could have leaked under a fallback "post"-style slug.
+    if (p.slug.startsWith("e2e-") || p.titleEn.startsWith("E2E ")) {
       await request.delete(`${API}/admin/posts/${p.id}`, { headers: AUTH(token) });
     }
   }
@@ -72,18 +69,14 @@ function readCounter(page: Page, word: string): Promise<number> {
     .then((t) => parseInt(t ?? "0", 10));
 }
 
-async function adminLoginViaUi(page: Page): Promise<void> {
-  await page.goto("/admin/login");
-  await page.getByPlaceholder("admin@creativesoundstudio.rw").fill(ADMIN_EMAIL);
-  await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: /Sign in/i }).click();
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 10000 });
-}
-
+// The UI-login path itself is covered by booking.spec ("admin login works")
+// and admin-features.spec ("clients tab"); this file's admin flows reuse the
+// beforeAll API token to stay well under the auth rate limiter (10 req/10min/IP)
+// during retries.
 async function openBlogTab(page: Page): Promise<void> {
   await page.locator("aside").getByRole("button", { name: "Blog", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Blog posts" })).toBeVisible({ timeout: 10000 });
-  await expect(page.getByRole("button", { name: "+ New post" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Blog", exact: true })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("button", { name: "New post", exact: true })).toBeVisible();
 }
 
 test.describe("blog journeys", () => {
@@ -94,7 +87,7 @@ test.describe("blog journeys", () => {
   test.skip(!ADMIN_EMAIL || !ADMIN_PASSWORD, "ADMIN_EMAIL/ADMIN_PASSWORD not set");
 
   test.beforeAll(async ({ request }) => {
-    token = await adminLogin(request);
+    token = getAdminToken(); // logged in once by the "setup" project
     await deleteE2EPosts(request); // defend against leftovers from a crashed run
   });
 
@@ -125,10 +118,16 @@ test.describe("blog journeys", () => {
   });
 
   test("admin creates a published post through the Blog tab", async ({ page, request }) => {
-    await adminLoginViaUi(page);
+    // Use the beforeAll API token instead of a second UI login — the login
+    // page itself is already covered by booking.spec and admin-features.spec,
+    // and the auth limiter (10 req/10min/IP) makes extra logins risky under
+    // retries.
+    await page.addInitScript((t) => localStorage.setItem("css_admin_token", t), token);
+    await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 10000 });
     await openBlogTab(page);
 
-    await page.getByRole("button", { name: "+ New post" }).click();
+    await page.getByRole("button", { name: "New post", exact: true }).click();
     const form = page.locator("form").first();
     await expect(editorField(form, "Title (EN)")).toBeVisible();
 
@@ -140,16 +139,30 @@ test.describe("blog journeys", () => {
     await editorField(form, "Excerpt (RW)").fill(`E2E excerpt RW ${RUN}`);
     await editorField(form, "Content (RW)", "textarea").fill(`## Amakuru\n\nUmubiri wa test ${RUN}.`);
     // Cover upload left empty → public card falls back to the soundwave placeholder.
+    // Slug: the UI always sends the slug input; the backend now preprocesses
+    // "" → undefined so the titleEn-derived slug runs (slug fix). The explicit
+    // slug below is PURE determinism for the public /blog/<slug> link — the
+    // derived-slug path is proved by the draft test (title-created post →
+    // slugify(titleEn), never the old "post"/"post-N" fallback).
+    await editorField(form, "Slug").fill(RUN_SLUG);
     await form.locator("select").selectOption({ label: "Client story" });
     await form.getByLabel("Published").check();
     await form.getByRole("button", { name: "Create" }).click();
 
-    // Editor unmounts and the refreshed list shows the new row.
+    // The overhauled editor no longer auto-unmounts on save: it stays open and
+    // confirms with a "Saved" submit label + success banner (no timers — spec §7.2),
+    // so the row only becomes visible once the editor is dismissed.
+    await expect(form.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 15000 });
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.locator("form").first()).toHaveCount(0);
+
+    // The refreshed list shows the new row. The overhauled table dropped the
+    // slug column (Title/Type/Status/Updated/Actions), so the slug is verified
+    // below via the admin API instead of the DOM.
     const row = page.locator("tbody tr").filter({ hasText: RUN_TITLE });
     await expect(row).toBeVisible({ timeout: 15000 });
     await expect(row).toContainText("Client story");
     await expect(row).toContainText("Published");
-    await expect(row).toContainText(`/${RUN_SLUG}`); // slug was auto-derived from titleEn
 
     // Grab the server row for the detail/views/likes tests.
     const all = await apiGet<PostRow[]>(request, "/admin/posts");
@@ -217,6 +230,11 @@ test.describe("blog journeys", () => {
   });
 
   test("draft posts never reach the public site", async ({ page, request }) => {
+    // slug: "" mimics exactly what the admin editor sends for an untouched Slug
+    // field. The backend preprocesses "" → undefined and derives
+    // slugify(titleEn), so the created row MUST carry the title-derived slug —
+    // never the old "post"/"post-N" fallback. This is the E2E proof for the
+    // backend slug-normalization fix.
     const res = await request.post(`${API}/admin/posts`, {
       headers: AUTH(token),
       data: {
@@ -225,12 +243,14 @@ test.describe("blog journeys", () => {
         contentEn: `Draft body ${RUN}`,
         contentRw: `Umubiri w'inyandiko ${RUN}`,
         contentType: "STUDIO_NEWS",
+        slug: "",
         published: false,
       },
     });
     expect(res.status()).toBe(201);
     const created = (await res.json()) as PostRow;
-    expect(created.slug).toBe(DRAFT_SLUG);
+    expect(created.slug, "slug is derived from titleEn, not the UI ''").toBe(DRAFT_SLUG);
+    expect(created.slug, "title-created post must never get the 'post'/'post-N' fallback").not.toMatch(/^post(-\d+)?$/);
 
     // Not in the public list…
     const list = await apiGet<PostRow[]>(request, "/public/posts");
@@ -247,6 +267,10 @@ test.describe("blog journeys", () => {
   });
 
   test("admin edit updates the card; delete restores the empty state", async ({ page, request }) => {
+    // QA #1 regression proof: edits round-trip through PATCH /admin/posts/:id
+    // (AdminBlog.tsx now uses adminApi.patch, and the editor stays open with a
+    // "Saved" label until dismissed). The renamed title must survive save +
+    // reload all the way to the public index.
     expect(published, "runs after the admin-create test").not.toBeNull();
 
     // Reuse the API token instead of a second UI login (login already covered above).
@@ -262,6 +286,10 @@ test.describe("blog journeys", () => {
     await expect(editorField(form, "Title (EN)")).toHaveValue(RUN_TITLE);
     await editorField(form, "Title (EN)").fill(RENAMED_TITLE);
     await form.getByRole("button", { name: "Save" }).click();
+    // Same persisted-editor pattern as the create flow: Saved label → dismiss.
+    await expect(form.getByRole("button", { name: "Saved" })).toBeVisible({ timeout: 15000 });
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.locator("form").first()).toHaveCount(0);
 
     row = page.locator("tbody tr").filter({ hasText: RENAMED_TITLE });
     await expect(row).toBeVisible({ timeout: 15000 });
@@ -272,14 +300,14 @@ test.describe("blog journeys", () => {
     await expect(page.getByRole("heading", { name: RENAMED_TITLE })).toBeVisible();
     await expect(page.getByRole("heading", { name: RUN_TITLE })).toHaveCount(0);
 
-    // --- Delete everything the suite created (UI delete + confirm dialog). ---
+    // --- Delete everything the suite created (UI delete + inline confirm). ---
     await page.goto("/admin");
     await openBlogTab(page);
-    page.on("dialog", (d) => void d.accept());
     for (const title of [RENAMED_TITLE, DRAFT_TITLE]) {
       const r = page.locator("tbody tr").filter({ hasText: title });
       await expect(r).toBeVisible({ timeout: 10000 });
       await r.getByRole("button", { name: "Delete" }).click();
+      await r.getByRole("button", { name: "Yes, delete" }).click();
       await expect(page.locator("tbody tr").filter({ hasText: title })).toHaveCount(0, { timeout: 10000 });
     }
     // The literal empty state only applies when no real content exists —
