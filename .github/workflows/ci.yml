@@ -11,7 +11,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://css:css123@localhost:5432/creativesoundstudio
       APP_URL: http://localhost:3000
-      JWT_SECRET: ci-secret
+      JWT_SECRET: ci-e2e-secret-0123456789abcdefghijklmnop
       MAGIC_LINK_TTL_HOURS: "168"
     steps:
       - uses: actions/checkout@v5
@@ -78,13 +78,13 @@ jobs:
           # Required by compose's ${ADMIN_EMAIL:?…} / ${JWT_SECRET:?…}
           ADMIN_EMAIL: ci@example.com
           ADMIN_PASSWORD: ci-password
-          JWT_SECRET: ci-secret
+          JWT_SECRET: ci-e2e-secret-0123456789abcdefghijklmnop
         run: docker compose config --quiet
       - name: Build backend and frontend images
         env:
           ADMIN_EMAIL: ci@example.com
           ADMIN_PASSWORD: ci-password
-          JWT_SECRET: ci-secret
+          JWT_SECRET: ci-e2e-secret-0123456789abcdefghijklmnop
         run: docker compose build backend frontend
 
   # -----------------------------------------------------------------------
