@@ -14,6 +14,8 @@
 - **Live stack (local docker):** frontend :3000, backend :4000, postgres. Running the latest code.
 - **Not deployed anywhere yet.** No domain, no live hosting. SMTP + Zavu + domain = next phase.
 
+**Nightly E2E:** was red every night Sep 4→14 (CI `JWT_SECRET` below the backend's 32-char guard → seed step died). Fixed in the workflows on 2026-09-14; next night's cron (02:00 UTC) confirms green.
+
 ---
 
 ## What the site has now (one-view sell)
