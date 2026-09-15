@@ -8,7 +8,19 @@ const createBookingSchema = z.object({
   serviceId: z.string().min(1),
   contactName: z.string().min(2, "Name is required").max(120),
   contactEmail: z.string().email("A valid email is required"),
-  contactPhone: z.string().regex(/^\+[1-9]\d{7,14}$/, "Phone must be in international format, e.g. +2507xxxxxxxx").optional().or(z.literal("")),
+  contactPhone: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? "").replace(/\s+/g, ""))
+    .pipe(
+      z
+        .string()
+        .refine((v) => v === "" || /^\+[1-9]\d{7,14}$/.test(v), {
+          message: "Phone must be a valid international number, e.g. +2507XXXXXXXX",
+        }),
+    )
+    // Empty/whitespace-only → undefined so the service's `input.contactPhone ?? null` stores null.
+    .transform((v) => (v === "" ? undefined : v)),
   eventDate: z
     .string()
     .optional()

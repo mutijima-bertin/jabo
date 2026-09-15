@@ -149,7 +149,7 @@ export function AdminBookings({ token }: { token: string }) {
         </div>
       ) : (
         <div className={cx(tableScrollWrap, "mt-6")}>
-          <table className={cx(table, "min-w-[840px]")}>
+          <table className={cx(table, "min-w-[1100px]")}>
             <thead className={theadRow}>
               <tr>
                 <th scope="col" className={thCls}>
@@ -160,6 +160,15 @@ export function AdminBookings({ token }: { token: string }) {
                 </th>
                 <th scope="col" className={thCls}>
                   {t("admin_bookings_col_service")}
+                </th>
+                <th scope="col" className={thCls}>
+                  {t("admin_bookings_col_event_date")}
+                </th>
+                <th scope="col" className={thCls}>
+                  {t("admin_bookings_col_location")}
+                </th>
+                <th scope="col" className={thCls}>
+                  {t("admin_bookings_col_budget")}
                 </th>
                 <th scope="col" className={thCls}>
                   {t("admin_bookings_col_status")}
@@ -188,6 +197,9 @@ export function AdminBookings({ token }: { token: string }) {
                     <p className="text-xs text-admin-muted">{b.contactEmail}</p>
                   </td>
                   <td className={tdCls}>{b.service?.nameEn ?? "—"}</td>
+                  <td className={tdCls}>{formatDate(b.eventDate, locale) || "—"}</td>
+                  <td className={tdCls}>{b.location ?? "—"}</td>
+                  <td className={tdCls}>{b.budgetRange ?? "—"}</td>
                   <td className={tdCls}>
                     <span className={statusPill(b.status)}>{t(statusKey(b.status))}</span>
                   </td>

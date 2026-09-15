@@ -71,6 +71,9 @@ interface BookingLike {
   id: string;
   reference: string;
   status: string;
+  eventDate?: string | null;
+  location?: string | null;
+  budgetRange?: string | null;
   events?: Array<{ id: string; status: string; note: string | null }>;
 }
 
@@ -86,10 +89,15 @@ async function apiGet<T>(request: APIRequestContext, path: string, opts?: { auth
 }
 
 /** Public booking create (same endpoint the client form posts to). */
-async function createBooking(request: APIRequestContext, contactName: string, contactEmail: string): Promise<BookingLike> {
+async function createBooking(
+  request: APIRequestContext,
+  contactName: string,
+  contactEmail: string,
+  extra?: Partial<Pick<BookingLike, "eventDate" | "location" | "budgetRange">>,
+): Promise<BookingLike> {
   const services = await apiGet<Array<{ id: string }>>(request, "/public/services", { auth: false });
   const res = await request.post(`${API}/bookings`, {
-    data: { serviceId: services[0].id, contactName, contactEmail, language: "en" },
+    data: { serviceId: services[0].id, contactName, contactEmail, language: "en", ...extra },
   });
   if (!res.ok()) throw new Error(`bookings create failed: ${res.status()} ${await res.text()}`);
   expect(res.status()).toBe(201);
@@ -289,6 +297,48 @@ test.describe("admin interface overhaul", () => {
     await expect(page).not.toHaveURL(/status=/);
     await expect(page.locator("tbody tr").filter({ hasText: done.reference })).toBeVisible();
     await expect(page.locator("tbody tr").filter({ hasText: pending.reference })).toBeVisible();
+  });
+
+  // ---------------------------------------------------------------------------
+  // 3b. Bookings LIST columns — Event date | Location | Budget data round-trip.
+  // The overhaul widened the table to 8 columns; create the row via the public
+  // API (fast, skips the form), then assert the three new cells on its row.
+  // ---------------------------------------------------------------------------
+  test("bookings list renders the Event date, Location and Budget columns", async ({ page, request }) => {
+    const location = `${PREFIX} venue`;
+    const booking = await createBooking(request, `Columns E2E ${RUN}`, `columns-${RUN}@test.local`, {
+      eventDate: "2026-12-25",
+      location,
+      budgetRange: "600k–1.5m RWF",
+    });
+    // Server-side truth: the extra fields were persisted with the booking.
+    expect(booking.eventDate, "eventDate should not be null").toBeTruthy();
+    expect(booking.location).toBe(location);
+    expect(booking.budgetRange).toBe("600k–1.5m RWF");
+
+    await adminSession(page);
+    await page.goto("/admin?tab=bookings");
+    await expect(page.getByRole("heading", { name: "Bookings", level: 1 })).toBeVisible({ timeout: 10000 });
+
+    // Row is newest-first (list sorts by createdAt desc) but anchor by the
+    // unique reference so ordering never matters.
+    const row = page.locator("tbody tr").filter({ hasText: booking.reference });
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    // 8 columns: 0 Reference | 1 Client | 2 Service | 3 Event date | 4 Location
+    // | 5 Budget | 6 Status | 7 Created.
+    const cells = row.locator("td");
+    await expect(cells.nth(3), "event date cell renders a formatted date (e.g. 25 Dec 2026), not a raw ISO or —")
+      .toHaveText(/^\d{1,2} [A-Z][a-z]{2} \d{4}$/);
+    await expect(cells.nth(3)).not.toHaveText("—");
+    await expect(cells.nth(4)).toHaveText(location);
+    await expect(cells.nth(5)).toHaveText("600k–1.5m RWF");
+
+    // The admin API agrees on what the row shows.
+    const fresh = await apiGet<BookingLike>(request, `/admin/bookings/${booking.id}`);
+    expect(fresh.location).toBe(location);
+    expect(fresh.budgetRange).toBe("600k–1.5m RWF");
+    expect(fresh.eventDate).toBeTruthy();
   });
 
   // ---------------------------------------------------------------------------

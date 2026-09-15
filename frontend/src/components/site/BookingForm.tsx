@@ -2,12 +2,50 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { api, type Service } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
-import { inputCls, labelCls } from "@/lib/ui";
+import { api, ApiError, type Service } from "@/lib/api";
+import { useI18n, type DictKey } from "@/lib/i18n";
+import { fieldErrorText, inputCls, inputErrorCls, labelCls } from "@/lib/ui";
+import { PhoneInput } from "@/components/site/PhoneInput";
 
 interface Props {
   services: Service[];
+}
+
+/**
+ * Budget bands — chips send a STABLE short English label to the API
+ * (admin panel shows a clean value regardless of locale), while the visible
+ * chip label is localized via book_budget_band_0..4.
+ */
+const BUDGET_BANDS: Array<{ key: DictKey; value: string }> = [
+  { key: "book_budget_band_0", value: "Under 300k RWF" },
+  { key: "book_budget_band_1", value: "300k–600k RWF" },
+  { key: "book_budget_band_2", value: "600k–1.5m RWF" },
+  { key: "book_budget_band_3", value: "1.5m+ RWF" },
+  { key: "book_budget_band_4", value: "Not sure" },
+];
+
+/** API issue field → localized inline-error key (spec backend validation). */
+function fieldErrorKey(field: string): DictKey {
+  switch (field) {
+    case "serviceId":
+      return "book_err_service";
+    case "contactName":
+      return "book_err_name";
+    case "contactEmail":
+      return "book_err_email";
+    case "contactPhone":
+      return "book_err_phone";
+    case "eventDate":
+      return "book_err_date";
+    case "location":
+      return "book_err_location";
+    case "budgetRange":
+      return "book_err_budget";
+    case "details":
+      return "book_err_details";
+    default:
+      return "book_error";
+  }
 }
 
 export function BookingForm({ services }: Props) {
@@ -23,15 +61,23 @@ export function BookingForm({ services }: Props) {
     details: "",
     language: locale,
   });
+  // Inline field errors keyed by API field name (from ApiError.issues) —
+  // rendered under the matching input; the generic banner is reserved for
+  // non-issue errors only.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<{ reference: string; trackUrl: string } | null>(null);
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => {
+    setForm((f) => ({ ...f, [k]: v }));
+    if (fieldErrors[k]) setFieldErrors((fe) => ({ ...fe, [k]: "" }));
+  };
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
     setSubmitting(true);
     try {
       const res = await api.post<{ booking: { reference: string }; trackUrl: string }>("/bookings", {
@@ -40,7 +86,17 @@ export function BookingForm({ services }: Props) {
       });
       setResult({ reference: res.booking.reference, trackUrl: res.trackUrl });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("book_error"));
+      if (err instanceof ApiError && Array.isArray(err.issues)) {
+        const issues = err.issues as Array<{ field?: string; message?: string }>;
+        const next: Record<string, string> = {};
+        for (const issue of issues) {
+          if (issue.field) next[issue.field] = t(fieldErrorKey(issue.field));
+        }
+        if (Object.keys(next).length > 0) setFieldErrors(next);
+        else setError(err.message || t("book_error"));
+      } else {
+        setError(err instanceof Error ? err.message : t("book_error"));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -69,7 +125,12 @@ export function BookingForm({ services }: Props) {
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <label className={labelCls}>{t("book_service")} *</label>
-        <select required value={form.serviceId} onChange={(e) => set("serviceId", e.target.value)} className={inputCls}>
+        <select
+          required
+          value={form.serviceId}
+          onChange={(e) => set("serviceId", e.target.value)}
+          className={fieldErrors.serviceId ? inputErrorCls : inputCls}
+        >
           <option value="">—</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
@@ -77,6 +138,11 @@ export function BookingForm({ services }: Props) {
             </option>
           ))}
         </select>
+        {fieldErrors.serviceId && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.serviceId}
+          </p>
+        )}
       </div>
 
       <div>
@@ -85,9 +151,14 @@ export function BookingForm({ services }: Props) {
           required
           value={form.contactName}
           onChange={(e) => set("contactName", e.target.value)}
-          className={inputCls}
+          className={fieldErrors.contactName ? inputErrorCls : inputCls}
           placeholder="Jean Uwimana"
         />
+        {fieldErrors.contactName && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.contactName}
+          </p>
+        )}
       </div>
       <div>
         <label className={labelCls}>{t("book_email")} *</label>
@@ -96,35 +167,89 @@ export function BookingForm({ services }: Props) {
           type="email"
           value={form.contactEmail}
           onChange={(e) => set("contactEmail", e.target.value)}
-          className={inputCls}
+          className={fieldErrors.contactEmail ? inputErrorCls : inputCls}
           placeholder="you@example.com"
         />
+        {fieldErrors.contactEmail && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.contactEmail}
+          </p>
+        )}
       </div>
       <div>
-        <label className={labelCls}>{t("book_phone")}</label>
-        <input
+        <label htmlFor="booking-phone" className={labelCls}>
+          {t("book_phone")}
+        </label>
+        <PhoneInput
+          id="booking-phone"
           value={form.contactPhone}
-          onChange={(e) => set("contactPhone", e.target.value)}
-          className={inputCls}
-          placeholder={t("book_phone_hint")}
+          onChange={(v) => set("contactPhone", v)}
+          error={!!fieldErrors.contactPhone}
         />
+        <p className="mt-1.5 text-xs text-ink/45">{t("book_phone_hint")}</p>
+        {fieldErrors.contactPhone && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.contactPhone}
+          </p>
+        )}
       </div>
       <div>
         <label className={labelCls}>{t("book_date")}</label>
-        <input type="date" value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} className={inputCls} />
+        <input
+          type="date"
+          value={form.eventDate}
+          onChange={(e) => set("eventDate", e.target.value)}
+          className={fieldErrors.eventDate ? inputErrorCls : inputCls}
+        />
+        {fieldErrors.eventDate && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.eventDate}
+          </p>
+        )}
       </div>
       <div>
         <label className={labelCls}>{t("book_location")}</label>
-        <input value={form.location} onChange={(e) => set("location", e.target.value)} className={inputCls} placeholder="Kigali" />
+        <input
+          value={form.location}
+          onChange={(e) => set("location", e.target.value)}
+          className={fieldErrors.location ? inputErrorCls : inputCls}
+          placeholder="Kigali"
+        />
+        {fieldErrors.location && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.location}
+          </p>
+        )}
       </div>
       <div>
         <label className={labelCls}>{t("book_budget")}</label>
-        <input
-          value={form.budgetRange}
-          onChange={(e) => set("budgetRange", e.target.value)}
-          className={inputCls}
-          placeholder="300,000 – 500,000 RWF"
-        />
+        {/* Preset bands as toggle chips — mirror the admin filter-chip
+            selected state in the cream theme (PortfolioGrid pattern). */}
+        <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={t("book_budget")}>
+          {BUDGET_BANDS.map((band) => {
+            const active = form.budgetRange === band.value;
+            return (
+              <button
+                key={band.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => set("budgetRange", active ? "" : band.value)}
+                className={
+                  active
+                    ? "shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold text-cream transition hover:bg-brass-dark bg-brass-deep"
+                    : "shrink-0 rounded-full border border-ink/15 px-4 py-2.5 text-sm text-ink/65 transition hover:border-brass/50 hover:text-brass"
+                }
+              >
+                {t(band.key)}
+              </button>
+            );
+          })}
+        </div>
+        {fieldErrors.budgetRange && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.budgetRange}
+          </p>
+        )}
       </div>
 
       <div className="sm:col-span-2">
@@ -133,12 +258,19 @@ export function BookingForm({ services }: Props) {
           rows={4}
           value={form.details}
           onChange={(e) => set("details", e.target.value)}
-          className={inputCls}
+          className={fieldErrors.details ? inputErrorCls : inputCls}
           placeholder={locale === "rw" ? "Ubwoko bw'ibirori, umubare w'abantu..." : "Type of event, number of guests..."}
         />
+        {fieldErrors.details && (
+          <p className={fieldErrorText} role="alert">
+            {fieldErrors.details}
+          </p>
+        )}
       </div>
 
-      {error && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {/* Generic banner — only for non-issues errors; field issues render
+          inline above. */}
+      {error && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
 
       <div className="sm:col-span-2">
         <button

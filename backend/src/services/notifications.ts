@@ -76,6 +76,9 @@ export async function notifyClientBookingReceived(booking: Booking, token: strin
   const html = trackPageHtml(booking, trackUrl);
   const emailRes = await sendEmail({ to: booking.contactEmail, subject, html });
   await log({ bookingId: booking.id, channel: "EMAIL", kind: "BOOKING_RECEIVED", recipient: booking.contactEmail, ok: emailRes.sent, error: emailRes.error });
+  if (!emailRes.sent) {
+    console.log(`[mailer] Booking ${booking.reference} (${booking.contactEmail}): track ${trackUrl}`);
+  }
 
   if (booking.contactPhone) {
     const waText = booking.language === "rw"

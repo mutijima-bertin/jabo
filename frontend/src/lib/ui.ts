@@ -40,6 +40,18 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
 export const inputCls =
   "w-full rounded-xl border border-ink/15 bg-white/80 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/40 focus:border-brass";
 
+/**
+ * Error variant of `inputCls` — red border ring for invalid fields on the
+ * cream theme (booking form, phone input). Written out in full (not composed
+ * on top of `inputCls`) because Tailwind class order does NOT resolve border
+ * color conflicts — the error state must always win over `border-ink/15`.
+ */
+export const inputErrorCls =
+  "w-full rounded-xl border border-red-400 bg-white/80 px-4 py-3 text-sm text-ink outline-none transition placeholder:text-ink/40 focus:border-red-500";
+
+/** Inline field error under an input — small red text (cream theme). */
+export const fieldErrorText = "mt-1.5 block text-xs text-red-600";
+
 export const textareaCls = cx(inputCls, "min-h-[7rem] leading-relaxed");
 
 export const labelCls = "mb-2 block text-sm font-medium text-ink/70";

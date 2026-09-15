@@ -209,3 +209,141 @@ describe("POST /api/clients/testimonials + GET /api/clients/testimonials/me", ()
     expect(adminRow!.client).toBeNull();
   });
 });
+
+// POST /api/bookings — contactPhone E.164 requirement/normalization. Public
+// booking form now sends E.164 via a country-coded input; the API must strip
+// whitespace, accept empty/absent as null, and reject non-E.164 with a
+// contactPhone-field VALIDATION issue. Uses the same real-express-app +
+// prisma-fixture pattern as the testimonial suite above.
+describe("POST /api/bookings contactPhone E.164 normalization", () => {
+  let server: Server;
+  let baseUrl: string;
+  let serviceId: string;
+
+  beforeAll(async () => {
+    const app = createApp();
+    server = app.listen(0);
+    await new Promise<void>((resolve, reject) => {
+      server.once("listening", resolve);
+      server.once("error", reject);
+    });
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("test server started without a TCP address");
+    }
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    // Bookings must go first (they reference service + client); booking events
+    // and notification logs cascade off the booking rows.
+    await prisma.booking.deleteMany();
+    await prisma.service.deleteMany();
+    await prisma.client.deleteMany();
+    await prisma.$disconnect();
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => (err ? reject(err) : resolve()));
+    });
+  });
+
+  beforeEach(async () => {
+    await prisma.booking.deleteMany();
+    await prisma.service.deleteMany();
+    await prisma.client.deleteMany();
+    const service = await prisma.service.create({
+      data: {
+        nameEn: "Studio Session",
+        nameRw: "Sesi yo muri studio",
+        priceEn: "$100",
+        priceRw: "Rwf 100k",
+        category: "audio",
+      },
+    });
+    serviceId = service.id;
+  });
+
+  // Unique email per call so the create route's per-email limit (5/hour) and
+  // the shared client-upsert never collide between tests.
+  const postBooking = (overrides: Record<string, unknown> = {}) =>
+    fetch(`${baseUrl}/api/bookings`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        serviceId,
+        contactName: "Alice Test",
+        contactEmail: `alice-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+        ...overrides,
+      }),
+    });
+
+  it("strips whitespace from an E.164 phone and stores the normalized value", async () => {
+    const res = await postBooking({ contactPhone: "+250 788 123 456" });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { booking: { id: string; contactPhone: string | null } };
+    // toPublicBooking passes contactPhone through.
+    expect(body.booking.contactPhone).toBe("+250788123456");
+
+    const persisted = await prisma.booking.findFirstOrThrow({ where: { id: body.booking.id } });
+    expect(persisted.contactPhone).toBe("+250788123456");
+  });
+
+  it("rejects a national-format phone (missing +) with a contactPhone VALIDATION issue", async () => {
+    const res = await postBooking({ contactPhone: "0788123456" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: string;
+      issues: { field: string; message: string }[];
+    };
+    expect(body.error).toBe("VALIDATION");
+    expect(body.issues).toContainEqual({
+      field: "contactPhone",
+      message: "Phone must be a valid international number, e.g. +2507XXXXXXXX",
+    });
+    expect(await prisma.booking.count()).toBe(0);
+  });
+
+  it("rejects an E.164-looking number without the + with a contactPhone VALIDATION issue", async () => {
+    const res = await postBooking({ contactPhone: "250788123456" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as {
+      error: string;
+      issues: { field: string; message: string }[];
+    };
+    expect(body.error).toBe("VALIDATION");
+    expect(body.issues).toContainEqual({
+      field: "contactPhone",
+      message: "Phone must be a valid international number, e.g. +2507XXXXXXXX",
+    });
+    expect(await prisma.booking.count()).toBe(0);
+  });
+
+  it("still accepts a full E.164 phone unchanged", async () => {
+    const res = await postBooking({ contactPhone: "+250700000000" });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { booking: { contactPhone: string | null } };
+    expect(body.booking.contactPhone).toBe("+250700000000");
+  });
+
+  it("still accepts a booking with the phone omitted (stored as null)", async () => {
+    const res = await postBooking({});
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { booking: { id: string; contactPhone: string | null } };
+    expect(body.booking.contactPhone).toBeNull();
+
+    const persisted = await prisma.booking.findFirstOrThrow({ where: { id: body.booking.id } });
+    expect(persisted.contactPhone).toBeNull();
+  });
+
+  it("still accepts an empty-string phone (stored as null)", async () => {
+    const res = await postBooking({ contactPhone: "" });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { booking: { contactPhone: string | null } };
+    expect(body.booking.contactPhone).toBeNull();
+  });
+});
