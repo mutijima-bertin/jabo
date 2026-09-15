@@ -7,6 +7,11 @@ export function findByEmailInsensitive(email: string) {
   return prisma.client.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
 }
 
+/** Minimal client lookup (id/name/email) — e.g. ownership checks + emails. */
+export function findById(id: string) {
+  return prisma.client.findUnique({ where: { id }, select: { id: true, name: true, email: true } });
+}
+
 export function upsertByEmail(params: {
   where: Prisma.ClientWhereUniqueInput;
   update: Prisma.ClientUpdateInput;

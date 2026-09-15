@@ -8,6 +8,7 @@ import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
 import { ReorderError } from "../models/errors";
 import { isAllowedMime, saveDataUrl } from "../services/storage";
+import { notifyClientTestimonialPublished } from "../services/notifications";
 import {
   PORTFOLIO_CATEGORIES,
   normalizePortfolioCategory,
@@ -333,11 +334,33 @@ export async function patchTestimonial(req: Request, res: Response): Promise<voi
     res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
     return;
   }
+  const id = pathParam(req, "id");
   try {
-    const testimonial = await testimonialModel.update(pathParam(req, "id"), parsed.data);
+    // Peek at the pre-update row: a publish (false→true) on a CLIENT-source
+    // testimonial triggers the author's thank-you email.
+    const existing = await testimonialModel.findById(id);
+    if (!existing) {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    const justPublished = !existing.published && parsed.data.published === true;
+    const testimonial = await testimonialModel.update(id, parsed.data);
+    if (justPublished && existing.client?.email) {
+      try {
+        await notifyClientTestimonialPublished({
+          client: { name: existing.client.name, email: existing.client.email },
+        });
+      } catch (err) {
+        console.error("[adminCatalog:testimonials:patch:notify]", (err as Error).message);
+      }
+    }
     res.json(testimonial);
-  } catch {
-    res.status(404).json({ error: "NOT_FOUND" });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    throw err;
   }
 }
 

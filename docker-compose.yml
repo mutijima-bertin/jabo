@@ -34,6 +34,7 @@ services:
       MAGIC_LINK_TTL_HOURS: "168"
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       ZAVU_API_KEY: ${ZAVU_API_KEY:-}

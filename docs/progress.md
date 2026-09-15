@@ -87,8 +87,37 @@ A client visiting the site sees, in one scroll:
 ## Gotchas (don't re-learn these)
 
 - E2E full-suite reruns: testimonial POST limiter 5/hr/IP → max 2 runs/hour or restart backend
-- Client login limiter 5/10-min/IP → space full e2e runs ≥10 min apart
+- Client login limiter 5/10-min/IP → space full e2e runs ≥10 min apart (or `docker compose restart backend`)
 - Admin login: use `.env` values (mutijimabertinr@gmail.com), not the `admin@creativesoundstudio.rw` placeholder
 - Docker rebuild resets in-memory rate limiters (that's a feature)
 - `docker compose build` does NOT copy `backend/scripts/` into the image (dev tool only)
 - Never commit `.opencode/memory/` (gitignored vault)
+
+---
+
+## Phase: Email templates + real sending (2026-09-15)
+
+**Delivered (commit pending):**
+- `backend/src/services/emailTemplates.ts` — light cream + brass template system: shared Outlook-safe table layout, XSS-safe esc(), EN/RW copy. Six builders: booking received (primary "Track this production" + secondary "Open my dashboard"), status changed, magic login/dashboard link, admin new booking, admin **testimonial submitted** (new), client **testimonial published** (new).
+- `notifications.ts` — all inline HTML replaced with templates; recipients `ADMIN_EMAILS`; when SMTP is unset, renders are still captured to `backend/.mailbox/*.html` in non-production (e.g. local `tsx` runs).
+- **Account creation flow:** magic login link → `/login?token=` → auto-sign-in → `/account` dashboard with ALL of the client's bookings.
+- Dashboard upgrades: per-booking **"View details"** button (mints a fresh 7-day magic token via `POST /clients/bookings/:id/track-token`, ownership-checked) + **"Book another"** link.
+- `POST /clients/testimonials` now emails the studio; `PATCH /admin/testimonials/:id` publish (false→true) emails the client author.
+- `docker-compose.yml` gained `SMTP_SECURE` passthrough.
+- Tests: backend **75/75** (12 new template tests), frontend lint/tsc/build clean, e2e **44 pass / 3 skip / 0 fail** (new dashboard → track timeline test).
+
+**SMTP activation (Resend free, no domain needed):**
+1. Sign up at https://resend.com → API Keys → create key (`re_…`)
+2. Root `.env` (compose feeds the backend):
+   ```
+   SMTP_HOST=smtp.resend.com
+   SMTP_PORT=465
+   SMTP_SECURE=true
+   SMTP_USER=resend
+   SMTP_PASS=re_...
+   MAIL_FROM="Creative Sound Studio <onboarding@resend.dev>"
+   ```
+3. `docker compose up -d backend` → make a test booking → check the inbox + Resend dashboard.
+4. **Branded later (env-only):** buy `creativesoundstudio.rw` (RICTA/register.rw ≈ RWF 15-17k/yr) → add domain in Resend → copy SPF/DKIM records → flip `MAIL_FROM` to `hello@creativesoundstudio.rw`.
+
+**Note:** with SMTP LIVE, the e2e `fetchMagicToken` reads a dev-only backend log line that still prints in non-production, so local/CI e2e keep working. In prod, tokens are never logged.

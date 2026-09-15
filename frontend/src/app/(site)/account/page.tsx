@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, LogOut, Mail, MapPin, Package, Phone, User } from "lucide-react";
+import { ExternalLink, Loader2, LogOut, Mail, MapPin, Package, Phone, User } from "lucide-react";
 import type { ClientTestimonial } from "@/lib/api";
 import { clearClientToken, clientFetch, getClientToken, type ClientAccount } from "@/lib/client";
 import { statusKey, useI18n } from "@/lib/i18n";
@@ -50,6 +51,9 @@ export default function AccountPage() {
   const [tmError, setTmError] = useState("");
   const [tmMinError, setTmMinError] = useState(false);
   const [tmSaving, setTmSaving] = useState(false);
+  // Per-booking tracking link (mints a fresh magic token on demand).
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [trackError, setTrackError] = useState(false);
 
   useEffect(() => {
     const token = getClientToken();
@@ -155,6 +159,32 @@ export default function AccountPage() {
     router.push("/login");
   }
 
+  /** Mint a tracking token for one of the client's own bookings and open its timeline. */
+  async function openTracking(bookingId: string) {
+    const token = getClientToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    setOpeningId(bookingId);
+    setTrackError(false);
+    try {
+      const res = await clientFetch<{ trackUrl: string }>(`/clients/bookings/${bookingId}/track-token`, token, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      router.push(res.trackUrl);
+    } catch (err) {
+      if ((err as Error).message === "NOT_AUTHENTICATED") {
+        clearClientToken();
+        router.replace("/login");
+        return;
+      }
+      setTrackError(true);
+      setOpeningId(null);
+    }
+  }
+
   if (state === "loading") {
     return (
       <div className="flex justify-center py-40">
@@ -231,7 +261,15 @@ export default function AccountPage() {
 
       {/* Bookings */}
       <section className="mt-12">
-        <h2 className="font-serif text-2xl font-semibold">{t("client_account_bookings")}</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="font-serif text-2xl font-semibold">{t("client_account_bookings")}</h2>
+          <Link
+            href="/book"
+            className="inline-flex items-center gap-2 rounded-full border border-brass/40 bg-cream px-5 py-2 text-sm font-semibold text-brass-dark transition hover:bg-brass/10"
+          >
+            + {t("client_account_book_another")}
+          </Link>
+        </div>
 
         {bookings.length === 0 ? (
           <div className="mt-6 rounded-3xl border border-dashed border-ink/20 bg-cream-alt/60 p-10 text-center">
@@ -274,6 +312,27 @@ export default function AccountPage() {
                     <dd className="mt-1">{b.budgetRange ?? "—"}</dd>
                   </div>
                 </dl>
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-4">
+                  <p className="text-xs text-ink/45">{t("client_account_track_hint")}</p>
+                  <button
+                    type="button"
+                    onClick={() => openTracking(b.id)}
+                    disabled={openingId === b.id}
+                    className="inline-flex items-center gap-2 rounded-full bg-brass-deep px-5 py-2 text-sm font-bold text-cream transition hover:bg-brass-dark disabled:opacity-60"
+                  >
+                    {openingId === b.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4" />
+                    )}
+                    {t("client_account_view_details")}
+                  </button>
+                </div>
+                {trackError && (
+                  <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+                    {t("book_error")}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

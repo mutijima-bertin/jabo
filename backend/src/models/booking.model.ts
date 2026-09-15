@@ -89,6 +89,17 @@ export function revokeMagicToken(id: string) {
   return prisma.booking.update({ where: { id }, data: { magicTokenRevoked: true } });
 }
 
+/**
+ * Mint a fresh magic token for a booking (dashboard "view details" flow).
+ * Replaces the previous hash so only one token is live per booking at a time.
+ */
+export function rotateMagicToken(id: string, hash: string, expiresAt: Date) {
+  return prisma.booking.update({
+    where: { id },
+    data: { magicTokenHash: hash, magicTokenExpiresAt: expiresAt, magicTokenRevoked: false },
+  });
+}
+
 /** Latest booking id for a client (used to attach MAGIC_LINK notification logs). */
 export async function findLatestIdByClientId(clientId: string): Promise<string | null> {
   const latest = await prisma.booking.findFirst({

@@ -17,3 +17,5 @@ clientsRouter.post("/clients/login/:token", clientsController.exchangeLoginToken
 clientsRouter.get("/clients/testimonials/me", requireClient, clientsController.getMyTestimonial);
 clientsRouter.post("/clients/testimonials", testiLimiter, requireClient, clientsController.postTestimonial);
 clientsRouter.get("/clients/me", requireClient, clientsController.getMe);
+// Dashboard "view details": mint a fresh magic token for one of the client's own bookings.
+clientsRouter.post("/clients/bookings/:id/track-token", requireClient, clientsController.getBookingTrackToken);

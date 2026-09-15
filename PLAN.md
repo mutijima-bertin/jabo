@@ -1,6 +1,6 @@
 # Creative Sound Studio — Project Plan (v1)
 
-> Status: IN BUILD — phases 1–12 done. Admin overhaul + content import + client testimonials all verified-by-dev — awaiting 3-part phased commit & push (user-approved) → CI green. Last updated: 2026-09-14
+> Status: IN BUILD — phases 1–13 done. Admin overhaul + content import + client testimonials + booking UX pass all committed & pushed to main (at 5937099). Nightly CI fixed (JWT_SECRET guard); green confirmation pending for 2026-09-15 02:00 UTC cron. Last updated: 2026-09-15
 
 ## Company & Founder Context
 - **Company**: Creative Sound Studio — Kigali, Rwanda. Media production: livestreaming, photography, videography (sound may be re-added later; name is legacy).
@@ -71,7 +71,8 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
 9. ✅ Docker + compose + GitHub Actions CI/CD (fast lint/build split from nightly full e2e; hosting deploy still pending — NO external deployment yet, session 2026-09-11)
 10. ✅ Security review + hardening + frontend org (2026-09-11): all cheap/high-value findings fixed & verified (C1 critical fixed, HS256 pin, atomic token consume, input validation, rate limits, CSP, non-root containers, npm audit 0); e2e green 25+1; frontend org done. Commit & push pending user approval (combined with admin overhaul).
 11. ✅ Admin overhaul — DONE, VERIFIED SHIPPABLE (2026-09-12): design language + full UI kit (globals.css tokens + lib/ui.ts), shell + tab architecture (?tab= URL routing, chrome-free admin via (site) route group, useAdminFetch/useSessionGuard), reorder API (PUT /admin/{services,portfolio,logos}/order — full-set raw array, dense sortOrder==index, SERIALIZABLE tx, 404/409), PUT /admin/testimonials/:id full edit, vitest toolchain (49/49 tests), full EN+RW i18n (~117 new admin keys, typed), 7 rewritten admin tabs + shared CollectionManager/AdminDialog, backend patches (slug normalization, upload guard, P2034→409), 36 e2e pass / 3 skip / 0 fail.
-12. ✅ Content import + Client testimonials (2026-09-14, verified-by-dev): (P1) `import-content.ts` — 25 logos (FAO→KC2, names pending founder), 6 portfolio items (7→13), founder image set, /app/uploads 79→111 files; (P2) `client_testimonials` schema + POST /clients/testimonials (5/hr/IP, duplicate→409) + GET /me + admin listAll with client join + /account 3-state form + admin Source badge + ~16 i18n keys. Backend 57/57, e2e 40/3/0. **Remaining: commit & push (3-part phased, user-approved) → CI green.**
+12. ✅ Content import + Client testimonials (2026-09-14, verified-by-dev): (P1) `import-content.ts` — 25 logos (FAO→KC2, names pending founder), 6 portfolio items (7→13), founder image set, /app/uploads 79→111 files; (P2) `client_testimonials` schema + POST /clients/testimonials (5/hr/IP, duplicate→409) + GET /me + admin listAll with client join + /account 3-state form + admin Source badge + ~16 i18n keys. Backend 57/57, e2e 40/3/0.
+13. ✅ Commit+push (2026-09-15) + nightly CI fix: 3-part phased push landed (admin overhaul → content e7209ba → testimonials e3256de); nightly red Sep 4–14 root-caused — CI JWT_SECRET below 32-char guard in env.ts killed seed at module load → fixed 40-char (43b9bbe). Booking UX pass (5937099): country-coded phone input (PhoneInput.tsx, E.164), guided budget chips, field-localized inline errors, admin bookings table 8 cols, mailer fallback log. Backend 63/63, e2e 45/1/0. Detail: .opencode/memory/booking-ux-2026-09-15.md
 
 ## Secrets (never commit)
 - ZAVU_API_KEY (live) — user provided, keep in backend/.env (gitignored)

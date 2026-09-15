@@ -4,8 +4,10 @@ import type { Testimonial } from "@prisma/client";
 import { env } from "../config/env";
 import * as clientModel from "../models/client.model";
 import * as testimonialModel from "../models/testimonial.model";
+import * as bookingModel from "../models/booking.model";
 import { createClientLoginToken, getClientByLoginToken, issueClientJwt } from "../services/clientAuth";
-import { notifyClientLogin } from "../services/notifications";
+import { generateMagicToken, magicLinkUrl } from "../services/magiclink";
+import { notifyAdminTestimonialSubmitted, notifyClientLogin } from "../services/notifications";
 
 const loginRequestSchema = z.object({
   email: z.string().email(),
@@ -114,6 +116,41 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Mint a fresh magic/audit token for one of the client's own bookings and
+ * return its /track URL. Ownership = the booking belongs to this client
+ * (clientId link) OR its contact email matches the authenticated client.
+ */
+export async function getBookingTrackToken(req: Request, res: Response): Promise<void> {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  try {
+    const client = await clientModel.findById(req.clientId!);
+    if (!client) {
+      res.status(401).json({ error: "INVALID_OR_EXPIRED_TOKEN" });
+      return;
+    }
+    const booking = await bookingModel.findById(id);
+    if (!booking) {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    const owned =
+      booking.clientId === client.id ||
+      (client.email != null && booking.contactEmail.toLowerCase() === client.email.toLowerCase());
+    if (!owned) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    const { token, hash } = generateMagicToken();
+    const expiresAt = new Date(Date.now() + env.magicLinkTtlHours * 3600 * 1000);
+    await bookingModel.rotateMagicToken(id, hash, expiresAt);
+    res.json({ trackUrl: magicLinkUrl(token) });
+  } catch (err) {
+    console.error("[clients:bookings:track-token]", err);
+    res.status(500).json({ error: "INTERNAL" });
+  }
+}
+
 export async function getMyTestimonial(req: Request, res: Response): Promise<void> {
   try {
     const client = await clientModel.findByIdWithBookings(req.clientId!);
@@ -158,6 +195,19 @@ export async function postTestimonial(req: Request, res: Response): Promise<void
       contentRw: parsed.data.contentRw,
       clientId: client.id,
     });
+    // Alert the studio (ADMIN_EMAILS) that a new testimonial awaits review.
+    // Failures must never block the response — same isolation as booking emails.
+    try {
+      await notifyAdminTestimonialSubmitted({
+        author: client.name,
+        email: client.email ?? "",
+        role: parsed.data.role ?? null,
+        contentEn: parsed.data.contentEn,
+        contentRw: parsed.data.contentRw ?? null,
+      });
+    } catch (err) {
+      console.error("[clients:testimonials:post:notify]", (err as Error).message);
+    }
     res.status(201).json({ testimonial: testimonialPayload(testimonial) });
   } catch (err) {
     console.error("[clients:testimonials:post]", err);

@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { execSync } from "child_process";
+import { readFileSync } from "fs";
 import { getAdminToken } from "./auth";
 
 const API = "http://localhost:4000/api";
@@ -6,6 +8,50 @@ const API = "http://localhost:4000/api";
 // or CI env) — never hardcoded.
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+
+const BACKEND_CONTAINER = "css-backend";
+const BACKEND_LOG_FILE = process.env.BACKEND_LOG_FILE;
+
+function readBackendLogs(): string {
+  if (BACKEND_LOG_FILE) return readFileSync(BACKEND_LOG_FILE, "utf8");
+  return execSync(`docker logs ${BACKEND_CONTAINER} 2>&1`, {
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+}
+
+// Pick the magic login token out of the backend log line for this email.
+async function fetchMagicToken(email: string, timeoutMs = 15000): Promise<string> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const logs = readBackendLogs();
+    const lines = logs.split("\n").filter((l) => l.includes(`Magic login link for ${email}`));
+    const last = lines[lines.length - 1];
+    if (last) {
+      const match = last.match(/token=([a-f0-9]{16,})/);
+      if (match) return match[1];
+    }
+    await new Promise((r) => setTimeout(r, 750));
+  }
+  throw new Error(`No magic link found for ${email} within ${timeoutMs}ms (login limiter: 5 req / 10 min / IP)`);
+}
+
+async function seedBooking(email: string): Promise<{ reference: string; trackUrl: string }> {
+  const services = await (await fetch(`${API}/public/services`)).json();
+  const res = await fetch(`${API}/bookings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      serviceId: services[0].id,
+      contactName: "Dashboard E2E",
+      contactEmail: email,
+      language: "en",
+    }),
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(`Booking seed failed (${res.status}): ${JSON.stringify(body)}`);
+  return { reference: body.booking.reference, trackUrl: body.trackUrl };
+}
 
 test("public site renders live content from the API", async ({ page }) => {
   await page.goto("/");
@@ -156,6 +202,36 @@ test("magic link tracking page shows booking status", async ({ page }) => {
 test("invalid tracking token shows the expired-link message", async ({ page }) => {
   await page.goto("/track/definitely-not-a-real-token");
   await expect(page.getByText(/invalid or expired/i)).toBeVisible({ timeout: 10000 });
+});
+
+test("dashboard lists all bookings and View details opens the booking timeline", async ({ page }) => {
+  const email = `dash-${Date.now()}@test.local`;
+  const first = await seedBooking(email);
+  const second = await seedBooking(email);
+
+  // Magic-login through the real UI (email is unique per run → no rate-limit bleed).
+  await page.goto("/login");
+  await page.getByPlaceholder("you@example.com").fill(email);
+  await page.getByRole("button", { name: "Send magic link" }).click();
+  await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({ timeout: 15000 });
+  const magicToken = await fetchMagicToken(email);
+  await page.goto(`/login?token=${magicToken}`);
+  await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
+
+  // The dashboard shows BOTH bookings (the "all my bookings" promise).
+  await expect(page.getByRole("heading", { name: "My account" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My bookings" })).toBeVisible();
+  await expect(page.getByText(first.reference, { exact: true })).toBeVisible();
+  await expect(page.getByText(second.reference, { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Book another/ })).toBeVisible();
+
+  // "View details" on one booking mints a fresh token and opens its timeline.
+  const card = page.locator("li").filter({ hasText: first.reference });
+  await expect(card.getByRole("button", { name: "View details" })).toBeVisible();
+  await card.getByRole("button", { name: "View details" }).click();
+  await page.waitForURL(/\/track\//, { timeout: 15000 });
+  await expect(page.getByText(first.reference, { exact: true }).first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("Booking received").first()).toBeVisible();
 });
 
 test("admin login works and dashboard loads", async ({ page }) => {

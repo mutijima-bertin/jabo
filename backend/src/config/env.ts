@@ -17,6 +17,7 @@ export function requiredWithGuard(name: string, forbiddenValues: string[] = [], 
 }
 
 export const env = {
+  nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: required("DATABASE_URL"),
   zavuApiKey: process.env.ZAVU_API_KEY ?? "",

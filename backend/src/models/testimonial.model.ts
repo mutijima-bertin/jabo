@@ -26,6 +26,17 @@ export function findByClientId(clientId: string) {
   return prisma.testimonial.findFirst({ where: { clientId } });
 }
 
+/**
+ * Single row with its linked client (id/name/email) — used when the publish
+ * toggle needs to know who to notify.
+ */
+export function findById(id: string) {
+  return prisma.testimonial.findUnique({
+    where: { id },
+    include: { client: { select: { id: true, name: true, email: true } } },
+  });
+}
+
 /** CLIENT-submitted rows: never auto-published, always attributed to the client. */
 export function createForClient(data: {
   author: string;
