@@ -401,6 +401,22 @@ const en = {
   /* ---- Admin upload rate limit (20/hr per IP, backend POST /admin/uploads) ---- */
   admin_upload_remaining: "uploads left this hour: {n}",
   admin_upload_rate_limited: "Upload limit reached for this hour — try again later.",
+  /* ---- Booking journey context panel & FAQ (Phase 2) ---- */
+  book_context_choose: "Choose a service to see details",
+  book_reply_sla: "We reply within 24 hours",
+  book_whatsapp_cta: "Prefer to chat?",
+  book_how_title: "How it works",
+  book_how_step_1: "Fill the form",
+  book_how_step_2: "Get instant confirmation via email & WhatsApp",
+  book_how_step_3: "Track your production in real time",
+  book_faq_q1: "How long until I get a response?",
+  book_faq_a1: "We reply within 24 hours via email and WhatsApp.",
+  book_faq_q2: "What happens after I book?",
+  book_faq_a2: "You'll receive an instant confirmation with a tracking link. We'll review your details and confirm your production within 24 hours.",
+  book_faq_q3: "How do I pay?",
+  book_faq_a3: "We'll send you a detailed quote after confirming your production details. Payment is handled directly — cash, mobile money, or bank transfer.",
+  book_faq_q4: "Can I cancel or reschedule?",
+  book_faq_a4: "Yes — just reply to any of our emails or message us on WhatsApp with your reference number.",
 };
 
 export type DictKey = keyof typeof en;
@@ -800,6 +816,22 @@ const rw: Record<keyof typeof en, string> = {
   /* ---- Admin upload rate limit (20/hr per IP, backend POST /admin/uploads) ---- */
   admin_upload_remaining: "Ifoto zisigaye izi saa: {n}",
   admin_upload_rate_limited: "Ugeze ku gipimo cyo kohereza ifoto izi saa — gerageza nanone nyuma.",
+  /* ---- Booking journey context panel & FAQ (Phase 2) ---- */
+  book_context_choose: "Hitamwo igisubizo kubona ibisobanuro",
+  book_reply_sla: "Dusubiza mu masaha 24",
+  book_whatsapp_cta: "Ushaka kwiga?",
+  book_how_title: "Ukora gatya",
+  book_how_step_1: "Uzuza ifomu",
+  book_how_step_2: "Urwemwo amakuru yemejwe na email na WhatsApp",
+  book_how_step_3: "Kurikirana umurimo rwawe mu gihe nyongera",
+  book_faq_q1: "Ntago ninga dutegeereza?",
+  book_faq_a1: "Dusubiza mu masaha 24 na email na WhatsApp.",
+  book_faq_q2: "Igihe nabayeho nyuma yo guhishura?",
+  book_faq_a2: "Urwemwo amakuru yemejwe hamwe na isanamu yo gukurikirana. Tuzagarura ibisobanuro byawe mu masaha 24.",
+  book_faq_q3: "Nkenera gufatira?",
+  book_faq_a3: "Tuzakohereza itegeko ryuzuye nyuma yo kwemeza ibisobanuro by'umurimo wawe. Ukwishura ni ku buryo busanzwe — amahera, mobile money cyangwa ikibazo.",
+  book_faq_q4: "Nshobora guhagarika cyangwa guhindura?",
+  book_faq_a4: "Ego — subiza mu meyili zacu cyangwa utwandikire kuri WhatsApp hamwe nimero ry'urugero rwawe.",
 };
 
 const dicts: Record<Locale, Record<keyof typeof en, string>> = { en, rw };

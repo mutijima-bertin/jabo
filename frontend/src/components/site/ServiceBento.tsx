@@ -32,7 +32,7 @@ export function ServiceBento({ services }: { services: Service[] }) {
         // Featured layout: the first two services go span-3 (half width) when they have an image.
         const large = i < 2 && Boolean(svc.imageUrl);
         const onPhoto = Boolean(svc.imageUrl);
-        const href = svc.linkedPostSlug ? `/blog/${svc.linkedPostSlug}` : "/book";
+        const href = svc.linkedPostSlug ? `/blog/${svc.linkedPostSlug}` : `/book?service=${svc.id}`;
         const num = String(i + 1).padStart(2, "0");
 
         return (
@@ -110,7 +110,7 @@ export function ServiceBento({ services }: { services: Service[] }) {
 
               {/* Book chip — sibling link above the body link; inverts on card hover */}
               <Link
-                href="/book"
+                href={`/book?service=${svc.id}`}
                 className={`absolute bottom-4 right-4 z-20 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-150 ${
                   onPhoto
                     ? "border border-cream/60 bg-ink/40 text-cream backdrop-blur-sm"

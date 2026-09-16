@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { api, ApiError, type Service } from "@/lib/api";
 import { useI18n, type DictKey } from "@/lib/i18n";
 import { fieldErrorText, inputCls, inputErrorCls, labelCls } from "@/lib/ui";
 import { PhoneInput } from "@/components/site/PhoneInput";
+import { useSelectedServiceId } from "@/components/site/BookingServiceContext";
 
 interface Props {
   services: Service[];
+  initialServiceId?: string;
 }
 
 /**
@@ -48,8 +50,9 @@ function fieldErrorKey(field: string): DictKey {
   }
 }
 
-export function BookingForm({ services }: Props) {
+export function BookingForm({ services, initialServiceId }: Props) {
   const { t, locale } = useI18n();
+  const { setSelectedServiceId } = useSelectedServiceId();
   const [form, setForm] = useState({
     serviceId: "",
     contactName: "",
@@ -72,7 +75,19 @@ export function BookingForm({ services }: Props) {
   const set = (k: string, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
     if (fieldErrors[k]) setFieldErrors((fe) => ({ ...fe, [k]: "" }));
+    // Keep context panel in sync when the service changes
+    if (k === "serviceId") setSelectedServiceId(v);
   };
+
+  // Pre-fill service from URL search param (?service=...)
+  useEffect(() => {
+    if (initialServiceId && services.some((s) => s.id === initialServiceId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- initialServiceId is a URL deep-link (SSR-scoped); apply it once to sync the form select after mount
+      set("serviceId", initialServiceId);
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

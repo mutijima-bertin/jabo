@@ -28,7 +28,7 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
           <li key={svc.id}>
             {/* Card surface = cardSurface (lib/ui.ts). */}
             <Link
-              href="/book"
+              href={`/book?service=${svc.id}`}
               className="group relative block h-full rounded-2xl border border-ink/10 bg-white/70 shadow-sm transition hover:-translate-y-0.5 hover:border-brass/50 hover:bg-white hover:shadow-md"
             >
               {/* Banner — picture when the service has one, otherwise the branded

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
 import { fetchServices } from "@/lib/content";
-import { BookingForm } from "@/components/site/BookingForm";
+import { BookPageShell } from "@/components/site/BookPageShell";
 import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
@@ -9,14 +9,20 @@ export const metadata: Metadata = {
   description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
 };
 
-export default async function BookPage() {
+export default async function BookPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
   const services = await fetchServices();
+  const raw = typeof sp.service === "string" ? sp.service : undefined;
+  const initialServiceId = raw && services.some((s) => s.id === raw) ? raw : undefined;
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20">
+    <div className="mx-auto max-w-7xl px-4 py-16">
       <PageHeading title="book_title" sub="page_book_sub" />
-      <div className="mt-12 rounded-3xl border border-ink/10 bg-white/70 p-6 shadow-sm md:p-10">
-        <BookingForm services={services} />
-      </div>
+      <BookPageShell services={services} initialServiceId={initialServiceId} />
     </div>
   );
 }
