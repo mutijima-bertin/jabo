@@ -4,10 +4,9 @@ import Link from "next/link";
 import { Languages, MapPin } from "lucide-react";
 import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
+import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/social-icons";
-
-const WHATSAPP_URL = "https://wa.me/250783269951";
 
 export function Footer() {
   const { t, locale, setLocale } = useI18n();
@@ -15,7 +14,7 @@ export function Footer() {
 
   const quickLinks = [
     { href: "/", label: t("nav_home") },
-    { href: "/#services", label: t("nav_services") },
+    { href: "/services", label: t("nav_services") },
     { href: "/portfolio", label: t("nav_portfolio") },
     { href: "/#about", label: t("nav_about") },
     { href: "/blog", label: t("nav_blog") },
@@ -23,7 +22,7 @@ export function Footer() {
   ];
 
   const socials = [
-    { href: WHATSAPP_URL, label: t("social_whatsapp"), Icon: WhatsAppIcon },
+    { href: CONTACT.whatsappUrl, label: t("social_whatsapp"), Icon: WhatsAppIcon },
     { href: "https://www.instagram.com/creativesoundstudiorw/", label: t("social_instagram_studio"), Icon: InstagramIcon },
     { href: "https://www.instagram.com/jabo_nkurunziza/", label: t("social_instagram_jabo"), Icon: InstagramIcon },
     { href: "https://www.youtube.com/@nkurunzizajabo7867", label: t("social_youtube"), Icon: YoutubeIcon },
@@ -98,20 +97,20 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href={WHATSAPP_URL}
+                  href={CONTACT.whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2.5 transition hover:text-brass"
                 >
                   <WhatsAppIcon className="h-4 w-4 shrink-0 text-brass" />
-                  +250 783 269 951
+                  {CONTACT.phoneDisplay}
                 </a>
               </li>
             </ul>
             <button
               onClick={() => setLocale(locale === "en" ? "rw" : "en")}
               className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream px-3.5 py-2 text-xs font-medium text-ink/70 transition hover:border-brass hover:text-brass"
-              aria-label="Switch language"
+              aria-label={t("footer_switch_language_aria")}
             >
               <Languages className="h-3.5 w-3.5" />
               {locale === "en" ? "Kinyarwanda" : "English"}

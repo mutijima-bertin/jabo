@@ -6,13 +6,28 @@ import { useI18n } from "@/lib/i18n";
 import type { PostSummary } from "@/lib/api";
 import { BlogCard } from "@/components/site/BlogCard";
 
+interface BlogListProps {
+  posts: PostSummary[] | null;
+  /** Total published posts across all pages (drives the pager). */
+  totalCount: number;
+  /** 1-based current page — from the blog index's `?page=N` search param. */
+  page: number;
+  /** Posts per page. */
+  pageSize: number;
+}
+
 /**
  * Blog index — header, responsive card grid, and a tasteful empty state
  * that reuses the site's existing CTA copy. Client component because all
  * copy (header, pills, dates) comes from the useI18n() locale context.
+ * Pagination is plain `?page=N` links (no router abstraction): the server
+ * page slices to `pageSize` and the pager links back to the index.
  */
-export function BlogList({ posts }: { posts: PostSummary[] | null }) {
+export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
   const { t } = useI18n();
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-20 md:py-28">
@@ -26,11 +41,50 @@ export function BlogList({ posts }: { posts: PostSummary[] | null }) {
       </header>
 
       {posts && posts.length > 0 ? (
-        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
-          {posts.map((post) => (
-            <BlogCard key={post.id} post={post} />
-          ))}
-        </div>
+        <>
+          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2">
+            {posts.map((post) => (
+              <BlogCard key={post.id} post={post} />
+            ))}
+          </div>
+
+          {/* Prev / Next pager — always-visible affordances, subdued until disabled. */}
+          {totalPages > 1 && (
+            <nav aria-label="Pagination" className="mt-12 flex items-center justify-between gap-4">
+              {hasPrev ? (
+                <Link
+                  href={`/blog?page=${page - 1}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
+                >
+                  <span aria-hidden="true">←</span>
+                  {t("blog_pager_newer")}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
+                  <span aria-hidden="true">←</span>
+                  {t("blog_pager_newer")}
+                </span>
+              )}
+              <span className="text-xs font-medium tracking-wide text-ink/45">
+                {page} / {totalPages}
+              </span>
+              {hasNext ? (
+                <Link
+                  href={`/blog?page=${page + 1}`}
+                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
+                >
+                  {t("blog_pager_older")}
+                  <span aria-hidden="true">→</span>
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
+                  {t("blog_pager_older")}
+                  <span aria-hidden="true">→</span>
+                </span>
+              )}
+            </nav>
+          )}
+        </>
       ) : (
         <div className="mx-auto mt-16 max-w-xl rounded-3xl border border-ink/10 bg-cream-alt px-6 py-16 text-center">
           <h2 className="font-serif text-2xl font-semibold text-ink">

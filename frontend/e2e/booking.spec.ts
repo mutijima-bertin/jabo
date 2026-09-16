@@ -246,8 +246,10 @@ test("admin login works and dashboard loads", async ({ page }) => {
 
 test("language switcher toggles Kinyarwanda", async ({ page }) => {
   await page.goto("/");
-  // After the redesign the toggle lives in the footer (a pill with
-  // aria-label "Switch language") — scope the locator to <footer>.
+  // After the redesign the toggle lives in the footer (a pill with a
+  // LOCALIZED aria-label — t("footer_switch_language_aria")) — scope the
+  // locator to <footer>. EN shows "Switch language"; once flipped to RW the
+  // same pill reads "Hindura ururimi".
   const toggle = page.locator("footer").getByRole("button", { name: "Switch language" });
   await expect(toggle).toBeVisible();
   // English baseline: "Services & pricing" is dict-driven, unlike the hero
@@ -256,7 +258,8 @@ test("language switcher toggles Kinyarwanda", async ({ page }) => {
   // Flip to Kinyarwanda and assert the dict-driven section title.
   await toggle.click();
   await expect(page.getByRole("heading", { name: "Serivisi n'ibiciro" })).toBeVisible();
-  // Toggle back to English for cleanliness.
-  await page.locator("footer").getByRole("button", { name: "Switch language" }).click();
+  // Toggle back to English for cleanliness — target the RW label the pill now
+  // carries in the active locale (it is no longer locale-invariant).
+  await page.locator("footer").getByRole("button", { name: "Hindura ururimi" }).click();
   await expect(page.getByRole("heading", { name: "Services & pricing" })).toBeVisible();
 });

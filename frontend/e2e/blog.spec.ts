@@ -328,4 +328,70 @@ test.describe("blog journeys", () => {
       await expect(page.getByRole("heading", { name: "No stories yet" })).toBeVisible();
     }
   });
+
+  test("blog index paginates 8 per page and the pager reaches ?page=2", async ({ page, request }) => {
+    // Force pagination deterministically: seed 9 run-unique published posts via
+    // the admin API so the index crosses the 8/page threshold. All posts are
+    // removed in finally (the serial siblings and afterAll must never see them).
+    const slugs = Array.from({ length: 9 }, (_, i) => `e2e-page-${RUN}-${i}`);
+    try {
+      for (const [i, slug] of slugs.entries()) {
+        const res = await request.post(`${API}/admin/posts`, {
+          headers: AUTH(token),
+          data: {
+            titleEn: `E2E Page ${RUN} ${i}`,
+            titleRw: `E2E Page RW ${RUN} ${i}`,
+            contentEn: `Pagination body ${slug}`,
+            contentRw: `Pagination body RW ${slug}`,
+            contentType: "STUDIO_NEWS",
+            slug,
+            published: true,
+          },
+        });
+        expect(res.status(), `seed post ${slug} should be created`).toBe(201);
+      }
+
+      // Derive the pager math from the live catalog so a richer owner catalog
+      // can never break the boundary assertions (only the page indicator text
+      // depends on totalCount; the "which posts land on which page" claims are
+      // relative to the newest/oldest seeded rows and always hold).
+      const totalPublished = (await apiGet<PostRow[]>(request, "/public/posts")).length;
+      const totalPages = Math.max(1, Math.ceil(totalPublished / 8));
+      const pager = page.getByRole("navigation", { name: "Pagination" });
+
+      // Page 1: exactly 8 cards — the newest batch (all eight newest seeded
+      // posts); the oldest seeded post is already off the page.
+      await page.goto("/blog");
+      await expect(page.getByRole("heading", { name: "Stories from the studio" })).toBeVisible();
+      await expect(page.locator('a[href^="/blog/"]')).toHaveCount(8, { timeout: 10000 });
+      await expect(page.locator(`a[href="/blog/${slugs[slugs.length - 1]}"]`)).toBeVisible();
+      await expect(page.locator(`a[href="/blog/${slugs[0]}"]`)).toHaveCount(0);
+      // Pager on page 1: "Older posts →" is the live link; "Newer posts" is a
+      // muted span (no link yet); page indicator shows the derived total.
+      await expect(pager.getByRole("link", { name: /Older posts/ })).toHaveAttribute("href", "/blog?page=2");
+      await expect(pager.getByRole("link", { name: /Newer posts/ })).toHaveCount(0);
+      await expect(pager.getByText(new RegExp(`^1 / ${totalPages}$`))).toBeVisible();
+
+      // ?page=2 flips the window: the oldest seeded post is visible now, the
+      // newest is gone, and "Newer posts" becomes the live link back to page 1.
+      await page.goto("/blog?page=2");
+      await expect(page.locator(`a[href="/blog/${slugs[0]}"]`)).toBeVisible();
+      await expect(page.locator(`a[href="/blog/${slugs[slugs.length - 1]}"]`)).toHaveCount(0);
+      await expect(pager.getByRole("link", { name: /Newer posts/ })).toHaveAttribute("href", "/blog?page=1");
+      await expect(pager.getByText(new RegExp(`^2 / ${totalPages}$`))).toBeVisible();
+      // "Older posts" is muted ONLY on the last page (a 2-page catalog today,
+      // but keep the assertion honest against a richer owner catalog).
+      if (totalPages === 2) {
+        await expect(pager.getByRole("link", { name: /Older posts/ })).toHaveCount(0);
+      }
+    } finally {
+      // Self-cleanup for the serial siblings + afterAll backstop sweep.
+      const all = await apiGet<PostRow[]>(request, "/admin/posts").catch(() => []);
+      for (const p of all) {
+        if (slugs.includes(p.slug)) {
+          await request.delete(`${API}/admin/posts/${p.id}`, { headers: AUTH(token) }).catch(() => {});
+        }
+      }
+    }
+  });
 });

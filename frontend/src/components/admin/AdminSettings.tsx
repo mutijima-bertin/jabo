@@ -45,7 +45,7 @@ import {
   thCls,
   tbody,
 } from "@/lib/ui";
-import { DeleteButton, Field, putCollectionOrder, uploadImage } from "@/components/admin/shared/CollectionManager";
+import { DeleteButton, Dropzone, Field, putCollectionOrder, uploadImage } from "@/components/admin/shared/CollectionManager";
 
 /* ---------------------------------------------------------------------------
  * AdminSettings — three independent sections, each a real <form>:
@@ -81,6 +81,17 @@ export function AdminSettings({ token }: { token: string }) {
 }
 
 /* ----------------------------- Site settings ----------------------------- */
+
+/** True when a setting value is an image: data-URL image, http(s) URL, or a
+ *  path/name ending in a common image extension. Image settings render a
+ *  dropzone instead of the dual en/rw textareas (the URL is locale-independent). */
+function isImageSetting(value: string): boolean {
+  const v = value.trim().toLowerCase();
+  if (!v) return false;
+  if (v.startsWith("data:image/")) return true;
+  if (v.startsWith("http://") || v.startsWith("https://")) return true;
+  return /\.(png|jpe?g|gif|webp|avif|svg|heic|bmp)$/.test(v);
+}
 
 function SiteSettingsSection({ token }: { token: string }) {
   const { t } = useI18n();
@@ -141,28 +152,55 @@ function SiteSettingsSection({ token }: { token: string }) {
   return (
     <form onSubmit={save}>
       <div className="space-y-5">
-        {keys.map((key) => (
-          <div key={key} className={cx("rounded-2xl border border-admin-border bg-admin-panel p-5")}>
-            <p className="mb-3 font-mono text-xs uppercase tracking-wider text-admin-faint">{key}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {(["en", "rw"] as const).map((loc) => {
-                const current = settings?.find((s) => s.key === key && s.locale === loc);
-                return (
-                  <div key={loc}>
-                    <Field label={t(loc === "en" ? "admin_lang_en" : "admin_lang_rw")}>
-                      <textarea
-                        rows={key === "about_story" ? 4 : 2}
-                        className={adminTextareaCls}
-                        value={current?.value ?? ""}
-                        onChange={(e) => setValue(key, loc, e.target.value)}
-                      />
-                    </Field>
-                  </div>
-                );
-              })}
+        {keys.map((key) => {
+          const rows = (settings ?? []).filter((s) => s.key === key);
+          const isImage = rows.some((r) => isImageSetting(r.value));
+          return (
+            <div key={key} className={cx("rounded-2xl border border-admin-border bg-admin-panel p-5")}>
+              <p className="mb-3 font-mono text-xs uppercase tracking-wider text-admin-faint">{key}</p>
+              {isImage ? (
+                /* Image-valued setting: single dropzone (preview + upload via
+                    POST /admin/uploads) mirrors the logos/services pattern.
+                    The uploaded URL lands on BOTH locale rows — images are
+                    locale-independent, and the save flow round-trips the
+                    settings array untouched otherwise. */
+                <div className="max-w-md">
+                  <Field label={t("admin_service_image")}>
+                    <Dropzone
+                      token={token}
+                      value={rows.find((r) => r.value.trim())?.value ?? ""}
+                      onChange={(url) => {
+                        setValue(key, "en", url);
+                        setValue(key, "rw", url);
+                      }}
+                      onError={setFormError}
+                      title={t("admin_service_image")}
+                      hint={t("admin_service_image_hint")}
+                    />
+                  </Field>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(["en", "rw"] as const).map((loc) => {
+                    const current = rows.find((s) => s.locale === loc);
+                    return (
+                      <div key={loc}>
+                        <Field label={t(loc === "en" ? "admin_lang_en" : "admin_lang_rw")}>
+                          <textarea
+                            rows={key === "about_story" ? 4 : 2}
+                            className={adminTextareaCls}
+                            value={current?.value ?? ""}
+                            onChange={(e) => setValue(key, loc, e.target.value)}
+                          />
+                        </Field>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {saved && (

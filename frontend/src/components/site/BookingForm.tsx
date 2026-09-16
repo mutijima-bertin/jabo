@@ -221,11 +221,13 @@ export function BookingForm({ services }: Props) {
           </p>
         )}
       </div>
-      <div>
+      <div className="sm:col-span-2">
         <label className={labelCls}>{t("book_budget")}</label>
         {/* Preset bands as toggle chips — mirror the admin filter-chip
-            selected state in the cream theme (PortfolioGrid pattern). */}
-        <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={t("book_budget")}>
+            selected state in the cream theme (PortfolioGrid pattern).
+            Full-width row that wraps gracefully; labels cannot break
+            mid-value (whitespace-nowrap). */}
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("book_budget")}>
           {BUDGET_BANDS.map((band) => {
             const active = form.budgetRange === band.value;
             return (
@@ -236,8 +238,8 @@ export function BookingForm({ services }: Props) {
                 onClick={() => set("budgetRange", active ? "" : band.value)}
                 className={
                   active
-                    ? "shrink-0 rounded-full px-4 py-2.5 text-sm font-semibold text-cream transition hover:bg-brass-dark bg-brass-deep"
-                    : "shrink-0 rounded-full border border-ink/15 px-4 py-2.5 text-sm text-ink/65 transition hover:border-brass/50 hover:text-brass"
+                    ? "shrink-0 whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-cream transition hover:bg-brass-dark bg-brass-deep"
+                    : "shrink-0 whitespace-nowrap rounded-full border border-ink/15 px-4 py-2.5 text-sm text-ink/65 transition hover:border-brass/50 hover:text-brass"
                 }
               >
                 {t(band.key)}

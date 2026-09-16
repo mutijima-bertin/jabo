@@ -26,12 +26,15 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
 
         return (
           <li key={svc.id}>
+            {/* Card surface = cardSurface (lib/ui.ts). */}
             <Link
               href="/book"
               className="group relative block h-full rounded-2xl border border-ink/10 bg-white/70 shadow-sm transition hover:-translate-y-0.5 hover:border-brass/50 hover:bg-white hover:shadow-md"
             >
-              {/* Thumbnail banner when the service has a picture */}
-              {svc.imageUrl && (
+              {/* Banner — picture when the service has one, otherwise the branded
+                  icon-tile placeholder (mirrors ServiceBento) so row heights
+                  stay consistent via the shared aspect-[16/6]. */}
+              {svc.imageUrl ? (
                 <div className="relative aspect-[16/6] overflow-hidden rounded-t-2xl">
                   <Image
                     src={svc.imageUrl}
@@ -41,6 +44,12 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
                     quality={80}
                     className="object-cover transition duration-500 group-hover:scale-[1.04]"
                   />
+                </div>
+              ) : (
+                <div className="relative flex aspect-[16/6] items-center justify-center overflow-hidden rounded-t-2xl bg-[radial-gradient(70%_60%_at_30%_20%,rgba(176,141,87,0.22),transparent_70%)]">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-brass/30 bg-white/70 text-brass shadow-sm transition group-hover:border-brass/60 group-hover:bg-brass/15">
+                    <Icon className="h-7 w-7" />
+                  </span>
                 </div>
               )}
               <span

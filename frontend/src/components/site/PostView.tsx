@@ -5,12 +5,11 @@ import { ArrowLeft, Calendar, Eye, Heart } from "lucide-react";
 import { useI18n, postTypeKey } from "@/lib/i18n";
 import type { PostFull } from "@/lib/api";
 import { formatDate } from "@/lib/format";
+import { CONTACT } from "@/lib/site";
 import { PostCover } from "@/components/site/PostCover";
 import { PostBody } from "@/components/site/PostBody";
 import { PostLikeButton } from "@/components/site/PostLikeButton";
 import { WhatsAppIcon } from "@/components/shared/social-icons";
-
-const WHATSAPP_URL = "https://wa.me/250783269951";
 
 /**
  * Single post view. Client component so title/body/meta follow the active
@@ -80,7 +79,7 @@ export function PostView({ post }: { post: PostFull }) {
             {t("blog_cta")}
           </Link>
           <a
-            href={WHATSAPP_URL}
+            href={CONTACT.whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-cream/30 px-8 py-3.5 text-sm font-bold text-cream transition hover:border-brass hover:bg-brass"

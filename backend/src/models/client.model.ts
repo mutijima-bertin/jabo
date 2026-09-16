@@ -77,4 +77,30 @@ export function listForAdmin() {
   });
 }
 
+/**
+ * Admin deletion: removes the client and every row they own atomically. The
+ * Booking.client and Testimonial.client relations are optional (FK default is
+ * ON DELETE SET NULL), so their rows must be deleted explicitly — never rely
+ * on a DB cascade for them. BookingEvent/NotificationLog rows cascade off the
+ * deleted bookings. Returns how many related rows were removed.
+ *
+ * An unknown id aborts the transaction (nothing committed) with a labeled
+ * "CLIENT_NOT_FOUND" error the controller maps to 404. Deleting a client with
+ * zero bookings/testimonials still commits and returns 0/0.
+ */
+export function removeWithRelated(id: string): Promise<{ deletedBookings: number; deletedTestimonials: number }> {
+  return prisma.$transaction(async (tx) => {
+    // Testimonials reference the client via an optional FK (SET NULL by default);
+    // prune them before the client row so no orphans point at a deleted id.
+    const deletedTestimonials = await tx.testimonial.deleteMany({ where: { clientId: id } });
+    // Bookings too — their events/notifications cascade at the DB level.
+    const deletedBookings = await tx.booking.deleteMany({ where: { clientId: id } });
+    const deleted = await tx.client.deleteMany({ where: { id } });
+    if (deleted.count === 0) {
+      throw new Error("CLIENT_NOT_FOUND");
+    }
+    return { deletedBookings: deletedBookings.count, deletedTestimonials: deletedTestimonials.count };
+  });
+}
+
 export type ClientWithBookings = NonNullable<Awaited<ReturnType<typeof findByIdWithBookings>>>;

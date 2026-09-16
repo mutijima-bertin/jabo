@@ -23,7 +23,7 @@ export function ServiceBento({ services }: { services: Service[] }) {
   const { locale, t } = useI18n();
 
   return (
-    <ol className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6 lg:grid-flow-row-dense">
+    <ol className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6">
       {services.map((svc, i) => {
         const Icon = serviceIcon(svc.icon);
         const name = locale === "rw" ? svc.nameRw : svc.nameEn;
@@ -37,12 +37,15 @@ export function ServiceBento({ services }: { services: Service[] }) {
 
         return (
           <li key={svc.id} className={large ? "sm:col-span-2 lg:col-span-3" : "lg:col-span-2"}>
+            {/* h-full + flex-col: the card fills the whole grid cell so the
+                caption/price block (mt-auto below) bottom-aligns across the row. */}
             <div
-              className={`group relative flex overflow-hidden rounded-2xl border shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+              className={`group relative flex h-full flex-col overflow-hidden rounded-2xl border shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                 onPhoto
-                  ? "border-ink/10 bg-white/70 hover:border-brass/60"
+                  ? // Photo card surface = cardSurface (lib/ui.ts).
+                    "border-ink/10 bg-white/70 hover:border-brass/60"
                   : "border-brass/25 bg-gradient-to-br from-sand via-cream-alt to-brass/25 hover:border-brass/60"
-              } ${large ? "min-h-[380px] sm:min-h-[440px]" : "min-h-[300px]"}`}
+              }`}
             >
               {/* Media — picture or branded placeholder composition */}
               {onPhoto ? (

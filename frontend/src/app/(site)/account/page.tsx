@@ -7,6 +7,7 @@ import { ExternalLink, Loader2, LogOut, Mail, MapPin, Package, Phone, User } fro
 import type { ClientTestimonial } from "@/lib/api";
 import { clearClientToken, clientFetch, getClientToken, type ClientAccount } from "@/lib/client";
 import { statusKey, useI18n } from "@/lib/i18n";
+import { CONTACT } from "@/lib/site";
 import { inputCls, labelCls } from "@/lib/ui";
 import { Logo } from "@/components/shared/Logo";
 
@@ -199,14 +200,14 @@ export default function AccountPage() {
         <Logo className="mx-auto h-14 w-auto" />
         <h1 className="mt-10 font-serif text-3xl font-semibold leading-tight">{t("client_account_title")}</h1>
         <p className="mt-4 text-ink/60">{t("client_account_error")}</p>
-        <p className="mt-8 text-sm text-ink/45">hello@creativesoundstudio.rw · +250 700 000 000</p>
+        <p className="mt-8 text-sm text-ink/45">{CONTACT.email} · {CONTACT.phoneDisplay}</p>
       </div>
     );
   }
 
   const { client, bookings } = account;
   const fmtDate = (iso: string | null) =>
-    iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
+    iso ? new Date(iso).toLocaleDateString(locale === "rw" ? "fr-RW" : "en-GB") : "—";
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">

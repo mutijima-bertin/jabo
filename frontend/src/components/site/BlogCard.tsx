@@ -19,6 +19,7 @@ export function BlogCard({ post }: { post: PostSummary }) {
       // Prefetching would run the server page for in-viewport cards and
       // inflate the view counter without a real visit.
       prefetch={false}
+      // Card surface = cardSurface (lib/ui.ts) — reuse the token for new cards.
       className="group flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white/70 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-brass/40 hover:shadow-md"
     >
       <PostCover coverImageUrl={post.coverImageUrl} alt={title} sizes="(max-width: 768px) 100vw, 50vw" className="aspect-video" />

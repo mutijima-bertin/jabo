@@ -1,19 +1,25 @@
 "use client";
 
+import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
 import type { Testimonial } from "@/lib/api";
+import { cardSurface } from "@/lib/ui";
 import { SectionTitle } from "@/components/shared/SectionTitle";
 
 /**
  * Homepage social proof: published client testimonials as elegant cream cards.
  * Data is fetched server-side in page.tsx (same pattern as services/portfolio);
  * renders nothing when there are no published testimonials — no empty state
- * on the public site.
+ * on the public site. Unbounded-list guard: at most six cards render; the
+ * remainder becomes one muted "more stories" link to booking.
  */
 export function TestimonialsSection({ items }: { items: Testimonial[] }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
 
   if (items.length === 0) return null;
+
+  const visible = items.slice(0, 6);
+  const hidden = items.length - visible.length;
 
   return (
     <section className="scroll-mt-20 py-24">
@@ -23,8 +29,8 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
           <SectionTitle k="testimonials_sub" />
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <figure key={item.id} className="relative rounded-3xl border border-ink/10 bg-white/60 p-8 shadow-sm">
+          {visible.map((item) => (
+            <figure key={item.id} className={`relative ${cardSurface} p-8 shadow-sm`}>
               <span aria-hidden className="block font-serif text-6xl leading-none text-brass">
                 &ldquo;
               </span>
@@ -38,6 +44,16 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
             </figure>
           ))}
         </div>
+        {hidden > 0 && (
+          <p className="mt-8 text-center text-sm text-ink/50">
+            <Link
+              href="/book"
+              className="font-semibold text-brass-deep underline decoration-2 underline-offset-4 transition hover:text-brass"
+            >
+              {t("testimonials_more").replace("{n}", String(hidden))}
+            </Link>
+          </p>
+        )}
       </div>
     </section>
   );

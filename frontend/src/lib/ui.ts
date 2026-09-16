@@ -57,6 +57,21 @@ export const textareaCls = cx(inputCls, "min-h-[7rem] leading-relaxed");
 export const labelCls = "mb-2 block text-sm font-medium text-ink/70";
 
 // ---------------------------------------------------------------------------
+// Public (cream) theme — shared site-card surface & section rhythm
+// ---------------------------------------------------------------------------
+/**
+ * ONE card surface for the public site (portfolio, services, testimonials,
+ * blog, contact rows). New cream-theme cards should import this instead of
+ * hand-typing rounded/border/bg so surfaces stop drifting.
+ */
+export const cardSurface = "rounded-2xl border border-ink/10 bg-white/70";
+
+// Standard section rhythm for homepage sections — one spacing, deliberate
+// exceptions only (TrustBand/ClientsWall/HomeCta keep their own contrast bands):
+//   section spacing    = `py-20 md:py-24`
+//   header→content gap = `mb-12` (48px)
+
+// ---------------------------------------------------------------------------
 // Admin theme — buttons
 // ---------------------------------------------------------------------------
 export const btn =
@@ -158,12 +173,6 @@ export const linkCls = "text-sm font-semibold text-brass-light transition-colors
 /** Portfolio/service card thumbnails. */
 export const thumbCls = "aspect-[4/3] w-full object-cover";
 export const thumbWide = "aspect-[16/9] w-full object-cover";
-
-/** Always-visible bottom action bar over collection card media (touch-safe).
- *  Below `md` the scrim is hidden — the card renders the action row as a
- *  footer strip under the media (portfolio mobile scaffold, QA #4). */
-export const cardScrim =
-  "absolute inset-x-0 bottom-0 hidden items-center justify-between gap-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-3 pt-8 md:flex";
 
 // ---------------------------------------------------------------------------
 // Admin theme — tables

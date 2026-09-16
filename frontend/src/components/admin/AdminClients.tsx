@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { Inbox, Search } from "lucide-react";
-import { useAdminFetch } from "@/lib/admin";
+import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
 import type { AdminClient } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
+import { DeleteButton } from "@/components/admin/shared/CollectionManager";
 import {
   adminInputCls,
   cx,
@@ -21,6 +22,7 @@ import {
   pageTitle,
   sectionLabel,
   skeletonRows,
+  successBanner,
   table,
   tableScrollWrap,
   tbody,
@@ -33,8 +35,38 @@ import {
 
 export function AdminClients({ token }: { token: string }) {
   const { t, locale } = useI18n();
+  const handleSessionExpired = useSessionGuard();
   const { data: clients, error, loading, reload } = useAdminFetch<AdminClient[]>("/admin/clients", token);
   const [query, setQuery] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+  const [removedName, setRemovedName] = useState<string | null>(null);
+
+  /**
+   * DELETE /admin/clients/:id → cascades bookings + testimonials.
+   * Contract: 200 { ok: true, deletedBookings, deletedTestimonials };
+   * 404 { error: "CLIENT_NOT_FOUND" }. On success the removed row vanishes
+   * after reload, so the "removed" confirmation persists above the table.
+   */
+  async function remove(client: AdminClient) {
+    setDeletingId(client.id);
+    setActionError("");
+    setRemovedName(null);
+    try {
+      await adminApi.del<{ ok: boolean }>(`/admin/clients/${client.id}`, token);
+      setRemovedName(client.name);
+      reload();
+    } catch (e) {
+      if ((e as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      const msg = (e as Error).message || t("admin_error_generic");
+      setActionError(msg === "CLIENT_NOT_FOUND" ? t("admin_error_generic") : msg);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const q = query.trim().toLowerCase();
   const filtered =
@@ -63,6 +95,20 @@ export function AdminClients({ token }: { token: string }) {
               {t("admin_retry")}
             </button>
           </div>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="mt-6">
+          <div className={errorBanner} role="alert">
+            <span className="min-w-0 flex-1">{actionError}</span>
+          </div>
+        </div>
+      )}
+
+      {removedName && (
+        <div className="mt-6" role="status">
+          <div className={successBanner}>{t("admin_clients_removed")}</div>
         </div>
       )}
 
@@ -109,6 +155,7 @@ export function AdminClients({ token }: { token: string }) {
                     <th scope="col" className={thCls}>{t("admin_clients_col_bookings")}</th>
                     <th scope="col" className={thCls}>{t("admin_clients_col_last_booking")}</th>
                     <th scope="col" className={thCls}>{t("admin_clients_col_created")}</th>
+                    <th scope="col" className={thCls}>{t("admin_clients_col_actions")}</th>
                   </tr>
                 </thead>
                 <tbody className={tbody}>
@@ -135,6 +182,15 @@ export function AdminClients({ token }: { token: string }) {
                           )}
                         </td>
                         <td className={cx(tdCls, tdMuted)}>{formatDate(c.createdAt, locale)}</td>
+                        <td className={tdCls}>
+                          <div className="flex items-center justify-end gap-2">
+                            <DeleteButton
+                              busy={deletingId === c.id}
+                              onConfirm={() => remove(c)}
+                              confirmLabel={t("admin_clients_delete_confirm")}
+                            />
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}

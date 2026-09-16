@@ -16,6 +16,6 @@ export function SectionTitle({
     | "testimonials_sub";
 }) {
   const { t } = useI18n();
-  if (k === "services_sub" || k === "portfolio_sub" || k === "testimonials_sub") return <p className="mt-3 text-ink/60">{t(k)}</p>;
+  if (k === "services_sub" || k === "portfolio_sub" || k === "testimonials_sub") return <p className="mt-4 text-ink/60">{t(k)}</p>;
   return <h2 className="font-serif text-3xl font-semibold leading-tight md:text-4xl">{t(k)}</h2>;
 }

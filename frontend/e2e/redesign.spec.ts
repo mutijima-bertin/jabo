@@ -210,32 +210,57 @@ test.describe("redesign journeys", () => {
     expect(await wall.locator("ul > li").count()).toBe(logos.length); // all rows show
     expect(await wall.locator("img").count()).toBe(imaged); // one <img> per image logo; wordmarks are spans
 
-    // Homepage portfolio grid renders every published item (seed floor 3;
-    // the content import brings it to 13+).
+    // Homepage portfolio grid caps the featured list at 6 (PortfolioGrid
+    // maxItems={6}); the FULL published set lives on /portfolio. Never pin the
+    // cap when the live catalog is smaller (seed floor is 3).
     const portfolio = await apiGet<Array<{ titleEn: string }>>(request, "/public/portfolio");
     expect(portfolio.length).toBeGreaterThanOrEqual(3);
     const grid = page.locator("#portfolio .grid-cols-1 > button");
     await expect(grid.first()).toBeVisible({ timeout: 10000 });
-    expect(await grid.count()).toBe(portfolio.length);
+    const homeCount = Math.min(6, portfolio.length);
+    expect(await grid.count()).toBe(homeCount);
 
     // Spot-check the FIRST TWO titles from the live /public/portfolio list
     // (never dev-import literals) actually render on the grid — preserves the
-    // "grid shows every published item" intent without pinning content.
+    // "grid shows the featured work" intent without pinning content.
     const titlesToSpotCheck = portfolio.slice(0, 2);
     for (const { titleEn } of titlesToSpotCheck) {
       await expect(page.getByRole("button", { name: titleEn })).toBeVisible();
     }
 
+    // Capped view points at the uncapped page ("View all work" link renders
+    // only while items are actually hidden). While on the homepage the
+    // lightbox navigates ONLY the visible (capped) items.
+    await expect(page.getByRole("link", { name: "View all work" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "View all work" })).toHaveAttribute("href", "/portfolio");
+    await grid.first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    await expect(dialog.getByText(/^\d{2} \/ \d{2}$/).first()).toHaveText(
+      new RegExp(`^01 / ${String(homeCount).padStart(2, "0")}$`),
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
     // The covers joined the hero carousel. The hero renders at most
     // intro + (MAX_SLIDES-2) cover slides, so the live denominator is not
     // necessarily "05" — assert counter↔slide-button agreement instead of
-    // hardcoding a slide count.
+    // hardcoding a slide count. (Asserted while still on the homepage — the
+    // CTA navigation below leaves the hero behind.) Passing the /public/
+    // catalog to the section is cheap; the hero also mutates nothing.
     const hero = page.locator('section[aria-roledescription="carousel"]');
     const counter = hero.getByText(/^\d{2} \/ \d{2}$/).first();
     await expect(counter).toBeVisible();
     const slideCount = await hero.getByRole("button", { name: /^Slide \d+ \/ \d+$/ }).count();
     expect(slideCount, "hero carries the intro slide plus published covers").toBeGreaterThanOrEqual(3);
     await expect(counter).toHaveText(new RegExp(`^\\d{2} / ${String(slideCount).padStart(2, "0")}$`));
+
+    // Following the CTA lands on the full (uncapped) catalog.
+    await page.getByRole("link", { name: "View all work" }).click();
+    await expect(page).toHaveURL(/\/portfolio$/);
+    const fullGrid = page.locator(".grid-cols-1 > button");
+    await expect(fullGrid.first()).toBeVisible({ timeout: 10000 });
+    expect(await fullGrid.count()).toBe(portfolio.length);
   });
 
   test("portfolio filter shows honest empty state and recovers", async ({ page, request }) => {

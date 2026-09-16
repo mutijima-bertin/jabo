@@ -13,7 +13,7 @@ export function Nav() {
 
   const links = [
     { href: "/", label: t("nav_home") },
-    { href: "/#services", label: t("nav_services") },
+    { href: "/services", label: t("nav_services") },
     { href: "/portfolio", label: t("nav_portfolio") },
     { href: "/blog", label: t("nav_blog") },
   ];
@@ -26,7 +26,7 @@ export function Nav() {
         </Link>
 
         {/* Desktop nav */}
-        <nav aria-label="Main" className="hidden items-center gap-8 text-sm font-medium text-ink/70 md:flex">
+        <nav aria-label={t("nav_main_aria")} className="hidden items-center gap-8 text-sm font-medium text-ink/70 md:flex">
           {links.map((l) => (
             <Link key={l.href} href={l.href} className="transition hover:text-brass">
               {l.label}
@@ -60,7 +60,7 @@ export function Nav() {
 
       {/* Mobile menu panel */}
       {open && (
-        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-ink/10 bg-cream md:hidden">
+        <nav id="mobile-menu" aria-label={t("nav_mobile_aria")} className="border-t border-ink/10 bg-cream md:hidden">
           <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
             {links.map((l) => (
               <Link

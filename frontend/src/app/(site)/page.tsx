@@ -29,7 +29,7 @@ export default async function HomePage() {
             <SectionTitle k="portfolio_title" />
             <SectionTitle k="portfolio_sub" />
           </div>
-          <PortfolioGrid items={portfolio} />
+          <PortfolioGrid items={portfolio} maxItems={6} />
         </div>
       </section>
 

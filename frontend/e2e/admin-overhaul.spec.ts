@@ -579,4 +579,139 @@ test.describe("admin interface overhaul", () => {
     await expect(page.getByText(/^Incamake/)).toBeVisible(); // admin_dash_sub (RW)
     await expect(page.locator("aside").getByRole("button", { name: "Ubutumwa", exact: true })).toBeVisible(); // admin_bookings
   });
+
+  // ---------------------------------------------------------------------------
+  // 10. Admin portfolio delete — the always-visible in-flow footer action row
+  // (no scrim / hover-reveal anymore) drives Delete, with BOTH branches of the
+  // inline confirm exercised: cancel keeps the card, commit removes it.
+  // ---------------------------------------------------------------------------
+  test("admin portfolio Delete removes a card after confirm; Cancel keeps it", async ({ page, request }) => {
+    const DELETE_TITLE = `${PREFIX} Delete Card`;
+    const CANCEL_TITLE = `${PREFIX} Cancel Card`;
+
+    const createCard = async (title: string): Promise<{ id: string }> => {
+      const res = await request.post(`${API}/admin/portfolio`, {
+        headers: AUTH(token),
+        data: {
+          titleEn: title,
+          titleRw: "",
+          category: "Corporate",
+          clientName: "",
+          tags: [],
+          coverUrl: "/uploads/e2e-action.png", // admin-trusted path string; not fetched
+          mediaUrls: [],
+          mediaType: "image",
+          published: false,
+          sortOrder: 900001,
+        },
+      });
+      expect(res.status(), `portfolio create for "${title}" should be 201`).toBe(201);
+      return res.json() as Promise<{ id: string }>;
+    };
+
+    const toDelete = await createCard(DELETE_TITLE);
+    const toKeep = await createCard(CANCEL_TITLE);
+
+    try {
+      await adminSession(page);
+      await page.goto("/admin?tab=portfolio");
+      await expect(page.getByRole("heading", { name: "Portfolio", level: 1 })).toBeVisible({ timeout: 10000 });
+
+      // Anchor each card by its cover's img[alt=title] and climb to the card
+      // div (the footer action row lives inside it at every breakpoint).
+      const cardFor = (title: string) => page.locator(`img[alt="${title}"]`).locator("..");
+
+      // --- Cancel branch: Delete → Cancel → the card stays put. ---
+      let card = cardFor(CANCEL_TITLE);
+      await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 10000 });
+      await card.getByRole("button", { name: "Delete", exact: true }).click();
+      // The footer swaps the Delete button for the inline confirmation panel.
+      await expect(card.getByRole("button", { name: "Yes, delete", exact: true })).toBeVisible();
+      await card.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+      expect(
+        (await apiGet<Array<{ id: string }>>(request, "/admin/portfolio")).some((p) => p.id === toKeep.id),
+        "cancelled delete must keep the item",
+      ).toBe(true);
+
+      // --- Commit branch: Delete → Yes, delete → the card disappears AND the
+      // admin catalog no longer contains it. ---
+      card = cardFor(DELETE_TITLE);
+      await expect(card.getByRole("button", { name: "Delete", exact: true })).toBeVisible({ timeout: 10000 });
+      await card.getByRole("button", { name: "Delete", exact: true }).click();
+      await expect(card.getByRole("button", { name: "Yes, delete", exact: true })).toBeVisible();
+      await card.getByRole("button", { name: "Yes, delete", exact: true }).click();
+      await expect(page.locator(`img[alt="${DELETE_TITLE}"]`)).toHaveCount(0, { timeout: 10000 });
+      const after = await apiGet<Array<{ id: string }>>(request, "/admin/portfolio");
+      expect(after.some((p) => p.id === toDelete.id), "deleted item must be gone from the admin API").toBe(false);
+    } finally {
+      // If the UI delete path itself failed, leave the catalog clean (the
+      // afterAll PREFIX sweep is the backstop, this is the prompt path).
+      const all = await apiGet<Array<{ id: string }>>(request, "/admin/portfolio").catch(() => []);
+      for (const p of all) {
+        if (p.id === toDelete.id || p.id === toKeep.id) {
+          await request.delete(`${API}/admin/portfolio/${p.id}`, { headers: AUTH(token) }).catch(() => {});
+        }
+      }
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // 11. Admin clients delete — the new 7th "Actions" column runs
+  // DELETE /admin/clients/:id with the cascade-warning inline confirm. The
+  // booking (created via the public API) and its client row must BOTH vanish.
+  // ---------------------------------------------------------------------------
+  test("admin clients Delete removes the client row and cascades their bookings", async ({ page, request }) => {
+    const email = `clients-del-${RUN}@test.local`;
+    const contactName = `Clients Del ${RUN}`;
+    // The public booking create upserts the Client row too (portal contract).
+    const booking = await createBooking(request, contactName, email);
+    expect(booking.reference).toBeTruthy();
+
+    const clientsList = () => apiGet<Array<{ id: string; email: string | null }>>(request, "/admin/clients");
+    const bookingStillListed = async (): Promise<boolean> =>
+      (await apiGet<Array<{ reference: string }>>(request, "/admin/bookings")).some((b) => b.reference === booking.reference);
+
+    // Preconditions via the admin API: the booking upsert created its client
+    // row, and the booking is listed before the deletion.
+    const seeded = await clientsList();
+    const clientRow = seeded.find((c) => c.email === email);
+    expect(clientRow, "booking create must upsert the client row").toBeTruthy();
+    expect(await bookingStillListed()).toBe(true);
+
+    try {
+      await adminSession(page);
+      await page.goto("/admin?tab=clients");
+      await expect(page.getByRole("heading", { name: /^Clients\d*$/ })).toBeVisible({ timeout: 10000 });
+
+      // Narrow the directory to exactly our run-unique client (search is the
+      // client-side filter; the email cell is unique per booking upsert).
+      const search = page.getByPlaceholder("Search by name or email");
+      await search.fill(email);
+      const row = page.locator("tbody tr").filter({ hasText: email });
+      await expect(row).toHaveCount(1, { timeout: 10000 });
+
+      // Delete → the inline confirm spells out the cascade out loud.
+      await row.getByRole("button", { name: "Delete", exact: true }).click();
+      await expect(row.getByText("Delete this client? Their bookings and testimonials are removed too.")).toBeVisible();
+      await row.getByRole("button", { name: "Yes, delete", exact: true }).click();
+
+      // The row disappears and the success banner confirms the removal.
+      await expect(page.locator("tbody tr").filter({ hasText: email })).toHaveCount(0, { timeout: 10000 });
+      await expect(page.getByText("Client removed", { exact: true })).toBeVisible();
+
+      // Server truth: the client is gone…
+      expect((await clientsList()).some((c) => c.email === email), "client must leave the admin catalog").toBe(false);
+      // …and the cascade wiped the booking too (that is the point of the API).
+      expect(await bookingStillListed(), "client deletion must cascade to their bookings").toBe(false);
+    } finally {
+      // If the UI delete path failed, clean the orphan client via the admin
+      // API — it is the only route (no public booking DELETE endpoint exists).
+      const all = await clientsList().catch(() => []);
+      const orphan = all.find((c) => c.email === email);
+      if (orphan) {
+        await request.delete(`${API}/admin/clients/${orphan.id}`, { headers: AUTH(token) }).catch(() => {});
+      }
+    }
+  });
 });

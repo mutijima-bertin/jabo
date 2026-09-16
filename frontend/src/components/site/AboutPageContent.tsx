@@ -20,6 +20,7 @@ export function AboutPageContent({ settings }: { settings: SettingsMap }) {
       <p className="mt-6 leading-relaxed text-ink/60">{t("about_page_story")}</p>
 
       <h2 className="mt-16 font-serif text-2xl font-semibold">{t("about_contact")}</h2>
+      {/* Contact cards share the site cardSurface (lib/ui.ts). */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-white/70 p-5 shadow-sm">
           <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brass" />

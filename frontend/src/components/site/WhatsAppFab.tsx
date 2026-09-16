@@ -1,9 +1,8 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n";
+import { CONTACT } from "@/lib/site";
 import { WhatsAppIcon } from "@/components/shared/social-icons";
-
-const WHATSAPP_URL = "https://wa.me/250783269951";
 
 /**
  * Floating WhatsApp button — fixed bottom-right, visible on every screen
@@ -14,7 +13,7 @@ export function WhatsAppFab() {
 
   return (
     <a
-      href={WHATSAPP_URL}
+      href={CONTACT.whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={t("whatsapp_aria")}

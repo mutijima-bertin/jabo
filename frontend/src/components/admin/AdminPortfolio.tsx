@@ -10,7 +10,6 @@ import { useI18n, type DictKey } from "@/lib/i18n";
 import {
   adminInputCls,
   adminSelectCls,
-  cardScrim,
   checkboxCls,
   cx,
   emptyState,
@@ -180,8 +179,8 @@ export function AdminPortfolio({ token }: { token: string }) {
 
   const list = items ?? [];
 
-  /** Shared always-visible action row — used in the mobile footer strip AND
-   *  the md+ scrim so both breakpoints expose the same touch-safe controls. */
+  /** Shared always-visible action row — in-flow footer so controls are
+   *  reachable at every breakpoint (no hover-reveal, no scrim overlay). */
   const renderActions = (item: PortfolioItem, itemIdx: number) => (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
       <button
@@ -374,20 +373,14 @@ export function AdminPortfolio({ token }: { token: string }) {
               {list.map((i, idx) => (
                 <div
                   key={i.id}
-                  className="relative flex flex-col overflow-hidden rounded-2xl border border-admin-border bg-admin-base md:block"
+                  className="relative flex flex-col overflow-hidden rounded-2xl border border-admin-border bg-admin-base"
                 >
                   <img src={i.coverUrl} alt={i.titleEn} className={thumbCls} loading="lazy" />
-                  {/* Mobile (≤639px): actions flow BELOW the media as a footer strip
-                      like the services cards — no half-cover scrim (QA #4). */}
-                  <div className="flex items-center justify-between gap-2 px-3 py-3 md:hidden">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-admin-text">{i.titleEn}</p>
-                      <p className="truncate text-xs text-admin-muted">{categoryLabel(i.category, t)}</p>
-                    </div>
-                    {renderActions(i, idx)}
-                  </div>
-                  {/* md+: always-visible scrim over the cover art (QA #4). */}
-                  <div className={cardScrim}>
+                  {/* In-flow card footer: title + category, then the always-visible
+                      action row (edit/delete/reorder) under the media at every
+                      breakpoint — no hover-reveal, no scrim overlay. The footer
+                      wraps on very narrow cards so the buttons never clip. */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-admin-text">{i.titleEn}</p>
                       <p className="truncate text-xs text-admin-muted">{categoryLabel(i.category, t)}</p>

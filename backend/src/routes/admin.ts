@@ -62,6 +62,7 @@ adminRouter.put("/admin/settings", adminCatalog.replaceSettings);
 
 // ---------- Clients ----------
 adminRouter.get("/admin/clients", adminClients.listClients);
+adminRouter.delete("/admin/clients/:id", adminClients.removeClient);
 
 // ---------- Blog ----------
 adminRouter.get("/admin/posts", adminPosts.listPosts);

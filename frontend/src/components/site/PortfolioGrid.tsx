@@ -44,17 +44,19 @@ function matchesCategory(category: string, filter: string | null): boolean {
 /**
  * Honest portfolio grid (blueprint §4.3): no silent fallback — an empty
  * category shows a real empty state. Cards open a shared accessible
- * lightbox; used on both the homepage section and /portfolio.
+ * lightbox; used on both the homepage section (capped via `maxItems`)
+ * and /portfolio (full list).
  */
-export function PortfolioGrid({ items }: { items: PortfolioItem[] }) {
+export function PortfolioGrid({ items, maxItems }: { items: PortfolioItem[]; maxItems?: number }) {
   const { locale, t } = useI18n();
   const [activeKey, setActiveKey] = useState<Filter["key"]>("portfolio_filter_all");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const activeFilter = FILTERS.find((f) => f.key === activeKey) ?? FILTERS[0];
   const filtered = items.filter((i) => matchesCategory(i.category ?? "", activeFilter.match));
-  // No fallback: dead categories honestly show nothing.
-  const visible = filtered;
+  // No fallback: dead categories honestly show nothing. `maxItems` caps the
+  // rendered list (homepage); lightbox nav operates on the capped `visible`.
+  const visible = filtered.slice(0, maxItems ?? filtered.length);
 
   const selectFilter = (key: Filter["key"]) => {
     setActiveKey(key);
@@ -133,6 +135,7 @@ export function PortfolioGrid({ items }: { items: PortfolioItem[] }) {
               key={item.id}
               type="button"
               onClick={() => setOpenIndex(idx)}
+              // Card surface = cardSurface (lib/ui.ts).
               className="group relative block cursor-pointer overflow-hidden rounded-2xl border border-ink/10 bg-white/70 text-left shadow-sm focus-visible:outline-offset-4"
               aria-label={portfolioTitle(item, locale)}
             >
@@ -157,6 +160,21 @@ export function PortfolioGrid({ items }: { items: PortfolioItem[] }) {
               </span>
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Capped view: point to the full /portfolio page instead of showing
+          every item (homepage passes maxItems). Centered underline link,
+          bolder than the book_now affordance. */}
+      {maxItems && filtered.length > maxItems && (
+        <div className="mt-10 text-center">
+          <Link
+            href="/portfolio"
+            className="inline-flex items-center gap-2 font-serif text-lg font-semibold text-brass-deep underline decoration-2 underline-offset-4 transition hover:text-brass"
+          >
+            {t("portfolio_view_all")}
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
       )}
 

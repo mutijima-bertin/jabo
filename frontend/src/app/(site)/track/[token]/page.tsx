@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { api, type Booking } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
+import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 
 export default function TrackPage() {
@@ -39,7 +40,7 @@ export default function TrackPage() {
         <h1 className="mt-10 font-serif text-3xl font-semibold leading-tight">{t("track_link_expired")}</h1>
         <p className="mt-4 text-ink/60">{t("track_request_new")}</p>
         <p className="mt-8 text-sm text-ink/45">
-          hello@creativesoundstudio.rw · +250 700 000 000
+          {CONTACT.email} · {CONTACT.phoneDisplay}
         </p>
       </div>
     );
@@ -54,6 +55,7 @@ export default function TrackPage() {
       <Logo className="h-12 w-auto" />
       <h1 className="mt-8 font-serif text-3xl font-semibold leading-tight md:text-4xl">{t("track_title")}</h1>
 
+      {/* Summary card = cardSurface (lib/ui.ts). */}
       <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-2 rounded-2xl border border-ink/10 bg-white/70 p-6 shadow-sm">
         <div>
           <p className="text-xs uppercase tracking-wider text-ink/50">{t("track_ref")}</p>
@@ -93,7 +95,10 @@ export default function TrackPage() {
                         ?.filter((e) => e.status === s)
                         .map((e) => (
                           <p key={e.id} className="text-xs text-ink/50">
-                            {new Date(e.createdAt).toLocaleString(locale === "rw" ? "en-GB" : "en-GB")}
+                            {/* Kinyarwanda falls back to French in the CLDR
+                                (fr-RW) — matches the day/month order and
+                                thousands separators RWF budgets expect. */}
+                            {new Date(e.createdAt).toLocaleString(locale === "rw" ? "fr-RW" : "en-GB")}
                             {e.note ? ` — ${e.note}` : ""}
                           </p>
                         ))}

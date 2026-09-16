@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { setClientToken } from "@/lib/client";
 import { useI18n } from "@/lib/i18n";
+import { CONTACT } from "@/lib/site";
 import { inputCls, labelCls } from "@/lib/ui";
 import { Logo } from "@/components/shared/Logo";
 
@@ -127,7 +128,7 @@ function LoginInner() {
       )}
 
       <p className="mt-8 text-center text-sm text-ink/45">
-        hello@creativesoundstudio.rw · +250 700 000 000
+        {CONTACT.email} · {CONTACT.phoneDisplay}
       </p>
     </div>
   );
