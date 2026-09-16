@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Languages, MapPin } from "lucide-react";
+import { Languages, Mail, MapPin, Phone } from "lucide-react";
 import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
 import { CONTACT } from "@/lib/site";
@@ -18,6 +18,7 @@ export function Footer() {
     { href: "/portfolio", label: t("nav_portfolio") },
     { href: "/#about", label: t("nav_about") },
     { href: "/blog", label: t("nav_blog") },
+    { href: "/contact", label: t("nav_contact") },
     { href: "/book", label: t("nav_book") },
   ];
 
@@ -103,6 +104,18 @@ export function Footer() {
                   className="flex items-center gap-2.5 transition hover:text-brass"
                 >
                   <WhatsAppIcon className="h-4 w-4 shrink-0 text-brass" />
+                  {CONTACT.phoneDisplay}
+                </a>
+              </li>
+              <li>
+                <a href={CONTACT.emailHref} className="flex items-center gap-2.5 transition hover:text-brass">
+                  <Mail className="h-4 w-4 shrink-0 text-brass" />
+                  {CONTACT.email}
+                </a>
+              </li>
+              <li>
+                <a href={CONTACT.phoneHref} className="flex items-center gap-2.5 transition hover:text-brass">
+                  <Phone className="h-4 w-4 shrink-0 text-brass" />
                   {CONTACT.phoneDisplay}
                 </a>
               </li>

@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Mail, Phone } from "lucide-react";
 import { api, type Booking } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
+import { WhatsAppIcon } from "@/components/shared/social-icons";
 
 export default function TrackPage() {
   const { token } = useParams<{ token: string }>();
@@ -39,9 +41,32 @@ export default function TrackPage() {
         <Logo className="mx-auto h-14 w-auto" />
         <h1 className="mt-10 font-serif text-3xl font-semibold leading-tight">{t("track_link_expired")}</h1>
         <p className="mt-4 text-ink/60">{t("track_request_new")}</p>
-        <p className="mt-8 text-sm text-ink/45">
-          {CONTACT.email} · {CONTACT.phoneDisplay}
-        </p>
+        {/* Contact row — actual links, no dead ends. */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a
+            href={CONTACT.whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-green px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-green-deep"
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            {t("social_whatsapp")}
+          </a>
+          <a
+            href={CONTACT.emailHref}
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-sm font-medium text-ink/70 transition hover:border-brass hover:text-brass"
+          >
+            <Mail className="h-4 w-4 text-brass" />
+            {CONTACT.email}
+          </a>
+          <a
+            href={CONTACT.phoneHref}
+            className="inline-flex items-center gap-2 rounded-full border border-ink/15 px-5 py-2.5 text-sm font-medium text-ink/70 transition hover:border-brass hover:text-brass"
+          >
+            <Phone className="h-4 w-4 text-brass" />
+            {CONTACT.phoneDisplay}
+          </a>
+        </div>
       </div>
     );
   }
@@ -114,6 +139,43 @@ export default function TrackPage() {
       <p className="mt-12 text-center text-xs text-ink/50">
         {t("track_request_new")}
       </p>
+
+      {/* Contact strip — lives inside the section container so every status
+          screen keeps a working next action. */}
+      <div className="mt-6 rounded-2xl border border-ink/10 bg-white/70 p-5">
+        <p className="text-sm font-semibold text-ink/80">{t("track_questions")}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <a
+            href={CONTACT.whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full bg-green px-5 py-2.5 text-sm font-semibold text-cream transition hover:bg-green-deep"
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            {t("social_whatsapp")}
+          </a>
+          <a
+            href={CONTACT.emailHref}
+            className="inline-flex items-center gap-2 text-sm font-medium text-ink/70 transition hover:text-brass"
+          >
+            <Mail className="h-4 w-4 text-brass" />
+            {CONTACT.email}
+          </a>
+          <a
+            href={CONTACT.phoneHref}
+            className="inline-flex items-center gap-2 text-sm font-medium text-ink/70 transition hover:text-brass"
+          >
+            <Phone className="h-4 w-4 text-brass" />
+            {CONTACT.phoneDisplay}
+          </a>
+        </div>
+        <Link
+          href="/book"
+          className="mt-4 inline-block text-sm font-semibold text-ink/50 transition hover:text-brass"
+        >
+          {t("track_book_another")}
+        </Link>
+      </div>
     </div>
   );
 }

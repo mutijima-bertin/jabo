@@ -417,6 +417,17 @@ const en = {
   book_faq_a3: "We'll send you a detailed quote after confirming your production details. Payment is handled directly — cash, mobile money, or bank transfer.",
   book_faq_q4: "Can I cancel or reschedule?",
   book_faq_a4: "Yes — just reply to any of our emails or message us on WhatsApp with your reference number.",
+  /* ---- Post-submit & contact experience (Phase 3) ---- */
+  nav_contact: "Contact",
+  contact_title: "Contact us",
+  contact_sub: "We reply within 24 hours. Prefer to keep it simple? WhatsApp us directly.",
+  contact_whatsapp_note: "Fastest — usually within the hour during the day",
+  contact_email_note: "For detailed quotes and invoices",
+  contact_phone_note: "For event-day emergencies, call us",
+  book_next_steps: "We'll review your details and confirm your production via email and WhatsApp within 24 hours.",
+  book_chat_whatsapp: "Chat on WhatsApp",
+  track_questions: "Questions about your production?",
+  track_book_another: "Book another production",
 };
 
 export type DictKey = keyof typeof en;
@@ -832,6 +843,17 @@ const rw: Record<keyof typeof en, string> = {
   book_faq_a3: "Tuzakohereza itegeko ryuzuye nyuma yo kwemeza ibisobanuro by'umurimo wawe. Ukwishura ni ku buryo busanzwe — amahera, mobile money cyangwa ikibazo.",
   book_faq_q4: "Nshobora guhagarika cyangwa guhindura?",
   book_faq_a4: "Ego — subiza mu meyili zacu cyangwa utwandikire kuri WhatsApp hamwe nimero ry'urugero rwawe.",
+  /* ---- Post-submit & contact experience (Phase 3) ---- */
+  nav_contact: "Twandikire",
+  contact_title: "Twandikire",
+  contact_sub: "Dusubiza mu masaha 24. Uramutse ushaka uburyo bworoshye, twandikire kuri WhatsApp.",
+  contact_whatsapp_note: "Ibyihuse — ubusanzwe dusubiza mu isaha imwe ku manywa",
+  contact_email_note: "Kubwo igiciro gisobanutse cyangwa invoice",
+  contact_phone_note: "Iyo hari ikintu cy'akabanga ku munsi w'ibirori, duhamagare",
+  book_next_steps: "Tuzareba ibisobanuro byawe maze dukwemeze umurimo wawe na email na WhatsApp mu masaha 24.",
+  book_chat_whatsapp: "Twandikire kuri WhatsApp",
+  track_questions: "Ufite ikibazo ku murimo wawe?",
+  track_book_another: "Andikisha undi murimo",
 };
 
 const dicts: Record<Locale, Record<keyof typeof en, string>> = { en, rw };

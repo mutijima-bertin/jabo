@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { api, ApiError, type Service } from "@/lib/api";
 import { useI18n, type DictKey } from "@/lib/i18n";
 import { fieldErrorText, inputCls, inputErrorCls, labelCls } from "@/lib/ui";
 import { PhoneInput } from "@/components/site/PhoneInput";
 import { useSelectedServiceId } from "@/components/site/BookingServiceContext";
+import { WhatsAppIcon } from "@/components/shared/social-icons";
 
 interface Props {
   services: Service[];
@@ -126,12 +128,38 @@ export function BookingForm({ services, initialServiceId }: Props) {
         <p className="mt-6 text-sm text-ink/55">
           {t("book_reference")}: <span className="font-bold text-brass">{result.reference}</span>
         </p>
-        <a
-          href={result.trackUrl}
-          className="mt-8 inline-block rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+
+        {/* What happens next — bite-size reassurance under the reference. */}
+        <p className="mx-auto mt-6 max-w-sm rounded-2xl border border-ink/10 bg-white/70 p-5 text-sm leading-relaxed text-ink/60">
+          {t("book_next_steps")}
+        </p>
+
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a
+            href={`https://wa.me/250783269951?text=${encodeURIComponent(
+              "Hello! I just booked a production (reference " + result.reference + ") — I have a question.",
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            {t("book_chat_whatsapp")}
+          </a>
+          <a
+            href={result.trackUrl}
+            className="inline-block rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+          >
+            {t("book_track_link")}
+          </a>
+        </div>
+
+        <Link
+          href="/book"
+          className="mt-5 inline-block text-sm font-semibold text-ink/50 transition hover:text-brass"
         >
-          {t("book_track_link")}
-        </a>
+          {t("track_book_another")}
+        </Link>
       </div>
     );
   }
