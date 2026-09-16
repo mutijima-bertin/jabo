@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function BookPage() {
   const services = await fetchServices();
   return (
-    <div className="mx-auto max-w-3xl px-4 py-20">
+    <div className="mx-auto max-w-6xl px-4 py-20">
       <PageHeading title="book_title" sub="page_book_sub" />
       <div className="mt-12 rounded-3xl border border-ink/10 bg-white/70 p-6 shadow-sm md:p-10">
         <BookingForm services={services} />

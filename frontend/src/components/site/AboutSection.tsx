@@ -25,7 +25,7 @@ export function AboutSection({
   const story = locale === "rw" && storyRw ? storyRw : storyEn;
 
   return (
-    <section id="about" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-24">
+    <section id="about" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-24">
       <div className="grid items-center gap-12 md:grid-cols-2">
         {/* Identity card */}
         <div className="relative mx-auto w-full max-w-md md:max-w-none">

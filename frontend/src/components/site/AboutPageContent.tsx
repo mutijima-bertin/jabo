@@ -14,7 +14,7 @@ export function AboutPageContent({ settings }: { settings: SettingsMap }) {
   const { locale, t } = useI18n();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-20">
+    <div className="mx-auto max-w-5xl px-4 py-20">
       <PageHeading title="about_title" />
       <p className="mt-8 leading-relaxed text-ink/70">{s(settings, "about_story", locale)}</p>
       <p className="mt-6 leading-relaxed text-ink/60">{t("about_page_story")}</p>

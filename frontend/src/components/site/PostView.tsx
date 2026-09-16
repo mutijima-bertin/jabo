@@ -22,7 +22,7 @@ export function PostView({ post }: { post: PostFull }) {
   const excerpt = locale === "rw" ? post.excerptRw || post.excerptEn || "" : post.excerptEn || "";
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-16 md:py-20">
+    <article className="mx-auto max-w-4xl px-4 py-16 md:py-20">
       <Link
         href="/blog"
         className="inline-flex items-center gap-2 text-sm font-medium text-ink/60 transition hover:text-brass"

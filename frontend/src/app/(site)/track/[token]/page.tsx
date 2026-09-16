@@ -51,7 +51,7 @@ export default function TrackPage() {
   const isCancelled = booking.status === "CANCELLED";
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-16">
+    <div className="mx-auto max-w-3xl px-4 py-16">
       <Logo className="h-12 w-auto" />
       <h1 className="mt-8 font-serif text-3xl font-semibold leading-tight md:text-4xl">{t("track_title")}</h1>
 

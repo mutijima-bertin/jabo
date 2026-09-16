@@ -24,7 +24,7 @@ export default async function HomePage() {
 
       {/* PORTFOLIO — the work leads the page */}
       <section id="portfolio" className="scroll-mt-20 py-24">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <SectionTitle k="portfolio_title" />
             <SectionTitle k="portfolio_sub" />
@@ -44,7 +44,7 @@ export default async function HomePage() {
 
       {/* SERVICES — picture-first bento (blueprint §4.6) */}
       <section id="services" className="scroll-mt-20 border-y border-ink/10 bg-cream-alt py-24">
-        <div className="mx-auto max-w-6xl px-4">
+        <div className="mx-auto max-w-7xl px-4">
           <div className="mb-12 text-center">
             <SectionTitle k="services_title" />
             <SectionTitle k="services_sub" />

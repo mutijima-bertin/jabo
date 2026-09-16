@@ -13,7 +13,7 @@ export function HomeCta() {
 
   return (
     <section className="bg-green">
-      <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+      <div className="mx-auto max-w-5xl px-4 py-24 text-center">
         <h2 className="font-serif text-3xl font-semibold text-cream md:text-4xl">{t("blog_cta_title")}</h2>
         <p className="mt-4 text-cream/70">{t("home_cta_body")}</p>
         <Link

@@ -30,7 +30,7 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
   const hasNext = page < totalPages;
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-20 md:py-28">
+    <section className="mx-auto max-w-7xl px-4 py-20 md:py-28">
       <header className="mx-auto max-w-2xl text-center">
         <span className="inline-flex items-center gap-2 rounded-full border border-brass/30 bg-brass/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-brass">
           <Camera className="h-3.5 w-3.5" />

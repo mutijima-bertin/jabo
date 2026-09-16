@@ -209,10 +209,10 @@ export function HeroSection({
 
               {/* Caption block — anchored bottom-left */}
               <div className="absolute inset-0 flex items-end">
-                <div className="mx-auto w-full max-w-6xl px-4 pb-24 md:px-6 md:pb-20">
+                <div className="mx-auto w-full max-w-7xl px-4 pb-24 md:px-6 md:pb-20">
                   <div
                     key={`${locale}-${slide.id}`}
-                    className="fade-up max-w-2xl"
+                    className="fade-up max-w-2xl md:max-w-3xl"
                     style={{ animationDelay: "0.1s" }}
                   >
                     <span

@@ -14,7 +14,7 @@ export function ClientsWall({ logos }: { logos: ClientLogo[] }) {
 
   return (
     <section className="border-y border-ink/10 bg-cream">
-      <div className="mx-auto max-w-6xl px-4 py-16 text-center md:py-20">
+      <div className="mx-auto max-w-7xl px-4 py-16 text-center md:py-20">
         <SectionTitle k="clients_title" />
         <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
           {logos.map((logo) => (

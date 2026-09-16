@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function PortfolioPage() {
   const portfolio = await fetchPortfolio();
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20">
+    <div className="mx-auto max-w-7xl px-4 py-20">
       <PageHeading title="page_portfolio_title" sub="page_portfolio_sub" subCls="mt-4 max-w-2xl text-ink/60" />
       <div className="mt-12">
         <PortfolioGrid items={portfolio} />

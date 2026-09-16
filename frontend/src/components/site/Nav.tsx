@@ -20,7 +20,7 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-cream/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <Link href="/" aria-label={`${BRAND} — home`} className="shrink-0">
           <Logo className="h-10 w-auto" />
         </Link>
@@ -61,7 +61,7 @@ export function Nav() {
       {/* Mobile menu panel */}
       {open && (
         <nav id="mobile-menu" aria-label={t("nav_mobile_aria")} className="border-t border-ink/10 bg-cream md:hidden">
-          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4">
             {links.map((l) => (
               <Link
                 key={l.href}

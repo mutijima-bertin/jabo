@@ -20,7 +20,7 @@ export function TrustBand() {
 
   return (
     <section className="bg-cream-alt">
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center md:py-20">
+      <div className="mx-auto max-w-5xl px-4 py-16 text-center md:py-20">
         <p className="font-serif text-2xl leading-snug text-ink md:text-3xl">{t("trust_statement")}</p>
         <div className="mt-14 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-0">
           {STATS.map((stat, i) => (

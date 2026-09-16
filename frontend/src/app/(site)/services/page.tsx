@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function ServicesPage() {
   const services = await fetchServices();
   return (
-    <div className="mx-auto max-w-6xl px-4 py-20">
+    <div className="mx-auto max-w-7xl px-4 py-20">
       <div className="max-w-2xl">
         <PageHeading title="page_services_title" sub="page_services_sub" />
       </div>

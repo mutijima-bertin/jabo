@@ -23,7 +23,7 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
 
   return (
     <section className="scroll-mt-20 py-24">
-      <div className="mx-auto max-w-6xl px-4">
+      <div className="mx-auto max-w-7xl px-4">
         <div className="mb-12 text-center">
           <SectionTitle k="testimonials_title" />
           <SectionTitle k="testimonials_sub" />

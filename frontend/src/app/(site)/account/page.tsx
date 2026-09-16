@@ -210,7 +210,7 @@ export default function AccountPage() {
     iso ? new Date(iso).toLocaleDateString(locale === "rw" ? "fr-RW" : "en-GB") : "—";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
+    <div className="mx-auto max-w-5xl px-4 py-16">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
           <Logo className="h-12 w-auto" />
