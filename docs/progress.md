@@ -121,3 +121,19 @@ A client visiting the site sees, in one scroll:
 4. **Branded later (env-only):** buy `creativesoundstudio.rw` (RICTA/register.rw ≈ RWF 15-17k/yr) → add domain in Resend → copy SPF/DKIM records → flip `MAIL_FROM` to `hello@creativesoundstudio.rw`.
 
 **Note:** with SMTP LIVE, the e2e `fetchMagicToken` reads a dev-only backend log line that still prints in non-production, so local/CI e2e keep working. In prod, tokens are never logged.
+
+---
+
+## Phase: Nightly CI green on a fresh DB (2026-09-15, commit d005885)
+
+The 02:00 UTC nightly finally cleared the seed block (JWT_SECRET fix) and failed **inside playwright** — every assertion that depended on the rich imported dev DB fails on a fresh database. Fixed by a local CI-parity repro (clean `ces_ci` DB + the ci-nightly env vars, one full suite per fresh DB):
+
+- **Duplicate admin CTAs** — AdminBlog + AdminSettings testimonials each rendered toolbar + empty-state buttons with identical accessible names → Playwright strict-mode violations whenever a collection is empty. Removed the redundant empty-state buttons.
+- **Hero collapsed with no covers** — seed now generates 3 placeholder WebP covers (sharp gradients → `backend/uploads/images/seed-*.webp`) + 3 published portfolio items (2 Weddings + 1 Corporate, so the e2e sparsest-category precondition holds).
+- **Empty admin needs data** — seed additionally creates a demo client (Aline Uwase) + one CONFIRMED booking (`CSS-SEED-001`) so the admin dashboard/directory render on fresh installs.
+- **e2e literals pinned to dev imports** — `redesign.spec.ts` (>25 logo imgs, >13 portfolio, hardcoded titles) rewritten to relational/API-driven assertions with seed floors; `blog.spec.ts` empty-state copy matcher fixed ("No posts yet." → `/^No posts yet/`).
+- All seed blocks idempotent (upsert-by-name / fixed reference).
+
+**Verification:** parity fresh-DB full suite **45 pass / 2 skip / 0 fail**; docker dev stack **44 pass / 3 skip / 0 fail**; backend **75/75**; fast CI green on d005885. Next nightly observation: 2026-09-16 02:00 UTC.
+
+**Fresh-seed contract** (what the seed guarantees): 1 admin (env creds), 10 services, 8 settings, 4 name-only logos, 3 portfolio items WITH images, 1 demo client, 1 demo booking. Everything else is empty — tests must be relational, never dev-import literals.
