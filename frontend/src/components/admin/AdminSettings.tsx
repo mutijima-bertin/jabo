@@ -597,10 +597,6 @@ function TestimonialsSection({ token }: { token: string }) {
             <Inbox className={emptyStateIcon} />
           </div>
           <p className={emptyStateTitle}>{t("admin_testimonials_empty")}</p>
-          <button type="button" className={btnPrimary} onClick={() => setForm({ ...emptyTestimonial })}>
-            <Plus className="h-4 w-4" />
-            {t("admin_testimonials_new")}
-          </button>
         </div>
       ) : (
         <div className={cx(tableScrollWrap, "mt-6")}>

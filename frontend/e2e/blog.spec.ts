@@ -317,7 +317,10 @@ test.describe("blog journeys", () => {
     const remaining = await apiGet<PostRow[]>(request, "/admin/posts");
     expect(remaining.filter((p) => p.slug.startsWith("e2e-")), "every e2e post must be deleted").toHaveLength(0);
     if (remaining.length === 0) {
-      await expect(page.getByText("No posts yet.")).toBeVisible();
+      // admin_blog_empty EN is "No posts yet — write your first story." — a
+      // tolerant ASCII prefix regex (no em dash in the matcher, and no exact
+      // copy pinning) so the assertion survives copy tweaks.
+      await expect(page.getByText(/^No posts yet/)).toBeVisible();
 
       // Admin list is empty and the public site is back to the empty state.
       expect(await apiGet<PostRow[]>(request, "/public/posts")).toEqual([]);

@@ -12,11 +12,17 @@ import { API, getAdminToken } from "./auth";
  * + linked-post dropdown).
  *
  * DB hygiene: the only mutation this spec makes is a TRANSIENT re-categorize
- * of one owner row (needed because every canonical category currently holds
- * at least one item, so no naturally-empty filter exists). The original
- * category is captured in beforeAll and restored in a finally block AND
- * again defensively in afterAll; afterAll asserts the catalog multiset,
- * testimonials and e2e-post counts match their baselines.
+ * of one published owner row (needed to manufacture an empty filter — the
+ * seed ships at least one item per published category that holds any rows).
+ * The original category is captured in beforeAll and restored in a finally
+ * block AND again defensively in afterAll; afterAll asserts the catalog
+ * multiset, testimonials and e2e-post counts match their baselines.
+ *
+ * Seed floor: the seeded DB ships 4 client logos (name-only, no images),
+ * 10 services, 3 published portfolio items (2 Weddings + 1 Corporate),
+ * 0 testimonials, and 0 bookings.  Content imports and manual admin
+ * work may raise those numbers; all assertions are RELATIONAL against the
+ * live API, never hardcoded counts.
  */
 
 // Credentials from the environment (root .env via playwright.config.ts, or CI
@@ -44,9 +50,10 @@ interface PortfolioRow {
 let token: string;
 let baselineCategories: string[] = []; // multiset of item categories before the run
 let baselineTestimonials = -1; // testimonial count before the run (owner content may exist)
-// Transient re-categorize (test 2): the import added several rows per
-// category, so the empty condition is manufactured by moving EVERY row of the
-// sparsest PUBLISHED canonical category → all of them must come back verbatim.
+// Transient re-categorize (test 2): the sparsest published canonical
+// category is picked dynamically and ALL of its rows are temporarily moved
+// to another category to manufacture the empty-filter condition; they are
+// restored verbatim in the finally block.
 let movedItems: { id: string; originalCategory: string }[] = [];
 
 const AUTH = (t: string) => ({ Authorization: `Bearer ${t}` });
@@ -187,14 +194,14 @@ test.describe("redesign journeys", () => {
     expect(await hero.getByRole("button", { name: /^Slide \d+ \/ \d+$/ }).count()).toBeGreaterThanOrEqual(2);
   });
 
-  test("live content import: clients wall logos, full portfolio grid and 5-slide hero", async ({ page, request }) => {
-    // HARDENING vs the content import: the DB now ships 40 client logos
-    // (incl. text-only wordmarks) and 13 published portfolio items. The wall
-    // has NO published flag — /public/logos returns everything, so all rows
-    // must render. Assert dynamically against the live catalog, never literals.
+  test("live content renders: clients wall, portfolio grid, multi-slide hero", async ({ page, request }) => {
+    // Seed floor: 4 name-only client logos (no imageUrl yet) and 3 published
+    // portfolio items with covers. The wall has NO published flag —
+    // /public/logos returns everything, so all rows must render. Assert
+    // RELATIONALLY against the live catalog, never hardcoded counts.
     const logos = await apiGet<Array<{ id: string; imageUrl: string | null }>>(request, "/public/logos");
     const imaged = logos.filter((l) => l.imageUrl).length;
-    expect(imaged, "import ships 25+ real logo images").toBeGreaterThanOrEqual(25);
+    expect(logos.length, "seed ships 4 name-only logos; imports may add image logos").toBeGreaterThanOrEqual(4);
 
     await page.goto("/");
 
@@ -202,21 +209,24 @@ test.describe("redesign journeys", () => {
     await expect(wall.getByRole("heading", { name: "Trusted by" })).toBeVisible({ timeout: 10000 });
     expect(await wall.locator("ul > li").count()).toBe(logos.length); // all rows show
     expect(await wall.locator("img").count()).toBe(imaged); // one <img> per image logo; wordmarks are spans
-    expect(await wall.locator("img").count()).toBeGreaterThanOrEqual(25);
 
-    // Homepage portfolio grid renders every published item (13 post-import).
+    // Homepage portfolio grid renders every published item (seed floor 3;
+    // the content import brings it to 13+).
     const portfolio = await apiGet<Array<{ titleEn: string }>>(request, "/public/portfolio");
-    expect(portfolio.length).toBeGreaterThanOrEqual(13);
+    expect(portfolio.length).toBeGreaterThanOrEqual(3);
     const grid = page.locator("#portfolio .grid-cols-1 > button");
     await expect(grid.first()).toBeVisible({ timeout: 10000 });
     expect(await grid.count()).toBe(portfolio.length);
 
-    // Spot-check two imported titles are actually on the grid.
-    for (const title of ["Africa Summit", "CEO of AERG — Portrait"]) {
-      await expect(page.getByRole("button", { name: title })).toBeVisible();
+    // Spot-check the FIRST TWO titles from the live /public/portfolio list
+    // (never dev-import literals) actually render on the grid — preserves the
+    // "grid shows every published item" intent without pinning content.
+    const titlesToSpotCheck = portfolio.slice(0, 2);
+    for (const { titleEn } of titlesToSpotCheck) {
+      await expect(page.getByRole("button", { name: titleEn })).toBeVisible();
     }
 
-    // The imported covers joined the hero carousel. The hero renders at most
+    // The covers joined the hero carousel. The hero renders at most
     // intro + (MAX_SLIDES-2) cover slides, so the live denominator is not
     // necessarily "05" — assert counter↔slide-button agreement instead of
     // hardcoding a slide count.
@@ -224,16 +234,17 @@ test.describe("redesign journeys", () => {
     const counter = hero.getByText(/^\d{2} \/ \d{2}$/).first();
     await expect(counter).toBeVisible();
     const slideCount = await hero.getByRole("button", { name: /^Slide \d+ \/ \d+$/ }).count();
-    expect(slideCount, "hero carries the intro slide plus imported covers").toBeGreaterThanOrEqual(3);
+    expect(slideCount, "hero carries the intro slide plus published covers").toBeGreaterThanOrEqual(3);
     await expect(counter).toHaveText(new RegExp(`^\\d{2} / ${String(slideCount).padStart(2, "0")}$`));
   });
 
   test("portfolio filter shows honest empty state and recovers", async ({ page, request }) => {
-    // The content import filled every canonical category (Portraits alone now
-    // holds 4 rows), so manufacture the empty condition DYNAMICALLY: take the
-    // sparsest canonical category among the PUBLISHED rows (never the transient
-    // "E2E " admin fixture) and temporarily move ALL of its rows to another
-    // canonical category, then restore them verbatim.
+    // Manufacture the empty condition DYNAMICALLY: take the sparsest canonical
+    // category among the PUBLISHED rows (never the transient "E2E " admin
+    // fixture) and temporarily move ALL of its rows to another canonical
+    // category, then restore them verbatim. On a fresh seed that is Corporate
+    // (1 row); a content import may make Portraits (or another category) the
+    // sparsest — either way the empty state is provable without hardcoding.
     const published = await apiGet<Array<{ id: string; titleEn: string; category: string | null }>>(
       request,
       "/public/portfolio",

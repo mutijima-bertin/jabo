@@ -1,6 +1,6 @@
 # Creative Sound Studio — Project Plan (v1)
 
-> Status: IN BUILD — phases 1–13 done. Admin overhaul + content import + client testimonials + booking UX pass all committed & pushed to main (at 5937099). Nightly CI fixed (JWT_SECRET guard); green confirmation pending for 2026-09-15 02:00 UTC cron. Last updated: 2026-09-15
+> Status: IN BUILD — phases 1–14 done. Email system (branded templates, dashboard links, SMTP wiring) committed & pushed to main (at 52e6077). Nightly CI fixed (JWT_SECRET guard); green confirmation pending for 2026-09-15 02:00 UTC cron. Last updated: 2026-09-15
 
 ## Company & Founder Context
 - **Company**: Creative Sound Studio — Kigali, Rwanda. Media production: livestreaming, photography, videography (sound may be re-added later; name is legacy).
@@ -73,8 +73,9 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
 11. ✅ Admin overhaul — DONE, VERIFIED SHIPPABLE (2026-09-12): design language + full UI kit (globals.css tokens + lib/ui.ts), shell + tab architecture (?tab= URL routing, chrome-free admin via (site) route group, useAdminFetch/useSessionGuard), reorder API (PUT /admin/{services,portfolio,logos}/order — full-set raw array, dense sortOrder==index, SERIALIZABLE tx, 404/409), PUT /admin/testimonials/:id full edit, vitest toolchain (49/49 tests), full EN+RW i18n (~117 new admin keys, typed), 7 rewritten admin tabs + shared CollectionManager/AdminDialog, backend patches (slug normalization, upload guard, P2034→409), 36 e2e pass / 3 skip / 0 fail.
 12. ✅ Content import + Client testimonials (2026-09-14, verified-by-dev): (P1) `import-content.ts` — 25 logos (FAO→KC2, names pending founder), 6 portfolio items (7→13), founder image set, /app/uploads 79→111 files; (P2) `client_testimonials` schema + POST /clients/testimonials (5/hr/IP, duplicate→409) + GET /me + admin listAll with client join + /account 3-state form + admin Source badge + ~16 i18n keys. Backend 57/57, e2e 40/3/0.
 13. ✅ Commit+push (2026-09-15) + nightly CI fix: 3-part phased push landed (admin overhaul → content e7209ba → testimonials e3256de); nightly red Sep 4–14 root-caused — CI JWT_SECRET below 32-char guard in env.ts killed seed at module load → fixed 40-char (43b9bbe). Booking UX pass (5937099): country-coded phone input (PhoneInput.tsx, E.164), guided budget chips, field-localized inline errors, admin bookings table 8 cols, mailer fallback log. Backend 63/63, e2e 45/1/0. Detail: .opencode/memory/booking-ux-2026-09-15.md
+14. ✅ Email system (2026-09-15, 52e6077): branded HTML email templates (cream+brass palette, Outlook-safe tables, esc() for all user fields, 6 template builders); notifications.ts rewrite (template-driven, .mailbox dumps for dev, always-log login token for e2e); new POST /clients/bookings/:id/track-token (7-day magic token mint with ownership gate); /account "View details" button; testimonial admin publish → client thank-you email; SMTP activation path C (Resend now, branded domain later); 12 new vitest template tests. Backend 75/75, e2e 44/3/0. Detail: .opencode/memory/email-system-2026-09-15.md
 
 ## Secrets (never commit)
 - ZAVU_API_KEY (live) — user provided, keep in backend/.env (gitignored)
-- SMTP creds — pending from user (Gmail app password or provider)
+- SMTP creds — **Resend chosen (PATH C)**: user has not yet provided API key; set `SMTP_*` in root `.env` once provided. Until domain verified, MAIL_FROM = `onboarding@resend.dev`. Branded domain (creativesoundstudio.rw) deferred.
 - Zavu WhatsApp sender number + template approval — pending; tracking-link domain needs Zavu URL verification

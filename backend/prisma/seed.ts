@@ -1,7 +1,136 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
+import fs from "node:fs";
+import path from "node:path";
+import sharp from "sharp";
 import { prisma } from "../src/config/db";
 import { env } from "../src/config/env";
+
+// ---------------------------------------------------------------------------
+// Placeholder portfolio covers (synthesized with sharp, no external assets).
+// UPLOADS_DIR at runtime resolves from compiled dist/services/storage.js to
+// backend/uploads — from seed.ts (backend/prisma/) "../uploads" hits same dir.
+// ---------------------------------------------------------------------------
+
+const PLACEHOLDER_COVER_DIR = path.resolve(__dirname, "../uploads/images");
+const PLACEHOLDER_WIDTH = 1200;
+const PLACEHOLDER_HEIGHT = 800;
+
+type GradientVariant = "vertical" | "horizontal" | "diagonal" | "radial";
+
+function hexToRgb(hex: string): [number, number, number] {
+  const value = parseInt(hex.replace("#", ""), 16);
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+function lerpChannel(a: number, b: number, t: number): number {
+  return Math.round(a + (b - a) * t);
+}
+
+/** Builds a raw RGBA buffer with a warm gradient (variant picks the direction). */
+function makeGradientBuffer(
+  width: number,
+  height: number,
+  fromHex: string,
+  toHex: string,
+  variant: GradientVariant
+): Buffer {
+  const from = hexToRgb(fromHex);
+  const to = hexToRgb(toHex);
+  const buffer = Buffer.alloc(width * height * 4);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let t: number;
+      switch (variant) {
+        case "vertical":
+          t = y / (height - 1);
+          break;
+        case "horizontal":
+          t = x / (width - 1);
+          break;
+        case "diagonal":
+          t = (x + y) / (width + height - 2);
+          break;
+        case "radial": {
+          const dx = x - width / 2;
+          const dy = y - height / 2;
+          t = Math.min(1, Math.sqrt(dx * dx + dy * dy) / (Math.max(width, height) / 1.7));
+          break;
+        }
+      }
+      const offset = (y * width + x) * 4;
+      buffer[offset] = lerpChannel(from[0], to[0], t);
+      buffer[offset + 1] = lerpChannel(from[1], to[1], t);
+      buffer[offset + 2] = lerpChannel(from[2], to[2], t);
+      buffer[offset + 3] = 255;
+    }
+  }
+  return buffer;
+}
+
+/**
+ * Writes a placeholder cover WebP (q82, 1200×800) only when the file is not
+ * already on disk (idempotent across seed re-runs). Returns its public URL.
+ */
+async function ensurePlaceholderCover(
+  fileName: string,
+  fromHex: string,
+  toHex: string,
+  variant: GradientVariant
+): Promise<string> {
+  fs.mkdirSync(PLACEHOLDER_COVER_DIR, { recursive: true });
+  const filePath = path.join(PLACEHOLDER_COVER_DIR, fileName);
+  if (!fs.existsSync(filePath)) {
+    const raw = makeGradientBuffer(PLACEHOLDER_WIDTH, PLACEHOLDER_HEIGHT, fromHex, toHex, variant);
+    await sharp(raw, { raw: { width: PLACEHOLDER_WIDTH, height: PLACEHOLDER_HEIGHT, channels: 4 } })
+      .webp({ quality: 82 })
+      .toFile(filePath);
+    console.log(`Placeholder cover written: ${fileName}`);
+  } else {
+    console.log(`Placeholder cover already exists: ${fileName}`);
+  }
+  return `/uploads/images/${fileName}`;
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio seed manifest — 2 Weddings + 1 Corporate (Corporate stays the
+// sparsest canonical category with exactly 1 published row, as the redesign
+// e2e spec expects). Canonical categories come from src/config/constants.
+// ---------------------------------------------------------------------------
+
+const portfolioSeeds = [
+  {
+    fileName: "seed-kigali-innovation.webp",
+    fromHex: "#1f1d1a",
+    toHex: "#b08d57",
+    variant: "vertical",
+    titleEn: "Kigali Innovation Week",
+    titleRw: "Icyumweru cy'Ubugeni muri Kigali",
+    clientName: "Kigali Innovation City",
+    category: "Corporate",
+  },
+  {
+    fileName: "seed-lake-kivu.webp",
+    fromHex: "#1f1d1a",
+    toHex: "#b08d57",
+    variant: "diagonal",
+    titleEn: "Wedding at Lake Kivu",
+    titleRw: "Ubukwe bw'umukunzi ku Kiyaga cya Kivu",
+    clientName: "Ingabire & Mugisha",
+    category: "Weddings",
+  },
+  {
+    fileName: "seed-umuganda.webp",
+    fromHex: "#1f1d1a",
+    toHex: "#b08d57",
+    variant: "radial",
+    titleEn: "Sunset Nuptials in Nyarutarama",
+    titleRw: "Ubukwe bw'izuba rirenze muri Nyarutarama",
+    clientName: "Uwimana & Habimana",
+    category: "Weddings",
+  },
+];
 
 async function main() {
   if (env.adminEmail && env.adminPassword) {
@@ -165,6 +294,95 @@ async function main() {
     }
   }
   console.log(`Client logos ready: ${logos.length}`);
+
+  let portfolioSeeded = 0;
+  for (let i = 0; i < portfolioSeeds.length; i++) {
+    const entry = portfolioSeeds[i];
+    // Idempotence: skip any row whose titleEn already exists (covers live on
+    // disk already, so re-runs must never rewrite files or duplicate rows).
+    const existing = await prisma.portfolioItem.findFirst({ where: { titleEn: entry.titleEn } });
+    if (existing) {
+      console.log(`Portfolio "${entry.titleEn}" already exists — skipped`);
+      continue;
+    }
+    const coverUrl = await ensurePlaceholderCover(entry.fileName, entry.fromHex, entry.toHex, entry.variant);
+    await prisma.portfolioItem.create({
+      data: {
+        titleEn: entry.titleEn,
+        titleRw: entry.titleRw,
+        category: entry.category,
+        clientName: entry.clientName,
+        tags: ["featured"],
+        coverUrl,
+        mediaUrls: [coverUrl],
+        mediaType: "image",
+        published: true,
+        sortOrder: i,
+      },
+    });
+    portfolioSeeded++;
+    console.log(`Portfolio "${entry.titleEn}" created (${entry.category})`);
+  }
+  console.log(`Portfolio ready: ${portfolioSeeded}`);
+
+  // ---------------------------------------------------------------------------
+  // Demo client + booking (admin e2e fixtures). The nightly suites run against a
+  // fresh seeded DB and require ≥1 client with an email (admin-features.spec:
+  // "clients tab renders directory with search") and ≥1 booking (booking.spec:
+  // "admin login works and dashboard loads" needs the Recent-bookings card).
+  // The fixed addresses below can never collide with run-unique e2e emails
+  // (<random>@test.local / e2e-*), and the booking reference guards idempotency.
+  // ---------------------------------------------------------------------------
+  const demoClientEmail = "aline.demo@example.co.rw";
+  const demoClient = await prisma.client.upsert({
+    where: { email: demoClientEmail },
+    update: {}, // re-runs must never overwrite a live client's details
+    create: {
+      name: "Aline Uwase",
+      email: demoClientEmail,
+      phone: "+250722334455",
+    },
+  });
+  console.log(`Demo client ready: ${demoClient.name} <${demoClient.email}> (${demoClient.id})`);
+
+  const demoBookingReference = "CSS-SEED-001";
+  const existingDemoBooking = await prisma.booking.findUnique({
+    where: { reference: demoBookingReference },
+  });
+  if (existingDemoBooking) {
+    console.log(`Demo booking already exists: ${demoBookingReference} — skipped`);
+  } else {
+    const demoService = await prisma.service.findFirst({ orderBy: { sortOrder: "asc" } });
+    if (!demoService) {
+      throw new Error("Cannot seed demo booking: no service rows exist");
+    }
+    const eventDate = new Date();
+    eventDate.setDate(eventDate.getDate() + 30); // a FUTURE preferred date
+    eventDate.setUTCHours(9, 0, 0, 0);
+
+    await prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          reference: demoBookingReference,
+          serviceId: demoService.id,
+          clientId: demoClient.id,
+          contactName: demoClient.name,
+          contactEmail: demoClient.email ?? demoClientEmail,
+          contactPhone: demoClient.phone,
+          eventDate,
+          location: "Kigali, Rwanda",
+          budgetRange: "300,000 – 600,000 RWF",
+          details: "Full-day wedding coverage — photo & film, final edited gallery and highlight film.",
+          language: "en",
+          status: "CONFIRMED",
+        },
+      });
+      // Keep the audit trail consistent with the row's CONFIRMED status.
+      await tx.bookingEvent.create({ data: { bookingId: created.id, status: "PENDING", note: "Booking received" } });
+      await tx.bookingEvent.create({ data: { bookingId: created.id, status: "CONFIRMED", note: "Booking confirmed" } });
+    });
+    console.log(`Demo booking created: ${demoBookingReference}`);
+  }
 }
 
 main()

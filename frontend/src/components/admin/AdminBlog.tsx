@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Eye, Heart, Inbox, Pencil, Plus } from "lucide-react";
+import { ChevronDown, Eye, Heart, Inbox, Pencil } from "lucide-react";
 import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
 import type { AdminPost, PostContentType } from "@/lib/api";
 import { formatDate } from "@/lib/format";
@@ -10,7 +10,6 @@ import {
   adminInputCls,
   adminSelectCls,
   badgeBrass,
-  btnPrimary,
   cx,
   adminTextareaCls,
   checkboxCls,
@@ -286,10 +285,6 @@ export function AdminBlog({ token }: { token: string }) {
                 <Inbox className={emptyStateIcon} />
               </div>
               <p className={emptyStateTitle}>{t("admin_blog_empty")}</p>
-              <button type="button" className={btnPrimary} onClick={openNew}>
-                <Plus className="h-4 w-4" />
-                {t("admin_blog_new")}
-              </button>
             </div>
           ) : (
             <div className={tableScrollWrap}>
