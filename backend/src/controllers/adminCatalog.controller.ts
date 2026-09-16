@@ -8,7 +8,7 @@ import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
 import { ReorderError } from "../models/errors";
 import { isAllowedMime, saveDataUrl } from "../services/storage";
-import { notifyClientTestimonialPublished } from "../services/notifications";
+import { notifyClientTestimonialPublished, runFireAndForget } from "../services/notifications";
 import {
   PORTFOLIO_CATEGORIES,
   normalizePortfolioCategory,
@@ -346,13 +346,9 @@ export async function patchTestimonial(req: Request, res: Response): Promise<voi
     const justPublished = !existing.published && parsed.data.published === true;
     const testimonial = await testimonialModel.update(id, parsed.data);
     if (justPublished && existing.client?.email) {
-      try {
-        await notifyClientTestimonialPublished({
-          client: { name: existing.client.name, email: existing.client.email },
-        });
-      } catch (err) {
-        console.error("[adminCatalog:testimonials:patch:notify]", (err as Error).message);
-      }
+      // Fire-and-forget — the publish response must not wait on external sends.
+      const author = { name: existing.client.name, email: existing.client.email };
+      runFireAndForget(() => notifyClientTestimonialPublished({ client: author }));
     }
     res.json(testimonial);
   } catch (err) {

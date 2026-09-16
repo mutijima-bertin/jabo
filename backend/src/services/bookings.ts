@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { BookingStatus } from "@prisma/client";
 import { env } from "../config/env";
 import { generateMagicToken } from "./magiclink";
-import { notifyAdminBookingReceived, notifyClientBookingReceived, notifyClientStatusChanged } from "./notifications";
+import { notifyAdminBookingReceived, notifyClientBookingReceived, notifyClientStatusChanged, runFireAndForget } from "./notifications";
 import * as bookingModel from "../models/booking.model";
 import * as clientModel from "../models/client.model";
 import * as serviceModel from "../models/service.model";
@@ -80,16 +80,9 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   });
 
   // External calls: outside the transaction, with failure isolation (logged via NotificationLog).
-  try {
-    await notifyClientBookingReceived(booking, token);
-  } catch (err) {
-    console.error("[notify:client:received]", (err as Error).message);
-  }
-  try {
-    await notifyAdminBookingReceived(booking, service.nameEn);
-  } catch (err) {
-    console.error("[notify:admin:received]", (err as Error).message);
-  }
+  // Fire-and-forget — booking creation must never wait on external notification sends.
+  runFireAndForget(() => notifyClientBookingReceived(booking, token));
+  runFireAndForget(() => notifyAdminBookingReceived(booking, service.nameEn));
 
   return { booking, token };
 }
@@ -105,11 +98,8 @@ export async function updateBookingStatus(bookingId: string, status: BookingStat
   await bookingModel.applyStatusTransition(bookingId, status, note);
 
   const updated = await bookingModel.findByIdOrThrow(bookingId);
-  try {
-    await notifyClientStatusChanged(updated);
-  } catch (err) {
-    console.error("[notify:status]", (err as Error).message);
-  }
+  // Fire-and-forget — the status-change response must not wait on external sends.
+  runFireAndForget(() => notifyClientStatusChanged(updated));
 }
 
 export async function revokeMagicToken(bookingId: string): Promise<void> {

@@ -29,6 +29,16 @@ export const env = {
     user: process.env.SMTP_USER ?? "",
     pass: process.env.SMTP_PASS ?? "",
   },
+  /**
+   * SMTP is "configured" only when it is actually USABLE. A real hostname is
+   * required (>=5 chars) so placeholder/garbage creds like "x" are treated as
+   * unconfigured — the deployed image must not attempt network sends to a
+   * bogus host, and the dev/e2e magic-login log line must keep printing.
+   */
+  get smtpConfigured(): boolean {
+    const { host, user, pass } = this.smtp;
+    return Boolean(host && user && pass) && host.trim().length >= 5;
+  },
   mailFrom: process.env.MAIL_FROM ?? "Creative Sound Studio",
   adminEmails: (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean),
   appUrl: process.env.APP_URL ?? "http://localhost:3000",

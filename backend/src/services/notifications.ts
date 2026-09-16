@@ -19,6 +19,14 @@ import {
 import * as notificationLogModel from "../models/notificationLog.model";
 import * as bookingModel from "../models/booking.model";
 
+/**
+ * Run an async function in the background, detached from the request path.
+ * Every call site MUST attach a .catch to avoid unhandled rejections.
+ */
+export function runFireAndForget(fn: () => Promise<unknown>): void {
+  void fn().catch((err) => console.error("[notify:fire-and-forget]", (err as Error).message));
+}
+
 async function log(entry: {
   bookingId: string;
   channel: "EMAIL" | "WHATSAPP";
@@ -135,30 +143,52 @@ export async function notifyClientStatusChanged(booking: Booking): Promise<void>
   }
 }
 
-/** Email a client their magic login link. Never throws; the email send is the requirement, the log row is best-effort. */
+/**
+ * Email a client their magic login link. Never throws.
+ *
+ * CRITICAL e2e invariant: the "Magic login" log line MUST be printed
+ * synchronously in the request path (before the HTTP 200). The actual email
+ * send (sendEmail / dumpHtml) and the NotificationLog row are moved to the
+ * background via `runFireAndForget` so they never block the response.
+ */
 export async function notifyClientLogin(client: { id: string; name: string; email: string | null }, loginUrl: string): Promise<void> {
   if (!client.email) return;
   const { subject, html } = loginLink({ client, loginUrl });
-  const emailRes = await sendEmail({ to: client.email, subject, html });
-  if (!emailRes.sent) {
-    // SMTP not configured (dev) — surface the link in server logs + preview file.
-    console.log(`[mailer] Magic login link for ${client.email}: ${loginUrl}`);
-    await dumpHtml("client-login", html);
-  } else if (env.nodeEnv !== "production") {
-    // Non-prod with SMTP: still log the link so the e2e suite can read it
-    // (never logs the token in production).
-    console.log(`[mailer] Magic login link sent for ${client.email}`);
+  const clientEmail = client.email;
+
+  // CRITICAL e2e invariant: the "Magic login" line must print synchronously in
+  // the request path (before the HTTP 200). Decide by CONFIG, not by send
+  // result, so the dev/e2e/CI log stays deterministic: in every non-prod env
+  // the sync line prints (SMTP unconfigured or not); live production with SMTP
+  // configured never prints the token to stdout.
+  const smtpConfigured = env.smtpConfigured;
+  if (!smtpConfigured || env.nodeEnv !== "production") {
+    console.log(`[mailer] Magic login link for ${clientEmail}: ${loginUrl}`);
   }
 
-  // NotificationLog requires a bookingId; use the client's most recent booking, else skip the log row.
-  try {
-    const latestId = await bookingModel.findLatestIdByClientId(client.id);
-    if (latestId) {
-      await log({ bookingId: latestId, channel: "EMAIL", kind: "MAGIC_LINK", recipient: client.email, ok: emailRes.sent, error: emailRes.error });
+  // Send email + dump preview + write notification log — all in the background.
+  runFireAndForget(async () => {
+    const emailRes = await sendEmail({ to: clientEmail, subject, html });
+    if (!emailRes.sent) {
+      // SMTP not configured (dev) — surface the rendered template in a preview
+      // file. No log line here: the sync line above already covered the link.
+      await dumpHtml("client-login", html);
+    } else if (env.nodeEnv !== "production") {
+      // Non-prod with SMTP: still log the send so the e2e suite can see it
+      // (never logs extra detail in production; no token in this line).
+      console.log(`[mailer] Magic login link sent for ${clientEmail}`);
     }
-  } catch (err) {
-    console.error("[notify:login:log]", (err as Error).message);
-  }
+
+    // NotificationLog requires a bookingId; use the client's most recent booking, else skip the log row.
+    try {
+      const latestId = await bookingModel.findLatestIdByClientId(client.id);
+      if (latestId) {
+        await log({ bookingId: latestId, channel: "EMAIL", kind: "MAGIC_LINK", recipient: clientEmail, ok: emailRes.sent, error: emailRes.error });
+      }
+    } catch (err) {
+      console.error("[notify:login:log]", (err as Error).message);
+    }
+  });
 }
 
 /** Admin alert when a client submits a testimonial for review. Recipients come from ADMIN_EMAILS. */

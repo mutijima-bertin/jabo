@@ -30,6 +30,9 @@ export async function sendWhatsApp(opts: { to: string; text: string }): Promise<
         text: opts.text,
         channel: "whatsapp",
       }),
+      // Hard bound on the external roundtrip so backgrounded notifies can never
+      // accumulate on a slow/hung Zavu API.
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) {
       const body = await res.text();

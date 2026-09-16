@@ -7,7 +7,7 @@ import * as testimonialModel from "../models/testimonial.model";
 import * as bookingModel from "../models/booking.model";
 import { createClientLoginToken, getClientByLoginToken, issueClientJwt } from "../services/clientAuth";
 import { generateMagicToken, magicLinkUrl } from "../services/magiclink";
-import { notifyAdminTestimonialSubmitted, notifyClientLogin } from "../services/notifications";
+import { notifyAdminTestimonialSubmitted, notifyClientLogin, runFireAndForget } from "../services/notifications";
 
 const loginRequestSchema = z.object({
   email: z.string().email(),
@@ -58,12 +58,10 @@ export async function requestLogin(req: Request, res: Response): Promise<void> {
     if (client) {
       const rawToken = await createClientLoginToken(client);
       const loginUrl = `${env.frontendUrl}/login?token=${rawToken}`;
-      try {
-        await notifyClientLogin(client, loginUrl);
-      } catch (err) {
-        // Email must never block the response.
-        console.error("[clients:login-request:notify]", (err as Error).message);
-      }
+      // Fire-and-forget: the magic-link log line prints synchronously inside
+      // notifyClientLogin (e2e reads it right after the HTTP 200); the actual
+      // email send runs in the background and can never block the response.
+      runFireAndForget(() => notifyClientLogin(client, loginUrl));
     }
   } catch (err) {
     console.error("[clients:login-request]", err);
@@ -196,18 +194,17 @@ export async function postTestimonial(req: Request, res: Response): Promise<void
       clientId: client.id,
     });
     // Alert the studio (ADMIN_EMAILS) that a new testimonial awaits review.
-    // Failures must never block the response — same isolation as booking emails.
-    try {
-      await notifyAdminTestimonialSubmitted({
+    // Fire-and-forget — failures must never block the response, same isolation
+    // as booking emails.
+    runFireAndForget(() =>
+      notifyAdminTestimonialSubmitted({
         author: client.name,
         email: client.email ?? "",
         role: parsed.data.role ?? null,
         contentEn: parsed.data.contentEn,
         contentRw: parsed.data.contentRw ?? null,
-      });
-    } catch (err) {
-      console.error("[clients:testimonials:post:notify]", (err as Error).message);
-    }
+      })
+    );
     res.status(201).json({ testimonial: testimonialPayload(testimonial) });
   } catch (err) {
     console.error("[clients:testimonials:post]", err);

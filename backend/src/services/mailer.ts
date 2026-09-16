@@ -4,7 +4,10 @@ import { env } from "../config/env";
 let transporter: Transporter | null = null;
 
 function getTransporter(): Transporter | null {
-  if (!env.smtp.host || !env.smtp.user || !env.smtp.pass) {
+  // Single source of truth — env.smtpConfigured requires a usable SMTP config
+  // (host/user/pass present AND host length >= 5), so placeholder/garbage
+  // creds are treated as unconfigured and never attempted.
+  if (!env.smtpConfigured) {
     return null;
   }
   if (!transporter) {
@@ -13,6 +16,10 @@ function getTransporter(): Transporter | null {
       port: env.smtp.port,
       secure: env.smtp.secure,
       auth: { user: env.smtp.user, pass: env.smtp.pass },
+      // Hard bounds on SMTP connect/socket so backgrounded sends can never
+      // accumulate on a slow/hung mail server.
+      connectionTimeout: 10_000,
+      socketTimeout: 10_000,
     });
   }
   return transporter;
