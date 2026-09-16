@@ -4,7 +4,7 @@ import { prisma } from "../config/db";
 export function create(entry: {
   bookingId: string;
   channel: "EMAIL" | "WHATSAPP";
-  kind: "BOOKING_RECEIVED" | "BOOKING_CONFIRMED" | "BOOKING_STATUS_CHANGED" | "BOOKING_CANCELLED" | "MAGIC_LINK";
+  kind: "BOOKING_RECEIVED" | "BOOKING_CONFIRMED" | "BOOKING_STATUS_CHANGED" | "BOOKING_CANCELLED" | "MAGIC_LINK" | "REVIEW_REQUEST";
   recipient: string;
   status: string;
   error?: string | null;

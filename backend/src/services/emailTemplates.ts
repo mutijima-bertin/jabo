@@ -122,7 +122,7 @@ function layout(opts: {
           <p style="margin:18px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:${COLOR.faint};text-align:center;letter-spacing:1px">CREATIVE SOUND STUDIO</p>
           <p style="margin:6px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:${COLOR.faint};text-align:center">Kigali · Rwanda</p>
           <p style="margin:4px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:${COLOR.faint};text-align:center">
-            ${esc(t(lang, "hello@creativesoundstudio.rw · +250 700 000 000", "hello@creativesoundstudio.rw · +250 700 000 000"))}
+            ${esc(t(lang, "hello@creativesoundstudio.rw · +250 783 269 951", "hello@creativesoundstudio.rw · +250 783 269 951"))}
           </p>
           <p style="margin:12px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:${COLOR.faint};text-align:center;line-height:1.6">
             ${esc(t(lang, "You received this email because of booking or account activity at Creative Sound Studio.", "Wakiriye iyi imeyili kubera urugendo cyangwa ibikorwa kuri Creative Sound Studio."))}
@@ -183,6 +183,7 @@ export function statusChanged(params: {
   language: string | null;
   contactName: string;
   dashboardUrl: string;
+  trackUrl?: string;
 }): { subject: string; html: string } {
   const lang: Lang = params.language === "rw" ? "rw" : "en";
   const subject = t(lang, `Your booking status updated (${params.reference})`, `Ibyegeranyo by'urugero rwawe byahindutse (${params.reference})`);
@@ -202,6 +203,10 @@ export function statusChanged(params: {
     html: layout({
       preheader: `${params.reference} — ${statusLabel(params.status, lang)}`,
       body,
+      // The tracking link is the primary action for EVERY status (the timeline
+      // still matters for CANCELLED too). It is optional: when a fresh token
+      // could not be rotated, we skip the CTA but keep the dashboard sub-link.
+      cta: params.trackUrl ? { href: params.trackUrl, label: t(lang, "Track this production", "Kurikirana umurimo") } : undefined,
       subLink: { href: params.dashboardUrl, label: t(lang, "Open my dashboard", "Fungura dashibodi yanjye") },
       lang,
     }),
@@ -328,6 +333,37 @@ export function testimonialPublished(params: {
       preheader: `${params.client.name}, your testimonial is live`,
       body,
       cta: { href: params.dashboardUrl, label: "Open my dashboard" },
+    }),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 7. Post-delivery review request (client)
+// ---------------------------------------------------------------------------
+export function reviewRequest(params: {
+  booking: { reference: string; language: string | null };
+  contactName: string;
+  dashboardUrl: string;
+}): { subject: string; html: string } {
+  const lang: Lang = params.booking.language === "rw" ? "rw" : "en";
+  const subject = t(lang, "Your production is ready — Creative Sound Studio", "Umurimo wawe urasozwa — Creative Sound Studio");
+  const body = `
+    <p style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-size:24px;color:${COLOR.ink};font-weight:600">${esc(t(lang, "Hello,", "Muraho,"))} <span style="color:${COLOR.brassDark}">${esc(params.contactName)}</span></p>
+    <p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:${COLOR.ink}">
+      ${esc(t(lang,
+      `Your production ${params.booking.reference} has been delivered. We'd love to hear about your experience — your feedback helps other couples and companies choose with confidence.`,
+      `Umurimo wawe ${params.booking.reference} watanzwe. Twifuza kumva uko wabaye — ibitekerezo byawe bifasha abandi bacuruza.`))}
+    </p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${COLOR.ink}">
+      ${esc(t(lang, "You can also just reply to this email.", "Mushobora kandi gusubiza muri iyi imeyili."))}
+    </p>`;
+  return {
+    subject,
+    html: layout({
+      preheader: `${params.booking.reference} — ${t(lang, "your production is ready", "umurimo wawe urasozwa")}`,
+      body,
+      cta: { href: params.dashboardUrl, label: t(lang, "Share your experience", "Sangiza ibitekerezo") },
+      lang,
     }),
   };
 }

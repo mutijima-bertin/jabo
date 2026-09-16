@@ -4,13 +4,14 @@ import path from "path";
 import { env } from "../config/env";
 import { sendEmail } from "./mailer";
 import { sendWhatsApp } from "./zavu";
-import { magicLinkUrl } from "./magiclink";
+import { generateMagicToken, magicLinkUrl } from "./magiclink";
 import {
   adminPanelUrl,
   bookingReceived,
   esc,
   loginLink,
   newBookingAdmin,
+  reviewRequest,
   statusChanged,
   statusLabel,
   testimonialPublished,
@@ -30,7 +31,7 @@ export function runFireAndForget(fn: () => Promise<unknown>): void {
 async function log(entry: {
   bookingId: string;
   channel: "EMAIL" | "WHATSAPP";
-  kind: "BOOKING_RECEIVED" | "BOOKING_CONFIRMED" | "BOOKING_STATUS_CHANGED" | "BOOKING_CANCELLED" | "MAGIC_LINK";
+  kind: "BOOKING_RECEIVED" | "BOOKING_CONFIRMED" | "BOOKING_STATUS_CHANGED" | "BOOKING_CANCELLED" | "MAGIC_LINK" | "REVIEW_REQUEST";
   recipient: string;
   ok: boolean;
   error?: string;
@@ -120,12 +121,29 @@ export async function notifyAdminBookingReceived(booking: Booking, serviceName: 
 
 export async function notifyClientStatusChanged(booking: Booking): Promise<void> {
   const dashboardUrl = `${env.appUrl}/login`;
+
+  // Mint a FRESH track token so the email/WhatsApp link is valid for the full
+  // TTL (the stored booking only holds the hash, never the raw token). Rotation
+  // also revokes the previous link (same semantics as the account-page path in
+  // clients.controller.ts getBookingTrackToken). If rotation fails the mail is
+  // still sent — without the tracking CTA, dashboard sub-link kept.
+  let trackUrl: string | undefined;
+  try {
+    const { token, hash } = generateMagicToken();
+    const expiresAt = new Date(Date.now() + env.magicLinkTtlHours * 3600 * 1000);
+    await bookingModel.rotateMagicToken(booking.id, hash, expiresAt);
+    trackUrl = magicLinkUrl(token);
+  } catch (err) {
+    console.error("[notify:status-changed:rotate]", (err as Error).message);
+  }
+
   const { subject, html } = statusChanged({
     reference: booking.reference,
     status: booking.status,
     language: booking.language,
     contactName: booking.contactName,
     dashboardUrl,
+    trackUrl,
   });
   const emailRes = await sendEmail({ to: booking.contactEmail, subject, html });
   await log({ bookingId: booking.id, channel: "EMAIL", kind: booking.status === "CANCELLED" ? "BOOKING_CANCELLED" : "BOOKING_STATUS_CHANGED", recipient: booking.contactEmail, ok: emailRes.sent, error: emailRes.error });
@@ -135,11 +153,43 @@ export async function notifyClientStatusChanged(booking: Booking): Promise<void>
   }
 
   if (booking.contactPhone) {
-    const waText = booking.language === "rw"
-      ? `Creative Sound Studio: ${statusLabel(booking.status, "rw")} — ${booking.reference}.`
-      : `Creative Sound Studio: your booking ${booking.reference} is now ${statusLabel(booking.status, "en")}.`;
+    const waText = trackUrl
+      ? booking.language === "rw"
+        ? `Creative Sound Studio: ${statusLabel(booking.status, "rw")} — ${booking.reference}. Kanda hano ubikurikirane: ${trackUrl}. Subiza muri iyi message niba ufite ikibazo.`
+        : `Creative Sound Studio: your booking ${booking.reference} is now ${statusLabel(booking.status, "en")}. Track it: ${trackUrl}. Reply to this message if you have questions.`
+      : booking.language === "rw"
+        ? `Creative Sound Studio: ${statusLabel(booking.status, "rw")} — ${booking.reference}.`
+        : `Creative Sound Studio: your booking ${booking.reference} is now ${statusLabel(booking.status, "en")}.`;
     const waRes = await sendWhatsApp({ to: booking.contactPhone, text: waText });
     await log({ bookingId: booking.id, channel: "WHATSAPP", kind: booking.status === "CANCELLED" ? "BOOKING_CANCELLED" : "BOOKING_STATUS_CHANGED", recipient: booking.contactPhone, ok: waRes.sent, error: waRes.error });
+  }
+}
+
+/**
+ * Post-delivery review request: fired ONCE when a booking becomes DELIVERED.
+ * Points the client at their dashboard (testimonial form) and asks for
+ * feedback. Never throws — failures are isolated and logged.
+ */
+export async function notifyClientReviewRequest(booking: Booking): Promise<void> {
+  const dashboardUrl = `${env.appUrl}/login`;
+  const { subject, html } = reviewRequest({
+    booking: { reference: booking.reference, language: booking.language },
+    contactName: booking.contactName,
+    dashboardUrl,
+  });
+  const emailRes = await sendEmail({ to: booking.contactEmail, subject, html });
+  await log({ bookingId: booking.id, channel: "EMAIL", kind: "REVIEW_REQUEST", recipient: booking.contactEmail, ok: emailRes.sent, error: emailRes.error });
+  if (!emailRes.sent) {
+    console.log(`[mailer] Review request ${booking.reference} -> ${booking.contactEmail}`);
+    await dumpHtml("review-request", html);
+  }
+
+  if (booking.contactPhone) {
+    const waText = booking.language === "rw"
+      ? `Murakaza neza ${booking.contactName}! Umurimo wawe (${booking.reference}) watanzwe — twifuza kumva ibyishimo byawe. Sangiza ibitekerezo: ${dashboardUrl}`
+      : `Hi ${booking.contactName}! Your production (${booking.reference}) is delivered — we'd love your feedback. Share your experience: ${dashboardUrl}`;
+    const waRes = await sendWhatsApp({ to: booking.contactPhone, text: waText });
+    await log({ bookingId: booking.id, channel: "WHATSAPP", kind: "REVIEW_REQUEST", recipient: booking.contactPhone, ok: waRes.sent, error: waRes.error });
   }
 }
 

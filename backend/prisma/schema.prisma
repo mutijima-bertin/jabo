@@ -28,6 +28,7 @@ enum NotificationKind {
   BOOKING_STATUS_CHANGED
   BOOKING_CANCELLED
   MAGIC_LINK
+  REVIEW_REQUEST
 }
 
 enum TestimonialSource {

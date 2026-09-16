@@ -5,6 +5,7 @@ import {
   esc,
   loginLink,
   newBookingAdmin,
+  reviewRequest,
   statusChanged,
   statusLabel,
   testimonialPublished,
@@ -87,6 +88,95 @@ describe("statusChanged", () => {
     });
     expect(mail.subject).toContain("Ibyegeranyo by'urugero rwawe byahindutse");
     expect(mail.html).toContain("Byahagaritswe");
+  });
+
+  it("renders the tracking CTA (primary) plus the dashboard sub-link when trackUrl is given", () => {
+    const mail = statusChanged({
+      reference: "CSS-MNFFGY",
+      status: "DELIVERED",
+      language: "en",
+      contactName: "Alain",
+      dashboardUrl: "http://localhost:3000/login",
+      trackUrl: "http://localhost:3000/track/css_fresh",
+    });
+    expect(mail.html).toContain("http://localhost:3000/track/css_fresh");
+    expect(mail.html).toContain("Track this production");
+    // CTA button href (escaped in the anchor) + dashboard sub-link both present.
+    expect(mail.html).toContain('href="http://localhost:3000/track/css_fresh"');
+    expect(mail.html).toContain('<a href="http://localhost:3000/login"');
+  });
+
+  it("renders the tracking CTA in Kinyarwanda for a CANCELLED rw booking (timeline still matters)", () => {
+    const mail = statusChanged({
+      reference: "CSS-MNFFGY",
+      status: "CANCELLED",
+      language: "rw",
+      contactName: "Alain",
+      dashboardUrl: "http://localhost:3000/login",
+      trackUrl: "http://localhost:3000/track/css_fresh",
+    });
+    expect(mail.html).toContain("Kurikirana umurimo");
+    expect(mail.html).toContain('href="http://localhost:3000/track/css_fresh"');
+    expect(mail.html).toContain('href="http://localhost:3000/login"');
+  });
+
+  it("skips the tracking CTA (keeps the dashboard sub-link) when trackUrl is missing", () => {
+    const mail = statusChanged({
+      reference: "CSS-MNFFGY",
+      status: "CONFIRMED",
+      language: "en",
+      contactName: "Alain",
+      dashboardUrl: "http://localhost:3000/login",
+    });
+    expect(mail.html).not.toContain("Track this production");
+    expect(mail.html).toContain("Open my dashboard");
+    expect(mail.html).toContain('href="http://localhost:3000/login"');
+  });
+});
+
+describe("reviewRequest", () => {
+  it("asks for feedback in EN with the dashboard CTA", () => {
+    const mail = reviewRequest({
+      booking: { reference: "CSS-MNFFGY", language: "en" },
+      contactName: "Alain",
+      dashboardUrl: "http://localhost:3000/login",
+    });
+    expect(mail.subject).toBe("Your production is ready — Creative Sound Studio");
+    expect(mail.html).toContain("Hello,");
+    expect(mail.html).toContain("Alain");
+    expect(mail.html).toContain("Your production CSS-MNFFGY has been delivered.");
+    expect(mail.html).toContain("Share your experience");
+    expect(mail.html).toContain('href="http://localhost:3000/login"');
+    expect(mail.html).toContain("You can also just reply to this email.");
+  });
+
+  it("switches to Kinyarwanda copy for rw bookings", () => {
+    const mail = reviewRequest({
+      booking: { reference: "CSS-MNFFGY", language: "rw" },
+      contactName: "Aline",
+      dashboardUrl: "http://localhost:3000/login",
+    });
+    expect(mail.subject).toBe("Umurimo wawe urasozwa — Creative Sound Studio");
+    expect(mail.html).toContain("Muraho,");
+    expect(mail.html).toContain("Umurimo wawe CSS-MNFFGY watanzwe.");
+    expect(mail.html).toContain("Sangiza ibitekerezo");
+    expect(mail.html).toContain('href="http://localhost:3000/login"');
+  });
+});
+
+describe("layout footer", () => {
+  it("shows the studio's real phone number in the footer for EN and RW (never the old placeholder)", () => {
+    for (const language of ["en", "rw"] as const) {
+      const mail = bookingReceived({
+        booking: { ...bookingFixture, language },
+        contactName: "Alain",
+        trackUrl: "http://localhost:3000/track/css_token",
+        dashboardUrl: "http://localhost:3000/login",
+        ttlHours: 168,
+      });
+      expect(mail.html).toContain("+250 783 269 951");
+      expect(mail.html).not.toContain("+250 700 000 000");
+    }
   });
 });
 
