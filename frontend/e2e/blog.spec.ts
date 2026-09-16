@@ -198,7 +198,13 @@ test.describe("blog journeys", () => {
     await expect(page.getByText(`E2E excerpt ${RUN}`).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "Release notes", level: 2 })).toBeVisible(); // markdown rendered
     await expect(page.getByText(`This is the e2e body paragraph ${RUN}.`)).toBeVisible();
-    await expect(page.locator("article").getByRole("link", { name: "Book a shoot", exact: true })).toBeVisible(); // CTA block
+    // Reading time (words/200, min 1) sits in the meta row next to date/views.
+    await expect(page.locator("article").getByText(/\d+ min read/)).toBeVisible();
+    // Per-type CTA: this post is a Client story with NO linked service, so the
+    // CTA label is the CLIENT_STORY key and the href is the generic /book.
+    const cta = page.locator("article").getByRole("link", { name: "Book your own story", exact: true });
+    await expect(cta).toBeVisible(); // CTA block
+    await expect(cta).toHaveAttribute("href", "/book");
 
     await expect(page.locator("article").getByText(new RegExp(`^${v0 + 1}\\s+Views$`))).toBeVisible();
     expect((await apiGet<PostRow>(request, `/admin/posts/${id}`)).views).toBe(v0 + 1);

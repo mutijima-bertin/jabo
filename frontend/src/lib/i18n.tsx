@@ -428,6 +428,18 @@ const en = {
   book_chat_whatsapp: "Chat on WhatsApp",
   track_questions: "Questions about your production?",
   track_book_another: "Book another production",
+  /* ---- Content journey (Phase 5): reading time, per-type booking CTAs, related posts, lightbox book link ---- */
+  read_time: "Reading time",
+  min_read: "min read",
+  book_cta_recap: "Book a shoot like this",
+  book_cta_story: "Book your own story",
+  book_cta_educational: "Book a private session",
+  book_cta_news: "Book a production",
+  book_a_production: "Book a production",
+  cta_support_line: "Tell us your date, budget and vision — we reply within 24h.",
+  more_stories: "More stories",
+  book_this_type: "Book this type of work",
+  book_this_production: "Book a production",
 };
 
 export type DictKey = keyof typeof en;
@@ -854,6 +866,18 @@ const rw: Record<keyof typeof en, string> = {
   book_chat_whatsapp: "Twandikire kuri WhatsApp",
   track_questions: "Ufite ikibazo ku murimo wawe?",
   track_book_another: "Andikisha undi murimo",
+  /* ---- Content journey (Phase 5): reading time, per-type booking CTAs, related posts, lightbox book link ---- */
+  read_time: "Igihe cyo gusoma",
+  min_read: "imin.",
+  book_cta_recap: "Booka umurimo nk'urwo",
+  book_cta_story: "Booka inkuru yawe",
+  book_cta_educational: "Booka gahunda yihariye",
+  book_cta_news: "Booka umurimo",
+  book_a_production: "Booka umurimo",
+  cta_support_line: "Tubwira itariki, ingengo y'umurimo n'ibyo ushaka — dusubiza mu masaha 24.",
+  more_stories: "Izindi nkuru",
+  book_this_type: "Booka umurimo nk'uwu",
+  book_this_production: "Booka umurimo",
 };
 
 const dicts: Record<Locale, Record<keyof typeof en, string>> = { en, rw };

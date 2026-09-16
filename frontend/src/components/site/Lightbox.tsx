@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useI18n, type Locale } from "@/lib/i18n";
-import type { PortfolioItem } from "@/lib/api";
+import type { PortfolioItem, Service } from "@/lib/api";
+import { cachedServices, confidentServiceForCategory } from "@/lib/services";
 
 /** Localized display title for a portfolio item (RW falls back to EN). */
 export function portfolioTitle(item: PortfolioItem, locale: Locale): string {
@@ -77,8 +79,15 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
   const { locale, t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Services for the "Book this type" link — fetched once (module-level cached
+  // promise in lib/services.ts) so locale toggles and slide changes never refetch.
+  const [services, setServices] = useState<Service[]>([]);
 
   const item = index !== null ? items[index] : undefined;
+
+  useEffect(() => {
+    cachedServices().then(setServices);
+  }, []);
 
   // Mount-only setup: remember focus, move focus in, lock body scroll.
   // Cleanup restores both — no setState here (lint-safe).
@@ -130,6 +139,10 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
   const title = portfolioTitle(item, locale);
   const count = items.length;
   const counter = `${String(index + 1).padStart(2, "0")} / ${String(count).padStart(2, "0")}`;
+  // "Book this type" pre-selects a service ONLY when the item's category maps
+  // to exactly one service; ambiguous/unmatched categories go to generic /book.
+  const matched = confidentServiceForCategory(item.category ?? "", services);
+  const bookHref = matched ? `/book?service=${matched.id}` : "/book";
 
   return (
     <div
@@ -187,6 +200,12 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
               {item.clientName}
             </p>
           )}
+          <Link
+            href={bookHref}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-brass-deep px-6 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+          >
+            {matched ? t("book_this_type") : t("book_this_production")}
+          </Link>
           <p className="mt-3 font-serif text-xs italic tracking-[0.2em] text-cream/85 tabular-nums">{counter}</p>
         </div>
 
