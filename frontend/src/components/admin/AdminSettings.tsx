@@ -180,7 +180,7 @@ function SiteSettingsSection({ token }: { token: string }) {
                   </Field>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {(["en", "rw"] as const).map((loc) => {
                     const current = rows.find((s) => s.locale === loc);
                     return (
@@ -363,7 +363,7 @@ function LogosSection({ token }: { token: string }) {
       )}
 
       {loading ? (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className={skeletonCard} />
           ))}
@@ -380,7 +380,7 @@ function LogosSection({ token }: { token: string }) {
           </button>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {list.map((logo, idx) => (
             <div
               key={logo.id}
@@ -390,7 +390,7 @@ function LogosSection({ token }: { token: string }) {
                 /* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail */
                 <img src={logo.imageUrl} alt={logo.name} className="h-14 w-auto max-w-full object-contain" loading="lazy" />
               ) : (
-                <span className="rounded-full border border-admin-line-strong px-4 py-2 font-serif text-sm tracking-wide text-admin-muted">
+                <span className="min-w-0 max-w-full truncate rounded-full border border-admin-line-strong px-4 py-2 font-serif text-sm tracking-wide text-admin-muted">
                   {logo.name}
                 </span>
               )}

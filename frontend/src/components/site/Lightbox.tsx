@@ -35,7 +35,7 @@ function LightboxSlide({ item }: { item: PortfolioItem }) {
         className="object-contain"
       />
       {sources.length > 1 && (
-        <div className="absolute inset-x-0 -bottom-10 flex justify-center gap-1.5">
+        <div className="absolute inset-x-0 -bottom-10 flex items-end justify-center gap-1.5">
           {sources.map((src, i) => (
             <button
               // coverUrl can repeat inside mediaUrls — key by position too
@@ -44,12 +44,18 @@ function LightboxSlide({ item }: { item: PortfolioItem }) {
               aria-label={`${i + 1} / ${sources.length}`}
               aria-current={i === mediaIdx}
               onClick={() => setMediaIdx(i)}
-              className={
-                i === mediaIdx
-                  ? "h-1.5 w-6 rounded-full bg-brass"
-                  : "h-1.5 w-3 rounded-full bg-cream/40 transition hover:bg-cream/70"
-              }
-            />
+              // 40px hit-slop button wrapping the 6px visual dot (items-end
+              // keeps the dot on its original baseline below the image stage).
+              className="flex h-10 cursor-pointer items-end"
+            >
+              <span
+                className={
+                  i === mediaIdx
+                    ? "h-1.5 w-6 rounded-full bg-brass"
+                    : "h-1.5 w-3 rounded-full bg-cream/40 transition hover:bg-cream/70"
+                }
+              />
+            </button>
           ))}
         </div>
       )}

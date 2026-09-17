@@ -50,17 +50,17 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
 
           {/* Prev / Next pager — always-visible affordances, subdued until disabled. */}
           {totalPages > 1 && (
-            <nav aria-label="Pagination" className="mt-12 flex items-center justify-between gap-4">
+            <nav aria-label="Pagination" className="mt-12 flex flex-wrap items-center justify-between gap-2">
               {hasPrev ? (
                 <Link
                   href={`/blog?page=${page - 1}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
+                  className="inline-flex min-w-0 items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
                 >
                   <span aria-hidden="true">←</span>
                   {t("blog_pager_newer")}
                 </Link>
               ) : (
-                <span className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
+                <span className="inline-flex min-w-0 items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
                   <span aria-hidden="true">←</span>
                   {t("blog_pager_newer")}
                 </span>
@@ -71,13 +71,13 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
               {hasNext ? (
                 <Link
                   href={`/blog?page=${page + 1}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
+                  className="inline-flex min-w-0 items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
                 >
                   {t("blog_pager_older")}
                   <span aria-hidden="true">→</span>
                 </Link>
               ) : (
-                <span className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
+                <span className="inline-flex min-w-0 items-center gap-2 px-5 py-2.5 text-sm font-medium text-ink/35">
                   {t("blog_pager_older")}
                   <span aria-hidden="true">→</span>
                 </span>

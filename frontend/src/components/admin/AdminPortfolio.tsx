@@ -369,7 +369,7 @@ export function AdminPortfolio({ token }: { token: string }) {
               <p className={emptyStateTitle}>{t("admin_portfolio_empty")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {list.map((i, idx) => (
                 <div
                   key={i.id}

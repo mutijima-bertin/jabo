@@ -20,8 +20,11 @@
  *    color switches automatically under `.admin-shell`. Do NOT add per-element
  *    outline-* hacks; use `focusRing` only where a native element needs an
  *    explicit reminder (checkboxes, selects via wrapper).
- *  - Buttons/rows use `h-8` MINIMUM touch target (WCAG 2.2 24px passes);
- *    inputs are `h-10` (40px) for comfortable daily admin typing.
+ *  - Interactive controls use `min-h-10` (40px) MINIMUM touch target
+ *    (WCAG 2.2 AAA-friendly; matches the `h-10` input height). `btn`,
+ *    `iconBtn*`, `rowAction`, `filterChip`, `pillBase`, `badge`,
+ *    `sideLink` all floor at 40px so composed variants can never silently
+ *    shrink a tap target.
  *
  * The class list is the SPEC. The JSX structure + states for each admin tab
  * live in docs/design/admin-interface-spec.md §4–§9.
@@ -75,9 +78,9 @@ export const cardSurface = "rounded-2xl border border-ink/10 bg-white/70";
 // Admin theme — buttons
 // ---------------------------------------------------------------------------
 export const btn =
-  "inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition duration-150 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex min-h-10 select-none items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition duration-150 disabled:pointer-events-none disabled:opacity-50";
 
-export const btnSm = cx(btn, "h-8 gap-1.5 px-3 text-xs");
+export const btnSm = cx(btn, "gap-1.5 px-3 text-xs");
 export const btnMd = cx(btn, "h-10 px-4 text-sm");
 export const btnLg = cx(btn, "h-11 px-6 text-sm");
 
@@ -99,24 +102,24 @@ export const btnDangerGhost = cx(btnSm, "text-admin-danger hover:bg-admin-danger
 /** Quiet tertiary — "View all", dismiss, utility taps. */
 export const btnGhost = cx(btnSm, "text-admin-muted hover:bg-admin-raised hover:text-admin-text");
 
-/** Touch-safe per-row action pill (Edit / Delete / Open): always visible, ≥32px. */
+/** Touch-safe per-row action pill (Edit / Delete / Open): always visible, ≥40px. */
 export const rowAction =
-  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition duration-150 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-xs font-semibold transition duration-150 disabled:pointer-events-none disabled:opacity-50";
 
 export const rowActionDefault = cx(rowAction, "border-admin-line-strong text-admin-muted hover:border-admin-muted hover:text-admin-text");
 export const rowActionBrass = cx(rowAction, "border-accent/40 text-brass-light hover:border-accent hover:bg-accent/10");
 export const rowActionDanger = cx(rowAction, "border-admin-danger/30 text-admin-danger hover:bg-admin-danger/10");
 
-/** Square icon buttons (dialog close, table header filters …). */
+/** Square icon buttons (dialog close, table header filters …) — ≥40px targets. */
 export const iconBtn =
-  "inline-flex items-center justify-center rounded-lg transition duration-150 disabled:pointer-events-none disabled:opacity-50";
-export const iconBtnSm = cx(iconBtn, "h-8 w-8");
-export const iconBtnMd = cx(iconBtn, "h-9 w-9");
+  "inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg transition duration-150 disabled:pointer-events-none disabled:opacity-50";
+export const iconBtnSm = iconBtn;
+export const iconBtnMd = iconBtn;
 export const iconBtnGhost = cx(iconBtnMd, "text-admin-muted hover:bg-admin-raised hover:text-admin-text");
 export const iconBtnSecondary = cx(iconBtnMd, "border border-admin-line-strong bg-admin-panel text-admin-muted hover:text-admin-text");
 export const iconBtnDanger = cx(iconBtnMd, "text-admin-danger hover:bg-admin-danger/10");
 
-/** Row-scale (h-8) ghost icon button — reorder arrows in collection action rows. */
+/** Row-scale ghost icon button — reorder arrows in collection action rows. */
 export const iconBtnGhostSm = cx(iconBtnSm, "text-admin-muted hover:bg-admin-raised hover:text-admin-text");
 
 /** Explicit focus-ring reinforcement (native elements that ignore global rings). */
@@ -194,7 +197,7 @@ export const tableActions = "flex items-center justify-end gap-2";
 // Admin theme — pills & badges
 // ---------------------------------------------------------------------------
 export const pillBase =
-  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium";
+  "inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-xs font-medium";
 
 /** The 6 booking statuses → brand-honest hues. Color is never the ONLY signal:
  *  every pill also carries an i18n label. */
@@ -235,7 +238,7 @@ export function pubPill(published: boolean): string {
 export const draftBadge = cx(pillBase, "border-admin-warning/30 bg-admin-warning/10 text-admin-warning");
 
 export const badge =
-  "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium";
+  "inline-flex min-h-10 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-medium";
 export const badgeBrass = cx(badge, "border border-accent/30 bg-accent/15 text-brass-light");
 export const badgeSuccess = cx(badge, "border border-admin-success/30 bg-admin-success/10 text-admin-success");
 export const badgeWarning = cx(badge, "border border-admin-warning/30 bg-admin-warning/10 text-admin-warning");
@@ -294,7 +297,7 @@ export const dropzoneHint = "text-xs text-admin-faint";
 // Admin theme — filter chips (bookings status, portfolio category)
 // ---------------------------------------------------------------------------
 export const filterChip =
-  "inline-flex h-8 shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-xs font-medium transition duration-150";
+  "inline-flex min-h-10 shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-xs font-medium transition duration-150";
 export const filterChipActive = cx(filterChip, "border-accent bg-accent text-ink hover:bg-brass-light");
 export const filterChipInactive = cx(
   filterChip,
@@ -309,7 +312,7 @@ export const filterRow = "-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5 snap-x";
 export const sidebar = "hidden w-60 shrink-0 flex-col gap-0.5 md:flex";
 export const sidebarBrand = "mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-admin-faint";
 export const sideLink =
-  "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-150";
+  "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-150";
 export const sideLinkIcon = "h-4 w-4 shrink-0";
 export const sideLinkActive = cx(sideLink, "bg-accent/15 text-brass-light");
 export const sideLinkInactive = cx(sideLink, "text-admin-muted hover:bg-admin-raised hover:text-admin-text");
@@ -319,7 +322,7 @@ export const sideLinkDanger = cx(sideLink, "text-admin-faint hover:bg-admin-rais
 export const mobileNav = cx(filterRow, "md:hidden");
 export const mobilePill = filterChip;
 
-export const shellMain = "mx-auto w-full max-w-[1440px] px-4 py-8 md:px-8";
+export const shellMain = "mx-auto w-full max-w-7xl px-4 py-8 md:px-8";
 export const topbarInset = "mb-6 space-y-4";
 
 // ---------------------------------------------------------------------------

@@ -282,8 +282,13 @@ export function HeroSection({
 
       {count > 1 && (
         <>
-          {/* Progress bars — bottom-left (active = brass, wider) */}
-          <div className="absolute bottom-6 left-4 z-20 flex items-center gap-1.5 md:left-6">
+          {/* Progress bars — bottom-left (active = brass, wider). Each segment
+              is a 40px-tall hit-slop button (WCAG touch target) wrapping the
+              4px visual bar; items-end keeps the track at its original spot.
+              On <md the strip sits ABOVE the control cluster band (which is
+              shifted left of the WhatsApp FAB and is wider than the strip at
+              narrow widths) so the two never overlap or block each other. */}
+          <div className="absolute bottom-20 left-4 z-20 flex items-end gap-1.5 md:bottom-6 md:left-6">
             {slides.map((slide, i) => (
               <button
                 key={slide.id}
@@ -291,12 +296,16 @@ export function HeroSection({
                 aria-label={`${t("hero_slide_label")} ${i + 1} / ${count}`}
                 aria-current={i === safeIndex}
                 onClick={() => go(i)}
-                className={`h-1 rounded-full transition-all duration-300 ${
-                  i === safeIndex
-                    ? "w-8 bg-brass"
-                    : `w-3 ${activeOnFallback ? "bg-ink/20 hover:bg-ink/40" : "bg-cream/50 hover:bg-cream"}`
-                }`}
-              />
+                className="flex h-10 cursor-pointer items-end"
+              >
+                <span
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    i === safeIndex
+                      ? "w-8 bg-brass"
+                      : `w-3 ${activeOnFallback ? "bg-ink/20 hover:bg-ink/40" : "bg-cream/50 hover:bg-cream"}`
+                  }`}
+                />
+              </button>
             ))}
           </div>
 
