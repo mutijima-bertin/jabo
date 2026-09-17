@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
+import { absoluteUrl } from "@/lib/seo";
 import { api, type PostSummary } from "@/lib/api";
 import { BlogList } from "@/components/site/BlogList";
 
 export const metadata: Metadata = {
   title: "Blog",
   description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
+  openGraph: {
+    title: `Blog — ${BRAND}`,
+    description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
+    url: absoluteUrl("/blog"),
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+  },
 };
 
 const PAGE_SIZE = 8;

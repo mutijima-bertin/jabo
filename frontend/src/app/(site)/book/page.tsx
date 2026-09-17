@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/constants";
+import { absoluteUrl } from "@/lib/seo";
 import { fetchServices } from "@/lib/content";
 import { BookPageShell } from "@/components/site/BookPageShell";
 import { PageHeading } from "@/components/shared/PageHeading";
@@ -6,6 +8,14 @@ import { PageHeading } from "@/components/shared/PageHeading";
 export const metadata: Metadata = {
   title: "Book a Production",
   description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
+  openGraph: {
+    title: `Book a Production — ${BRAND}`,
+    description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
+    url: absoluteUrl("/book"),
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+  },
 };
 
 export default async function BookPage({

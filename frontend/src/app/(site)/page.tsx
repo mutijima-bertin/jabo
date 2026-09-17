@@ -8,15 +8,26 @@ import { TrustBand } from "@/components/site/TrustBand";
 import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { ClientsWall } from "@/components/site/ClientsWall";
 import { AboutSection } from "@/components/site/AboutSection";
-import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
+import { BRAND } from "@/lib/constants";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
 import type { Metadata } from "next";
 
 // Money page — explicit > inherited default. `absolute` pins the exact
 // keyword-rich title (the root template would otherwise re-append the brand).
+// The openGraph block mirrors the rendered title/description and pins the
+// canonical-home og:url (no og:image yet — later phase).
 export const metadata: Metadata = {
   title: { absolute: SITE_TITLE },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: absoluteUrl("/"),
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+  },
 };
 
 export default async function HomePage() {

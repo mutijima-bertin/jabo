@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/constants";
+import { absoluteUrl } from "@/lib/seo";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { PageHeading } from "@/components/shared/PageHeading";
@@ -6,6 +8,14 @@ import { PageHeading } from "@/components/shared/PageHeading";
 export const metadata: Metadata = {
   title: "Track a Production",
   description: "Track the status of your production — from booking confirmation to final delivery.",
+  openGraph: {
+    title: `Track a Production — ${BRAND}`,
+    description: "Track the status of your production — from booking confirmation to final delivery.",
+    url: absoluteUrl("/track"),
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+  },
 };
 
 export default function TrackHomePage() {

@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { BRAND } from "@/lib/constants";
+import { absoluteUrl } from "@/lib/seo";
 import { fetchPortfolio } from "@/lib/content";
 import { PortfolioGrid } from "@/components/site/PortfolioGrid";
 import { PageHeading } from "@/components/shared/PageHeading";
@@ -6,6 +8,14 @@ import { PageHeading } from "@/components/shared/PageHeading";
 export const metadata: Metadata = {
   title: "Portfolio",
   description: "Recent photography, videography and livestreaming productions for media houses, institutions, and events across Rwanda.",
+  openGraph: {
+    title: `Portfolio — ${BRAND}`,
+    description: "Recent photography, videography and livestreaming productions for media houses, institutions, and events across Rwanda.",
+    url: absoluteUrl("/portfolio"),
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+  },
 };
 
 export default async function PortfolioPage() {

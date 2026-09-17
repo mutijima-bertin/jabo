@@ -2,6 +2,7 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BRAND } from "@/lib/constants";
+import { absoluteUrl } from "@/lib/seo";
 import { fetchPost } from "@/lib/content";
 import { PostView } from "@/components/site/PostView";
 
@@ -25,8 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.titleEn,
     description: post.excerptEn ?? post.titleEn,
     openGraph: {
+      // og:type stays "article" (page-level OG handled in this file, not the
+      // static `website` pages) — SEO phase 3.
       title: `${post.titleEn} — ${BRAND}`,
       description: post.excerptEn ?? post.titleEn,
+      url: absoluteUrl(`/blog/${slug}`),
+      siteName: BRAND,
+      locale: "en_RW",
       type: "article",
     },
   };
