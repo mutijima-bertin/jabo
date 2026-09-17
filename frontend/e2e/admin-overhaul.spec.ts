@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
+import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { createHmac } from "node:crypto";
 import { API, getAdminToken } from "./auth";
 
@@ -75,6 +75,24 @@ interface BookingLike {
   location?: string | null;
   budgetRange?: string | null;
   events?: Array<{ id: string; status: string; note: string | null }>;
+}
+
+/** GET /admin/dashboard shape — mirrors frontend/src/lib/api.ts DashboardStats. */
+interface DashboardPayload {
+  stats: {
+    total: number;
+    pending: number;
+    confirmed: number;
+    inProduction: number;
+    delivered: number;
+    completed: number;
+    cancelled: number;
+    clients: number;
+  };
+  bookingsByDay: Array<{ date: string; count: number }>;
+  topServices: Array<{ id: string; nameEn: string; count: number }>;
+  counts: { testimonials: number; posts: number; portfolio: number; services: number };
+  recent: Array<{ id: string; reference: string; status: string; createdAt: string; service: { nameEn: string } | null }>;
 }
 
 let token: string;
@@ -229,6 +247,75 @@ test.describe("admin interface overhaul", () => {
     for (const [label, l] of Object.entries(publicChrome)) {
       await expect(l, `public ${label} must be absent on /admin`).toHaveCount(0);
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // 1d. Dashboard analytics (phase 7B) — the lazy-loaded recharts region renders
+  // the live /admin/dashboard payload. KPIs mirror the API's own numbers,
+  // the three chart cards + quick actions carry their titles, and the 14-day
+  // area chart renders a REAL chart when the series has data (or its empty
+  // state otherwise); a top-services row shows the leading live service name.
+  // All counts are relational (read straight from the API), never hardcoded.
+  // ---------------------------------------------------------------------------
+  test("dashboard renders recharts KPIs, chart regions and quick actions from the live API", async ({ page, request }) => {
+    const dash = await apiGet<DashboardPayload>(request, "/admin/dashboard");
+
+    await adminSession(page);
+    await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible({ timeout: 10000 });
+
+    // KPI cards expose numeric labels. Exact snapshot equality is impossible
+    // in this fully-parallel suite (sibling specs create/delete bookings while
+    // this test runs), so assert the shape AND the one true booking invariant:
+    // the six status KPIs always sum to the total-bookings KPI (same render).
+    const totalBtn = page.getByRole("button", { name: /^Total bookings: \d+$/ });
+    await expect(totalBtn).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Clients: \d+$/ })).toBeVisible();
+    const kpiNumber = async (btn: Locator): Promise<number> => {
+      const m = /\d+$/.exec((await btn.getAttribute("aria-label")) ?? "");
+      return m ? Number(m[0]) : Number.NaN;
+    };
+    const total = await kpiNumber(totalBtn);
+    const statusKpis = ["Booking received", "Confirmed", "In production", "Delivered", "Completed", "Cancelled"];
+    const statusSum = (
+      await Promise.all(statusKpis.map((label) => kpiNumber(page.getByRole("button", { name: new RegExp(`^${label}: \\d+$`) }))))
+    ).reduce((a, b) => a + b, 0);
+    expect(statusSum, `status KPIs ${statusSum} must equal the total bookings KPI ${total}`).toBe(total);
+
+    // The three chart cards (+ quick actions) render once the chart chunk loads.
+    const areaTitle = page.getByRole("heading", { name: "Bookings — last 14 days", exact: true });
+    await expect(areaTitle).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: "Bookings by status", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Top services", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Quick actions", exact: true })).toBeVisible();
+
+    // 14-day area: a real chart when the series has data, the empty state else.
+    const areaCard = areaTitle.locator("..");
+    if (dash.bookingsByDay.some((d) => d.count > 0)) {
+      await expect(areaCard.locator('[role="img"][aria-label*="last 14 days"]')).toBeVisible();
+    } else {
+      await expect(areaCard.getByText("No bookings yet", { exact: true })).toBeVisible();
+    }
+
+    // Top services: at least one of the live top-5 service names renders a
+    // bar row (the peak charts on seeded data; membership is stable, exact
+    // ordering can shift while parallel specs add bookings).
+    if (dash.topServices.length > 0) {
+      const topCard = page.getByRole("heading", { name: "Top services", exact: true }).locator("..");
+      let found = false;
+      for (const s of dash.topServices) {
+        if ((await topCard.getByText(s.nameEn, { exact: true }).count()) > 0) {
+          found = true;
+          break;
+        }
+      }
+      expect(found, `top services chart must render one of: ${dash.topServices.map((s) => s.nameEn).join(", ")}`).toBe(true);
+    }
+
+    // Quick actions deep-link to the correct ?tab= targets.
+    await page.getByRole("link", { name: "Clients", exact: true }).click();
+    await expect(page).toHaveURL(/tab=clients$/);
+    await expect(page.getByRole("heading", { name: /^Clients\d*$/ })).toBeVisible({ timeout: 10000 });
   });
 
   // ---------------------------------------------------------------------------

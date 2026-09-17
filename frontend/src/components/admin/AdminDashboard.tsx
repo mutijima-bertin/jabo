@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, Inbox, Loader2, RefreshCw } from "lucide-react";
 import { useAdminFetch } from "@/lib/admin";
@@ -28,6 +30,7 @@ import {
   pageTitle,
   skeletonCard,
   skeletonRows,
+  skeletonText,
   statCardClickable,
   statLabel,
   statValue,
@@ -51,6 +54,58 @@ const STATUS_STAT_KEY: Record<string, keyof DashboardStats["stats"]> = {
   COMPLETED: "completed",
   CANCELLED: "cancelled",
 };
+
+/**
+ * Chart region (recharts) is lazily loaded client-only so the chart library
+ * never touches the SSR bundle or the public site (phase 7B). The skeleton
+ * below uses the same ui.ts shimmer/skeleton tokens as every admin screen.
+ */
+const DashboardCharts = dynamic(() => import("./DashboardCharts"), {
+  ssr: false,
+  loading: () => (
+    <>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={cx(cardCls, "p-5")}>
+          <div className={cx(skeletonText, "h-4 w-44")} />
+          <div className={cx(skeletonText, "mt-2 w-24")} />
+          <div className={cx(skeletonCard, "mt-4 h-56 rounded-xl")} />
+        </div>
+      ))}
+    </>
+  ),
+});
+
+/** One-tap admin shortcuts — same tab targets as the shell sidebar. */
+function QuickActions({ onOpenBookings }: { onOpenBookings: () => void }) {
+  return (
+    <section className={cx(cardCls, "p-5")} aria-labelledby="dash-quick-actions-title">
+      <h2 id="dash-quick-actions-title" className={cardHeaderTitle}>
+        Quick actions
+      </h2>
+      <p className="mt-1 text-xs text-admin-muted">Jump straight to a section.</p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" className={btnSecondary} onClick={onOpenBookings}>
+          Bookings
+        </button>
+        <Link className={btnSecondary} href="/admin?tab=clients">
+          Clients
+        </Link>
+        <Link className={btnSecondary} href="/admin?tab=portfolio">
+          Portfolio
+        </Link>
+        <Link className={btnSecondary} href="/admin?tab=blog">
+          Blog posts
+        </Link>
+        <Link className={btnSecondary} href="/admin?tab=services">
+          Services
+        </Link>
+        <Link className={btnSecondary} href="/admin?tab=settings">
+          Settings
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 export function AdminDashboard({ token, onOpenBookings }: { token: string; onOpenBookings: () => void }) {
   const { t, locale } = useI18n();
@@ -152,6 +207,16 @@ export function AdminDashboard({ token, onOpenBookings }: { token: string; onOpe
                 <p className={statLabel}>{t(statusKey(status))}</p>
               </button>
             ))}
+          </div>
+
+          {/* Charts + quick actions — recharts is lazy-loaded client-only (phase 7B) */}
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <DashboardCharts
+              stats={data.stats}
+              bookingsByDay={data.bookingsByDay}
+              topServices={data.topServices}
+            />
+            <QuickActions onOpenBookings={onOpenBookings} />
           </div>
 
           {/* Recent bookings (spec §5.3) */}

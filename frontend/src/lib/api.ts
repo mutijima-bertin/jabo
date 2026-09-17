@@ -117,6 +117,12 @@ export interface SiteSetting {
 
 export interface DashboardStats {
   stats: { total: number; pending: number; confirmed: number; inProduction: number; delivered: number; completed: number; cancelled: number; clients: number };
+  /** Exactly 14 entries, oldest→newest, ISO YYYY-MM-DD, zero-filled (admin dashboard area chart). */
+  bookingsByDay: Array<{ date: string; count: number }>;
+  /** Top 5 services by booking count, count desc (admin dashboard bar chart). */
+  topServices: Array<{ id: string; nameEn: string; count: number }>;
+  /** Live content catalog sizes shown by the admin shell/charts. */
+  counts: { testimonials: number; posts: number; portfolio: number; services: number };
   recent: Array<{ id: string; reference: string; status: string; createdAt: string; service: { nameEn: string } | null }>;
 }
 
