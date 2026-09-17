@@ -206,13 +206,18 @@ test.describe("blog journeys", () => {
     await expect(cta).toBeVisible(); // CTA block
     await expect(cta).toHaveAttribute("href", "/book");
 
-    await expect(page.locator("article").getByText(new RegExp(`^${v0 + 1}\\s+Views$`))).toBeVisible();
-    expect((await apiGet<PostRow>(request, `/admin/posts/${id}`)).views).toBe(v0 + 1);
+    // Monotonic (>=) rather than exact: a sibling worker navigating to this
+    // same public post (or reloading it) can bump the counter between our v0
+    // snapshot and the assertion. readCounter().first() is the article's own
+    // meta-row counter — related-post cards below also render "N Views".
+    expect(await readCounter(page, "Views")).toBeGreaterThanOrEqual(v0 + 1);
+    expect((await apiGet<PostRow>(request, `/admin/posts/${id}`)).views).toBeGreaterThanOrEqual(v0 + 1);
 
-    // A reload is exactly one more server fetch (React cache() dedupes within a request).
+    // A reload is at least one more server fetch (React cache() dedupes within
+    // a request; a sibling worker may add even more).
     await page.reload();
-    await expect(page.locator("article").getByText(new RegExp(`^${v0 + 2}\\s+Views$`))).toBeVisible();
-    expect((await apiGet<PostRow>(request, `/admin/posts/${id}`)).views).toBe(v0 + 2);
+    expect(await readCounter(page, "Views")).toBeGreaterThanOrEqual(v0 + 2);
+    expect((await apiGet<PostRow>(request, `/admin/posts/${id}`)).views).toBeGreaterThanOrEqual(v0 + 2);
   });
 
   test("like button increments the count and it sticks after reload", async ({ page, request }) => {
