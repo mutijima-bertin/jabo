@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/constants";
 import { fetchPortfolio } from "@/lib/content";
 import { PortfolioGrid } from "@/components/site/PortfolioGrid";
 import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
-  title: `Portfolio — ${BRAND}`,
+  title: "Portfolio",
   description: "Recent photography, videography and livestreaming productions for media houses, institutions, and events across Rwanda.",
 };
 

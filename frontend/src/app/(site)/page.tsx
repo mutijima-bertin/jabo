@@ -8,6 +8,16 @@ import { TrustBand } from "@/components/site/TrustBand";
 import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { ClientsWall } from "@/components/site/ClientsWall";
 import { AboutSection } from "@/components/site/AboutSection";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
+import type { Metadata } from "next";
+
+// Money page — explicit > inherited default. `absolute` pins the exact
+// keyword-rich title (the root template would otherwise re-append the brand).
+export const metadata: Metadata = {
+  title: { absolute: SITE_TITLE },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+};
 
 export default async function HomePage() {
   const [settings, services, portfolio, testimonials, logos] = await Promise.all([

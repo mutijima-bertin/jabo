@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/constants";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
-  title: `Track a Production — ${BRAND}`,
+  title: "Track a Production",
   description: "Track the status of your production — from booking confirmation to final delivery.",
 };
 

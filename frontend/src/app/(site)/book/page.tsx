@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/constants";
 import { fetchServices } from "@/lib/content";
 import { BookPageShell } from "@/components/site/BookPageShell";
 import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
-  title: `Book a Production — ${BRAND}`,
+  title: "Book a Production",
   description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
 };
 

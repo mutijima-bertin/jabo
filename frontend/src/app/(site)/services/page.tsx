@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/constants";
 import { fetchServices } from "@/lib/content";
 import { ServiceBlocks } from "@/components/site/ServiceBlocks";
 import { PageHeading } from "@/components/shared/PageHeading";
 
 export const metadata: Metadata = {
-  title: `Services — ${BRAND}`,
+  title: "Services",
   description:
     "Wedding & event photography, corporate and documentary videography, livestreaming, drone coverage and more in Kigali, Rwanda.",
 };

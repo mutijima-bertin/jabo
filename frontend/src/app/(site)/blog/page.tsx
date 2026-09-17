@@ -4,7 +4,7 @@ import { api, type PostSummary } from "@/lib/api";
 import { BlogList } from "@/components/site/BlogList";
 
 export const metadata: Metadata = {
-  title: `Blog — ${BRAND}`,
+  title: "Blog",
   description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
 };
 

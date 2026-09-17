@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // uses the English defaults — the in-page copy is locale-aware.
   if (!post) notFound();
   return {
-    title: `${post.titleEn} — ${BRAND}`,
+    title: post.titleEn,
     description: post.excerptEn ?? post.titleEn,
     openGraph: {
       title: `${post.titleEn} — ${BRAND}`,

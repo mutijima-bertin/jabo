@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Admin — Creative Sound Studio",
+  // Bare keyword only — the root layout's title.template appends the brand.
+  title: "Admin",
   robots: { index: false, follow: false },
 };
 

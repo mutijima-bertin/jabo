@@ -3,6 +3,7 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
+import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,9 +21,28 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
+// SEO phase 2 — metadata foundation. metadataBase resolves all relative
+// URL-based fields (canonical/og) to absolute; title.template appends the
+// brand to child page titles (pages export bare keywords only). No OG image
+// yet — a dedicated phase ships it. Admin stays noindex via its own layout.
 export const metadata: Metadata = {
-  title: `${BRAND} — Photography, Videography & Livestreaming in Kigali`,
-  description: `${BRAND} is a Kigali-based media production company by video journalist Nkurunziza Jabo — photography, videography, livestreaming and aerial coverage for events, media houses, and institutions including FAO, The New Times and Kigali Today.`,
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s — ${BRAND}`,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    siteName: BRAND,
+    locale: "en_RW",
+    type: "website",
+    url: "/",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 // Root layout holds only shared chrome (fonts, i18n, dark/cream canvas).
