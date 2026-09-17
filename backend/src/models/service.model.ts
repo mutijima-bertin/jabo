@@ -13,6 +13,10 @@ export function listPublished() {
   });
 }
 
+export function countAll(): Promise<number> {
+  return prisma.service.count();
+}
+
 export function listAll() {
   return prisma.service.findMany({ orderBy: { sortOrder: "asc" } });
 }

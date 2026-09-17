@@ -1,5 +1,5 @@
 import { prisma } from "../config/db";
-import type { Booking, BookingStatus, Prisma } from "@prisma/client";
+import { Prisma, type Booking, type BookingStatus } from "@prisma/client";
 import * as bookingEventModel from "./bookingEvent.model";
 
 /**
@@ -17,6 +17,84 @@ export function countAll(): Promise<number> {
 
 export function countByStatus(status: BookingStatus): Promise<number> {
   return prisma.booking.count({ where: { status } });
+}
+
+/**
+ * 14-day UTC booking series, zero-filled. One entry per day from
+ * `daysBack - 1` days ago through today, oldest → newest.
+ * Dates are ISO YYYY-MM-DD (UTC). The series is computed entirely in UTC
+ * (deterministic, no timezone drift).
+ */
+export async function countByDaySince(
+  daysBack: number
+): Promise<{ date: string; count: number }[]> {
+  // Floor "now" to UTC midnight.
+  const now = new Date();
+  const todayUtc = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+
+  // Start of the window: (daysBack − 1) days before today (so we include today).
+  const startUtc = new Date(todayUtc);
+  startUtc.setUTCDate(startUtc.getUTCDate() - (daysBack - 1));
+
+  // Query only the rows inside the window — GROUP BY day.
+  const rows = await prisma.$queryRaw<{ day: Date | string; count: unknown }[]>(
+    Prisma.sql`SELECT date_trunc('day', "createdAt")::date AS day, COUNT(*)::int AS count FROM "Booking" WHERE "createdAt" >= ${startUtc} GROUP BY 1`
+  );
+
+  // Index raw counts by YYYY-MM-DD.
+  const countMap = new Map<string, number>();
+  for (const row of rows) {
+    const key = new Date(row.day).toISOString().slice(0, 10);
+    countMap.set(key, Number(row.count));
+  }
+
+  // Build the zero-filled series (oldest → newest).
+  const series: { date: string; count: number }[] = [];
+  for (let i = 0; i < daysBack; i++) {
+    const d = new Date(startUtc);
+    d.setUTCDate(d.getUTCDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    series.push({ date: key, count: countMap.get(key) ?? 0 });
+  }
+
+  return series;
+}
+
+/**
+ * Top services by booking count (descending), tied on count sorted by
+ * nameEn ascending. Returns at most `limit` entries.
+ * Service rows that were deleted after the booking was created are silently
+ * dropped (defensive).
+ */
+export async function topServices(
+  limit = 5
+): Promise<{ id: string; nameEn: string; count: number }[]> {
+  // Raw query avoids Prisma 7 groupBy _count union-type issues and gives
+  // a clean { serviceId, count } shape directly.
+  const rows = await prisma.$queryRaw<{ serviceid: string; count: bigint }[]>(
+    Prisma.sql`SELECT "serviceId" AS serviceid, COUNT(*)::bigint AS count FROM "Booking" GROUP BY "serviceId"`
+  );
+
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((r) => r.serviceid);
+  const services = await prisma.service.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, nameEn: true },
+  });
+  const nameMap = new Map(services.map((s) => [s.id, s.nameEn]));
+
+  return rows
+    .filter((r) => nameMap.has(r.serviceid))
+    .map((r) => ({
+      id: r.serviceid,
+      nameEn: nameMap.get(r.serviceid)!,
+      count: Number(r.count),
+    }))
+    .sort((a, b) => b.count - a.count || a.nameEn.localeCompare(b.nameEn))
+    .slice(0, limit);
 }
 
 /** 10 most recent bookings with service name (admin dashboard). */

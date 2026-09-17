@@ -66,3 +66,7 @@ export function update(id: string, data: Prisma.TestimonialUpdateInput) {
 export function deleteById(id: string) {
   return prisma.testimonial.delete({ where: { id } });
 }
+
+export function countAll(): Promise<number> {
+  return prisma.testimonial.count();
+}

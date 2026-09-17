@@ -86,6 +86,10 @@ export function slugify(input: string): string {
   return base.slice(0, 80).replace(/-+$/, "");
 }
 
+export function countAll(): Promise<number> {
+  return prisma.blogPost.count();
+}
+
 /**
  * Deterministic uniqueness: append -2, -3, ... until the slug is free.
  * excludeId lets a PATCH keep its own existing slug.

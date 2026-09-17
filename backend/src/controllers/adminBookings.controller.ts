@@ -1,13 +1,33 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import * as bookingModel from "../models/booking.model";
+import * as testimonialModel from "../models/testimonial.model";
+import * as blogPostModel from "../models/blogPost.model";
+import * as portfolioItemModel from "../models/portfolioItem.model";
+import * as serviceModel from "../models/service.model";
 import { pathParam } from "./params";
 import * as clientModel from "../models/client.model";
 import { revokeMagicToken, updateBookingStatus } from "../services/bookings";
 
 // ---------- Dashboard ----------
 export async function dashboard(_req: Request, res: Response): Promise<void> {
-  const [total, pending, confirmed, inProduction, delivered, completed, cancelled, recent, clients] = await Promise.all([
+  const [
+    total,
+    pending,
+    confirmed,
+    inProduction,
+    delivered,
+    completed,
+    cancelled,
+    recent,
+    clients,
+    bookingsByDay,
+    topServices,
+    testimonialCount,
+    postCount,
+    portfolioCount,
+    serviceCount,
+  ] = await Promise.all([
     bookingModel.countAll(),
     bookingModel.countByStatus("PENDING"),
     bookingModel.countByStatus("CONFIRMED"),
@@ -17,8 +37,21 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
     bookingModel.countByStatus("CANCELLED"),
     bookingModel.findRecentWithService(10),
     clientModel.count(),
+    bookingModel.countByDaySince(14),
+    bookingModel.topServices(5),
+    testimonialModel.countAll(),
+    blogPostModel.countAll(),
+    portfolioItemModel.countAll(),
+    serviceModel.countAll(),
   ]);
-  res.json({ stats: { total, pending, confirmed, inProduction, delivered, completed, cancelled, clients }, recent });
+
+  res.json({
+    stats: { total, pending, confirmed, inProduction, delivered, completed, cancelled, clients },
+    bookingsByDay,
+    topServices,
+    counts: { testimonials: testimonialCount, posts: postCount, portfolio: portfolioCount, services: serviceCount },
+    recent,
+  });
 }
 
 // ---------- Bookings ----------

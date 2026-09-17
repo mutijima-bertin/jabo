@@ -29,6 +29,10 @@ export function deleteById(id: string) {
   return prisma.portfolioItem.delete({ where: { id } });
 }
 
+export function countAll(): Promise<number> {
+  return prisma.portfolioItem.count();
+}
+
 /**
  * Bulk-replace the whole grid's order atomically (see serviceModel.reorder for
  * the shared semantics — all-or-nothing, labeled errors abort the transaction,
