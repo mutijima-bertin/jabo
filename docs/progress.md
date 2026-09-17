@@ -3,18 +3,17 @@
 > Personal reference file for the founder. Updated end of each work session.
 > Plan of record: `PLAN.md` (repo root). Full engineering memory: `.opencode/memory/`.
 
-**Last updated: 2026-09-14**
+**Last updated: 2026-09-17**
 
 ---
 
 ## Current status
 
-- **Code: SHIPPABLE** — admin overhaul + content import + client testimonials all pass their verification gates.
-- **Git:** 3-phase push to `main` (admin overhaul → content import → client testimonials), CI gate between each — IN PROGRESS.
+- **Code: SHIPPABLE** — UX/journey overhaul complete (8 phases), all shipped on main, CI green.
+- **Git:** main branch, latest commit `cbedec6` (dashboard API + recharts). All phases pushed.
 - **Live stack (local docker):** frontend :3000, backend :4000, postgres. Running the latest code.
 - **Not deployed anywhere yet.** No domain, no live hosting. SMTP + Zavu + domain = next phase.
-
-**Nightly E2E:** was red every night Sep 4→14 (CI `JWT_SECRET` below the backend's 32-char guard → seed step died). Fixed in the workflows on 2026-09-14; next night's cron (02:00 UTC) confirms green.
+- **Test gates:** e2e 56 pass / 3 skip / 0 fail · vitest 96/96 · lint 0 · tsc clean · build 14 routes.
 
 ---
 
@@ -42,6 +41,22 @@ A client visiting the site sees, in one scroll:
 - Backend: testimonial edit endpoint, vitest test toolchain, crash fixes (PATCH bug, empty slugs, upload guards)
 - **Gates:** backend 49/49 · frontend lint 0 · build 14 routes · e2e 36 pass / 3 skip / 0 fail
 
+### 2026-09-17 — UX/journey overhaul (8 phases, all shipped)
+The full end-to-end user journey was rebuilt across 8 commits on main:
+
+1. **Container density** (`3bf8680`) — all public containers widened to `max-w-7xl`.
+2. **Booking journey** (`58dd769`) — two-column /book (form left, 360px sticky context right), service prefill via `/book?service=<id>`, services-as-CTA, trust signals/FQA section. i18n +30 keys.
+3. **Post-submit + contacts** (`3ee90ae`) — success card with WhatsApp prefilled reference, /contact page, footer/About clickable mailto/tel, `lib/site.ts` single-source phone/email helpers. i18n +10 keys.
+4. **Notifications** (`4b6dfca`) — magic track URL in status emails + WhatsApp, new `REVIEW_REQUEST` NotificationKind firing on DELIVERED (additive Prisma enum + migration). Backend tests 87→96.
+5. **Content journey** (`9810528`) — reading time estimate, per-contentType booking CTA (strict linkedPostSlug match), "More stories" related posts, lightbox "Book this type" CTA. New `bookings-from-content.spec.ts`. i18n +11 keys.
+6. **Responsive** (`144d3ca`) — 40px touch targets everywhere, admin grids single-column at base, hero control repositioned on <md, BlogList pager flex-wrap.
+7. **e2e deflake** (`a0f8cfe`) — monotonic (≥) view-count assertions fixed (exact counts raced under fullyParallel).
+8. **Dashboard API + charts** (`cbedec6`) — `/admin/dashboard` returns bookingsByDay (14d zero-filled), topServices (max 5), counts (4 models). recharts v3.10.1 lazy-loaded (ssr:false → chart chunk never touches public site). AreaChart, PieChart, BarChart, QuickActions, empty states. e2e +1 chart invariant test.
+
+**Gates:** e2e 56/3/0 · vitest 96/96 · lint 0 · tsc clean · build 14 routes.
+
+**Operational gotcha discovered:** in-memory express-rate-limiters (bookings 30/hr/IP, login 5/10min/IP) exhaust within back-to-back full e2e runs → `docker compose restart backend` clears them. Also: SMTP still blocked on Resend API key; Phase 4 notification paths verified via `.mailbox` HTML dumps.
+
 ### 2026-09-14 — Content import (P1) + Client testimonials (P2)
 - **Content import** (`backend/scripts/import-content.ts`): 25 client logos, 6 showcase portfolio items ("Africa Summit", "CEO of AERG — Portrait", "Fishing Activities", 2 portraits, "Wedding Party"), founder photo (`Pasted image.png`) wired into About section. Idempotent, re-runnable (`npm run content:import -- --dir=…`).
 - **Junk cleanup:** removed 13 leftover test/download artifacts from the logo wall (8× "Dropped Image", "New York Times Logo", "Visit Rwanda vector logo…", "MTN Logo PNG Vector…", "Republic of Rwanda seal", mojibake "Tour du Rwanda ⛱ Visit Rwanda"). Wall now = 27 clean logos, FAO first, Kigali Channel 2 last.
@@ -52,41 +67,38 @@ A client visiting the site sees, in one scroll:
 
 ## Verification numbers (current)
 
-| Gate | Admin overhaul | +P1 & P2 |
-|---|---|---|
-| Backend tests | 49/49 | **57/57** |
-| Frontend lint | 0 errors | 0 errors (3 tolerated e2e warnings) |
-| Frontend build | 14 routes | 14 routes |
-| E2E | 36 pass / 3 skip / 0 fail | **40 pass / 3 skip / 0 fail** |
-| Uploads | 79 files | **111 files** (WebP q82, ≤1920px) |
+| Gate | Admin overhaul | +P1 & P2 | +UX/journey overhaul |
+|---|---|---|---|
+| Backend tests | 49/49 | **57/57** | **96/96** |
+| Frontend lint | 0 errors | 0 errors (3 tolerated e2e warnings) | 0 errors |
+| Frontend build | 14 routes | 14 routes | 14 routes |
+| E2E | 36 pass / 3 skip / 0 fail | **40 pass / 3 skip / 0 fail** | **56 pass / 3 skip / 0 fail** |
+| Uploads | 79 files | **111 files** (WebP q82, ≤1920px) | 111 files (unchanged) |
 
 ---
 
 ## Open items
 
-1. **Git push in progress** — 3 phases, CI green between each (see current status)
-2. **RW translations** — 196 keys now; mechanically verified, need a native-speaker review
-3. **Junk cleanup** — ✅ DONE (logo wall clean). Blog content still has placeholder posts ("africa sumit 2023", "qwertyui")
-4. **Composition security ticket** — local compose uses `css123` + published 5432; fix before hosting
-5. **Dead kit exports** — 12 unused UI-kit exports to remove (pending)
-6. **Owner-blocked content still missing:** real testimonials from clients, founder consent for `jabo.jpg` (the `Pasted image.png` is live), stats numbers, blog posts, SMTP credentials, Zavu sender + template, domain, deploy
-
----
+1. **RW translations** — mechanical verification done, need a native-speaker review (esp. Phase 2/3/5 journey keys)
+2. **Junk cleanup** — ✅ DONE (logo wall + placeholders clean). Blog content still has placeholder posts
+3. **Composition security ticket** — local compose uses `css123` + published 5432; fix before hosting
+4. **Dead kit exports** — 12 unused UI-kit exports to remove (pending)
+5. **Owner-blocked content still missing:** real testimonials from clients, founder consent for `jabo.jpg`, stats numbers, blog posts, SMTP credentials, Zavu sender + template, domain, deploy
 
 ## Next phases (order)
 
-1. ✅ Finish 3-phase push → CI green
-2. RW translation native review
-3. SMTP credentials → real magic-link emails (links currently print to backend logs)
-4. Zavu WhatsApp integration
-5. Domain + real deploy (VPS + compose)
-6. Content: real blog posts, client testimonials seeding, stats
+1. SMTP credentials → real magic-link + review-request emails (currently gated at `env.smtpConfigured`)
+2. Zavu WhatsApp integration (sender number + template approval; tracking-link domain verification pending)
+3. Domain + real deploy (VPS + compose)
+4. Content: real blog posts, client testimonials seeding, stats
+5. Possible future (not approved): Google review request link; RW translation quality pass on Phase 2/3/5 keys; nothing post-phase-18 scheduled. Nightly CI view-count test now stable.
 
 ---
 
 ## Gotchas (don't re-learn these)
 
 - E2E full-suite reruns: testimonial POST limiter 5/hr/IP → max 2 runs/hour or restart backend
+- Booking POST limiter 30/hr/IP — back-to-back full-suite e2e runs within an hour exhaust it too; `docker compose restart backend` clears all in-memory limiters
 - Client login limiter 5/10-min/IP → space full e2e runs ≥10 min apart (or `docker compose restart backend`)
 - Admin login: use `.env` values (mutijimabertinr@gmail.com), not the `admin@creativesoundstudio.rw` placeholder
 - Docker rebuild resets in-memory rate limiters (that's a feature)
