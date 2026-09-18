@@ -22,3 +22,10 @@ export const SITE_DESCRIPTION = `${BRAND} in Kigali — photography, videography
 export function absoluteUrl(path: string): string {
   return new URL(path, SITE_URL).toString();
 }
+
+/**
+ * Branded typographic OG poster (1200×630, `public/og-default.png`), generated
+ * by `scripts/og-image.mjs`. Absolute like everything else in this module so
+ * build-time env swaps (NEXT_PUBLIC_SITE_URL) stay seamless — SEO phase 6.
+ */
+export const OG_IMAGE = absoluteUrl("/og-default.png");

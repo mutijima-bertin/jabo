@@ -3,7 +3,7 @@ import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
-import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
+import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,8 +23,12 @@ const fraunces = Fraunces({
 
 // SEO phase 2 — metadata foundation. metadataBase resolves all relative
 // URL-based fields (canonical/og) to absolute; title.template appends the
-// brand to child page titles (pages export bare keywords only). No OG image
-// yet — a dedicated phase ships it. Admin stays noindex via its own layout.
+// brand to child page titles (pages export bare keywords only). SEO phase 6 —
+// branded typographic OG poster (public/og-default.png). Next merges metadata
+// shallowly, so every page that defines its own openGraph re-states the shared
+// image (see those files) — only non-overriding routes inherit from here.
+// Per-post covers come later once the real domain is wired. Admin stays
+// noindex via its own layout.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -39,9 +43,18 @@ export const metadata: Metadata = {
     url: "/",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: "Creative Sound Studio — photography, videography & livestreaming in Kigali, Rwanda",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
+    images: [OG_IMAGE],
   },
 };
 

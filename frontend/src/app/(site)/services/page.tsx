@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { JsonLd, servicesItemListJsonLd } from "@/lib/jsonld";
 import { fetchServices } from "@/lib/content";
 import { ServiceBlocks } from "@/components/site/ServiceBlocks";
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     description:
       "Wedding & event photography, corporate and documentary videography, livestreaming, drone coverage and more in Kigali, Rwanda.",
     url: absoluteUrl("/services"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",

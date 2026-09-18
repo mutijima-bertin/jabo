@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { JsonLd, portfolioItemListJsonLd } from "@/lib/jsonld";
 import { fetchPortfolio } from "@/lib/content";
 import { PortfolioGrid } from "@/components/site/PortfolioGrid";
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     title: `Portfolio — ${BRAND}`,
     description: "Recent photography, videography and livestreaming productions for media houses, institutions, and events across Rwanda.",
     url: absoluteUrl("/portfolio"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",

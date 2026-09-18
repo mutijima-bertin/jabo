@@ -2,7 +2,7 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { JsonLd, articleJsonLd, breadcrumbListJsonLd } from "@/lib/jsonld";
 import { fetchPost } from "@/lib/content";
 import { PostView } from "@/components/site/PostView";
@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${post.titleEn} — ${BRAND}`,
       description: post.excerptEn ?? post.titleEn,
       url: absoluteUrl(`/blog/${slug}`),
+      images: [OG_IMAGE],
       siteName: BRAND,
       locale: "en_RW",
       type: "article",

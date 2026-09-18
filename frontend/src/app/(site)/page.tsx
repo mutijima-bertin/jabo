@@ -9,14 +9,17 @@ import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { ClientsWall } from "@/components/site/ClientsWall";
 import { AboutSection } from "@/components/site/AboutSection";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
 import { JsonLd, localBusinessJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 // Money page — explicit > inherited default. `absolute` pins the exact
 // keyword-rich title (the root template would otherwise re-append the brand).
-// The openGraph block mirrors the rendered title/description and pins the
-// canonical-home og:url (no og:image yet — later phase).
+// The openGraph block mirrors the rendered title/description, pins the
+// canonical-home og:url and re-attaches the shared OG poster — Next merges
+// metadata shallowly, so a page-level openGraph replaces the root's entirely
+// (images included); re-stating a static `images` here keeps the default
+// graphic while the per-post cover previews ship in a later phase.
 export const metadata: Metadata = {
   title: { absolute: SITE_TITLE },
   description: SITE_DESCRIPTION,
@@ -25,6 +28,7 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: absoluteUrl("/"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",

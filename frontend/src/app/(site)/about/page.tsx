@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { fetchSettings } from "@/lib/content";
 import { AboutPageContent } from "@/components/site/AboutPageContent";
 
@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     title: `About — ${BRAND}`,
     description: ABOUT_DESCRIPTION,
     url: absoluteUrl("/about"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",

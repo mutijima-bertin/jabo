@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { PageHeading } from "@/components/shared/PageHeading";
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: `Track a Production — ${BRAND}`,
     description: "Track the status of your production — from booking confirmation to final delivery.",
     url: absoluteUrl("/track"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",

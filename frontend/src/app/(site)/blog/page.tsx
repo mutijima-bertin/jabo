@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { JsonLd, breadcrumbListJsonLd, blogItemListJsonLd } from "@/lib/jsonld";
 import { api, type PostSummary } from "@/lib/api";
 import { BlogList } from "@/components/site/BlogList";
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: `Blog — ${BRAND}`,
     description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
     url: absoluteUrl("/blog"),
+    images: [OG_IMAGE],
     siteName: BRAND,
     locale: "en_RW",
     type: "website",
