@@ -8,6 +8,7 @@ import { PageHeading } from "@/components/shared/PageHeading";
 export const metadata: Metadata = {
   title: "Track a Production",
   description: "Track the status of your production — from booking confirmation to final delivery.",
+  alternates: { canonical: absoluteUrl("/track") },
   openGraph: {
     title: `Track a Production — ${BRAND}`,
     description: "Track the status of your production — from booking confirmation to final delivery.",

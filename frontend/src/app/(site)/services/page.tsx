@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: "Services",
   description:
     "Wedding & event photography, corporate and documentary videography, livestreaming, drone coverage and more in Kigali, Rwanda.",
+  alternates: { canonical: absoluteUrl("/services") },
   openGraph: {
     title: `Services — ${BRAND}`,
     description:

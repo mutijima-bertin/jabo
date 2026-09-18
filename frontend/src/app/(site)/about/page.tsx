@@ -10,6 +10,7 @@ const ABOUT_DESCRIPTION = `${BRAND} is a Kigali-based media production company b
 export const metadata: Metadata = {
   title: "About",
   description: ABOUT_DESCRIPTION,
+  alternates: { canonical: absoluteUrl("/about") },
   openGraph: {
     title: `About — ${BRAND}`,
     description: ABOUT_DESCRIPTION,

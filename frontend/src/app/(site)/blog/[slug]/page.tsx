@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.titleEn,
     description: post.excerptEn ?? post.titleEn,
+    alternates: { canonical: absoluteUrl(`/blog/${post.slug}`) },
     openGraph: {
       // og:type stays "article" (page-level OG handled in this file, not the
       // static `website` pages) — SEO phase 3.

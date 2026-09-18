@@ -7,6 +7,7 @@ import { BlogList } from "@/components/site/BlogList";
 export const metadata: Metadata = {
   title: "Blog",
   description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
+  alternates: { canonical: absoluteUrl("/blog") },
   openGraph: {
     title: `Blog — ${BRAND}`,
     description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,

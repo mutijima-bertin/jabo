@@ -8,6 +8,7 @@ import { PageHeading } from "@/components/shared/PageHeading";
 export const metadata: Metadata = {
   title: "Book a Production",
   description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
+  alternates: { canonical: absoluteUrl("/book") },
   openGraph: {
     title: `Book a Production — ${BRAND}`,
     description: "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
