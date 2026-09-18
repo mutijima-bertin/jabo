@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BRAND } from "@/lib/constants";
 import { absoluteUrl } from "@/lib/seo";
+import { JsonLd, articleJsonLd, breadcrumbListJsonLd } from "@/lib/jsonld";
 import { fetchPost } from "@/lib/content";
 import { PostView } from "@/components/site/PostView";
 
@@ -43,5 +44,18 @@ export default async function PostPage({ params }: Props) {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) notFound();
-  return <PostView post={post} />;
+  return (
+    <>
+      {/* SEO phase 5 — Article from the real post row + Home → Blog → post trail. */}
+      <JsonLd data={articleJsonLd(post)} />
+      <JsonLd
+        data={breadcrumbListJsonLd([
+          { name: "Home", url: absoluteUrl("/") },
+          { name: "Blog", url: absoluteUrl("/blog") },
+          { name: post.titleEn, url: absoluteUrl(`/blog/${post.slug}`) },
+        ])}
+      />
+      <PostView post={post} />
+    </>
+  );
 }

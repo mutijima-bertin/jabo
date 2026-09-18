@@ -1,6 +1,6 @@
 # Creative Sound Studio — Project Plan (v1)
 
-> Status: IN BUILD — phases 1–26 done. UX/journey overhaul (8-phase end-to-end user journey + dashboard API) landed ed3ed1b → main, CI green. e2e 56 pass / 3 skip; vitest 96; lint/tsc/build clean. SMTP still blocked on user's Resend API key. Last updated: 2026-09-17
+> Status: IN BUILD — phases 1–18 done (incl. UX/journey overhaul 8-phase). SEO rollout Phases 1–4 shipped on main (`c946d8f`, `b130e7f`, `8f1c532`); CI Nightly fresh-seed green (e2e 57 pass / 2 skip) after `bd3815e`; CI-faithful repro = `bash /tmp/opencode/repro.sh`. SEO Phase 5 (JSON-LD) IN PROGRESS; phases 6–9 pending. SMTP still blocked on user's Resend API key. vitest 96; lint/tsc/build clean. Last updated: 2026-09-18
 
 ## Company & Founder Context
 - **Company**: Creative Sound Studio — Kigali, Rwanda. Media production: livestreaming, photography, videography (sound may be re-added later; name is legacy).
@@ -88,12 +88,22 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
    - **18g** `a0f8cfe` — e2e deflake: monotonic (≥) view-count assertions in blog.spec (exact counts raced under fullyParallel).
    - **18h** `cbedec6` — Dashboard API + charts: `/admin/dashboard` returns `bookingsByDay` (14 UTC days, zero-filled), `topServices` (max 5), `counts` (4 models). recharts v3.10.1 (lazy-loaded `DashboardCharts.tsx`, dynamic ssr:false → chart chunk never touches public site). AreaChart, PieChart, BarChart, QuickActions, empty states. e2e +1 chart invariant test.
 
+19. 🔄 SEO rollout (started 2026-09-17, phased): **Ph1** research ✅ · **Ph2** `c946d8f` ✅ — `src/lib/seo.ts` (`SITE_URL` = `NEXT_PUBLIC_SITE_URL` ?? https://creativesoundstudio.rw, `absoluteUrl()`, shared SITE_TITLE/SITE_DESCRIPTION), metadataBase + title template + root OG · **Ph3** `b130e7f` ✅ — per-page OG, noindex /login /account, client-component splits (LoginClient/AccountClient/NotFoundContent) · **Ph4** `8f1c532` ✅ — dynamic `sitemap.ts` (8 statics + published posts newest-first; never 500), `robots.ts` (disallow /admin /login /account /track/ + sitemap ref), canonical sweep (exactly 1 canonical per public page), token noindex via `(site)/track/[token]/layout.tsx` (server layout; verified live). **CI Nightly was red (heads 9810528, b130e7f) → root cause = 2 e2e specs passing only on the accumulated dev DB (top-services tick truncation vs exact-text; "View all work" gated on >6 while seed floor = 3). Fixed `bd3815e`:** NEW pure `frontend/src/lib/admin-charts.ts` (`truncateServiceName` shared with Playwright), recharts tick `width: 400` (labels no longer wrap into tspans), View-all-work assertions relational → **fresh seed 57/2/0 fully green**; repro `bash /tmp/opencode/repro.sh` now repo-golden for e2e changes. **Ph5 (JSON-LD: LocalBusiness home, Service ItemList /services, Article+BreadcrumbList /blog/[slug], portfolio ItemList; real data only) delegated, IN PROGRESS.** **Ph6** OG image (user sign-off) · **Ph7** on-page quality (alt-text: home 21/47, services 11/11, portfolio 16/16; headings; internal links) · **Ph8** keyword copy (service copy + permit-guide posts; Tier-1 livestreaming/drone/wedding) · **Ph9** seo.spec.ts + verify + ship. EN-first, no hreflang, metadata EN-only. Detail: .opencode/memory/seo-rollout-and-fresh-seed-ci-2026-09-18.md
+
 ### Decisions locked (UX/journey overhaul)
 - Container max-w-7xl everywhere public (admin shell too); vertical rhythm py-24 + mobile px-4 unchanged.
 - Homepage section order unchanged; booking layout form-left/context-right.
 - Services whole-card CTA with preselect; journey scope = full 10 recommendations.
 - recharts = user's explicit choice (overrides AGENTS.md no-new-deps rule — one-time exception).
 - Admin JWT auth + client magic-link (no merge); admin tables keep horizontal scroll; full touch pass ≥40px.
+
+### Decisions locked (SEO rollout)
+- EN-first; NO hreflang; metadata EN-only (RW content stays on-page i18n only).
+- Canonical base = `SITE_URL` placeholder until prod domain — flipping later is env-only (`NEXT_PUBLIC_SITE_URL` at build).
+- Semantic data = real data only: NO fake reviews/ratings, NO nonexistent OG image.
+- `/track/<token>` PRIVACY: noindexed via server segment layout (client page can't export metadata) + robots disallow.
+- Chart-tick formatter is shared (`lib/admin-charts.ts`); e2e asserts truncated labels, never untruncated API strings.
+- ALL e2e changes validated against fresh seed via `/tmp/opencode/repro.sh` before pushing (dev DB masks seed-only failures).
 
 ## Secrets (never commit)
 - ZAVU_API_KEY (live) — user provided, keep in backend/.env (gitignored)

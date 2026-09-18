@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/constants";
 import { absoluteUrl } from "@/lib/seo";
+import { JsonLd, breadcrumbListJsonLd, blogItemListJsonLd } from "@/lib/jsonld";
 import { api, type PostSummary } from "@/lib/api";
 import { BlogList } from "@/components/site/BlogList";
 
@@ -19,6 +20,13 @@ export const metadata: Metadata = {
 };
 
 const PAGE_SIZE = 8;
+
+// Breadcrumb trail shared by both render paths (backend up or down): the index
+// has no pagination nuances worth reflecting in the trail.
+const BLOG_CRUMBS = [
+  { name: "Home", url: absoluteUrl("/") },
+  { name: "Blog", url: absoluteUrl("/blog") },
+] as const;
 
 export default async function BlogPage({
   searchParams,
@@ -41,7 +49,12 @@ export default async function BlogPage({
   }
 
   if (posts === null) {
-    return <BlogList posts={null} totalCount={0} page={1} pageSize={PAGE_SIZE} />;
+    return (
+      <>
+        <JsonLd data={breadcrumbListJsonLd(BLOG_CRUMBS)} />
+        <BlogList posts={null} totalCount={0} page={1} pageSize={PAGE_SIZE} />
+      </>
+    );
   }
 
   // Clamp to a valid page: hand-typed /blog?page=99 still lands on the last page.
@@ -50,5 +63,13 @@ export default async function BlogPage({
   const start = (page - 1) * PAGE_SIZE;
   const pagePosts = posts.slice(start, start + PAGE_SIZE);
 
-  return <BlogList posts={pagePosts} totalCount={posts.length} page={page} pageSize={PAGE_SIZE} />;
+  return (
+    <>
+      {/* SEO phase 5 — breadcrumbs + an ItemList of BlogPosting entries for the
+          real published posts (all loaded rows; the visible slice is paginated). */}
+      <JsonLd data={breadcrumbListJsonLd(BLOG_CRUMBS)} />
+      <JsonLd data={blogItemListJsonLd(posts)} />
+      <BlogList posts={pagePosts} totalCount={posts.length} page={page} pageSize={PAGE_SIZE} />
+    </>
+  );
 }

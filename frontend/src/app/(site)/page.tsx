@@ -10,6 +10,7 @@ import { ClientsWall } from "@/components/site/ClientsWall";
 import { AboutSection } from "@/components/site/AboutSection";
 import { BRAND } from "@/lib/constants";
 import { absoluteUrl, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
+import { JsonLd, localBusinessJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 // Money page — explicit > inherited default. `absolute` pins the exact
@@ -41,6 +42,9 @@ export default async function HomePage() {
 
   return (
     <>
+      {/* SEO phase 5 — real LocalBusiness identity (contacts from lib/site.ts,
+          socials from the footer, price range derived from live service rows). */}
+      <JsonLd data={localBusinessJsonLd(services)} />
       <HeroSection settings={settings} portfolio={portfolio} />
 
       {/* PORTFOLIO — the work leads the page */}
