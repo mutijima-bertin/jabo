@@ -25,9 +25,23 @@ const CATEGORY_KEY = {
   portraits: "portfolio_filter_portraits",
 } as const;
 
+/**
+ * EN-first descriptive alt for a production cover (SEO phase 7): real item
+ * data only — the production title, its category, and the medium derived from
+ * the item's mediaType. Examples: "Kigali Innovation Week — Corporate
+ * photography, Kigali" or "Live concert — Concerts videography, Kigali".
+ */
+function portfolioCoverAlt(p: PortfolioItem): string {
+  const medium = (p.mediaType ?? "").toLowerCase() === "video" ? "videography" : "photography";
+  const category = p.category?.trim() ? `${p.category.trim()} ` : "";
+  return `${p.titleEn} — ${category}${medium}, Kigali`;
+}
+
 interface Slide {
   id: string;
   image: string | null;
+  /** EN-first alt for the slide's cover photo ("" for the branded fallback). */
+  alt: string;
   kicker: string;
   title: string;
   subtitle: string | null;
@@ -76,6 +90,7 @@ export function HeroSection({
       {
         id: "intro",
         image: withImage[0]?.coverUrl ?? null,
+        alt: withImage[0] ? portfolioCoverAlt(withImage[0]) : "",
         kicker: badge,
         title: heroTitle,
         subtitle: heroSubtitle,
@@ -89,6 +104,7 @@ export function HeroSection({
         return {
           id: p.id,
           image: p.coverUrl,
+          alt: portfolioCoverAlt(p),
           kicker: (categoryKey ? t(categoryKey) : p.category) || t("nav_portfolio"),
           title: locale === "rw" ? p.titleRw ?? p.titleEn : p.titleEn,
           subtitle: null,
@@ -183,7 +199,7 @@ export function HeroSection({
                   {/* Photo slide — next/image, preloaded + priority semantics on slide 1 only */}
                   <Image
                     src={slide.image}
-                    alt=""
+                    alt={slide.alt}
                     fill
                     preload={i === 0}
                     sizes="100vw"

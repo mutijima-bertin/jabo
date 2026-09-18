@@ -171,7 +171,7 @@ export function PostView({ post }: { post: PostFull }) {
 
       <PostCover
         coverImageUrl={post.coverImageUrl}
-        alt={title}
+        alt={post.titleEn}
         sizes="(max-width: 768px) 100vw, 768px"
         priority
         className="mt-10 aspect-video rounded-2xl"

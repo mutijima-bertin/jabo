@@ -22,7 +22,14 @@ export function BlogCard({ post }: { post: PostSummary }) {
       // Card surface = cardSurface (lib/ui.ts) — reuse the token for new cards.
       className="group flex flex-col overflow-hidden rounded-2xl border border-ink/10 bg-white/70 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-brass/40 hover:shadow-md"
     >
-      <PostCover coverImageUrl={post.coverImageUrl} alt={title} sizes="(max-width: 768px) 100vw, 50vw" className="aspect-video" />
+      {/* EN-first cover alt (SEO phase 7): the visible title may be RW, but
+          the alt metadata stays keyword-natural English for indexing. */}
+      <PostCover
+        coverImageUrl={post.coverImageUrl}
+        alt={post.titleEn}
+        sizes="(max-width: 768px) 100vw, 50vw"
+        className="aspect-video"
+      />
       <div className="flex flex-1 flex-col p-5">
         <span className="w-fit rounded-full border border-brass/30 bg-brass/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-brass">
           {t(postTypeKey(post.contentType))}

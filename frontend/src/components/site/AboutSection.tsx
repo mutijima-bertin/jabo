@@ -35,7 +35,7 @@ export function AboutSection({
               {founderImage ? (
                 <Image
                   src={founderImage}
-                  alt={t("about_founder_name")}
+                  alt={`${t("about_founder_name")} — ${t("about_founder_role")}, Creative Sound Studio`}
                   fill
                   sizes="(min-width: 768px) 50vw, (min-width: 420px) 90vw, 100vw"
                   quality={80}

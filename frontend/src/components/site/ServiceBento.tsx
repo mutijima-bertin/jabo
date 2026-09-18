@@ -51,7 +51,7 @@ export function ServiceBento({ services }: { services: Service[] }) {
               {onPhoto ? (
                 <Image
                   src={svc.imageUrl!}
-                  alt=""
+                  alt={`${svc.nameEn} — ${svc.category} in Kigali, Rwanda`}
                   fill
                   sizes={large ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
                   quality={80}

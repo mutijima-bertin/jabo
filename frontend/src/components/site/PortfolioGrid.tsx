@@ -142,7 +142,9 @@ export function PortfolioGrid({ items, maxItems }: { items: PortfolioItem[]; max
               <span className="relative block aspect-[3/2] overflow-hidden">
                 <Image
                   src={item.coverUrl}
-                  alt=""
+                  alt={`${item.titleEn} — ${item.category ? `${item.category} ` : ""}${
+                    item.mediaType === "video" ? "videography" : "photography"
+                  }, Kigali`}
                   fill
                   sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                   quality={80}

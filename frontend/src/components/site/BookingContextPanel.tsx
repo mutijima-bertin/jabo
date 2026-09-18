@@ -78,8 +78,9 @@ export function BookingContextPanel({ services }: Props) {
       {/* Divider */}
       <hr className="my-5 border-ink/10" />
 
-      {/* How it works */}
-      <h3 className="mb-4 text-sm font-semibold text-ink/70">{t("book_how_title")}</h3>
+      {/* How it works — h2 so /book keeps a clean h1 → h2 hierarchy
+          (the page has no h3 level; the panel previously jumped h1 → h3). */}
+      <h2 className="mb-4 text-sm font-semibold text-ink/70">{t("book_how_title")}</h2>
       <ol className="space-y-3">
         {(["book_how_step_1", "book_how_step_2", "book_how_step_3"] as const).map((key, i) => (
           <li key={key} className="flex items-start gap-3">
@@ -108,7 +109,7 @@ function ServiceDetails({ service, locale }: { service: Service; locale: string 
         {createElement(serviceIcon(service.icon), { className: "h-6 w-6" })}
       </div>
       <div>
-        <h3 className="font-serif text-lg font-semibold leading-snug">{name}</h3>
+        <h2 className="font-serif text-lg font-semibold leading-snug">{name}</h2>
         {price && <p className="mt-1 text-sm font-semibold text-brass-deep">{price}</p>}
       </div>
       {desc && <p className="text-sm leading-relaxed text-ink/55">{desc}</p>}
