@@ -25,6 +25,7 @@ import { Inbox } from "lucide-react";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
 import type { DashboardStats } from "@/lib/api";
 import { cardCls, cardHeaderTitle, cx, emptyStateIcon, emptyStateIconWrap, emptyStateTitle } from "@/lib/ui";
+import { truncateServiceName } from "@/lib/admin-charts";
 
 // ---------------------------------------------------------------------------
 // Brand tokens (globals.css) as raw hex for SVG fills/strokes
@@ -75,9 +76,6 @@ const TOOLTIP_STYLE = {
 /** "2026-09-17" → "Sep 17" (local time, avoids UTC off-by-one). */
 const monthDay = (iso: string): string =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-
-/** Keep long service names from pushing the horizontal bar axis off-card. */
-const truncateServiceName = (name: string): string => (name.length > 22 ? `${name.slice(0, 22)}…` : name);
 
 /** Guard: an array of {count} rows with every value finite (never chart NaN). */
 const allFinite = (rows: Array<{ count: number }>): boolean =>
@@ -258,7 +256,14 @@ export default function DashboardCharts({ stats, bookingsByDay, topServices }: D
                   dataKey="nameEn"
                   width={180}
                   tickFormatter={truncateServiceName}
-                  tick={{ fill: ADMIN_MUTED, fontSize: 11 }}
+                  // width (400) keeps the label on ONE line: recharts' Text
+                  // re-fits a tick within the axis width (180) and would
+                  // otherwise WRAP long names onto multiple <tspan>s (dropping
+                  // the joining space) and re-truncate with its own ellipsis —
+                  // so the rendered text would never equal the truncateServiceName
+                  // output the e2e specs assert on. 400px is only the fitting
+                  // budget; the tick still draws inside the 180px axis column.
+                  tick={{ width: 400, fill: ADMIN_MUTED, fontSize: 11 }}
                   stroke={ADMIN_BORDER}
                   tickLine={false}
                   axisLine={false}

@@ -1,6 +1,10 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { createHmac } from "node:crypto";
 import { API, getAdminToken } from "./auth";
+// Single source of truth for the top-services Y-axis tick formatter — matches
+// the EXACT rendered (truncated) label, never the untruncated API string.
+// Pure module (no JSX/React), safe for Playwright's esbuild transpiler.
+import { truncateServiceName } from "../src/lib/admin-charts";
 
 /**
  * admin-overhaul.spec.ts — E2E proof for the admin interface overhaul
@@ -299,12 +303,15 @@ test.describe("admin interface overhaul", () => {
 
     // Top services: at least one of the live top-5 service names renders a
     // bar row (the peak charts on seeded data; membership is stable, exact
-    // ordering can shift while parallel specs add bookings).
+    // ordering can shift while parallel specs add bookings). The Y-axis ticks
+    // run through truncateServiceName (>22 chars → "…"), so match against the
+    // SAME formatter — the full API string (e.g. the 27-char seed service
+    // "Wedding & Event Photography") never appears verbatim in the chart.
     if (dash.topServices.length > 0) {
       const topCard = page.getByRole("heading", { name: "Top services", exact: true }).locator("..");
       let found = false;
       for (const s of dash.topServices) {
-        if ((await topCard.getByText(s.nameEn, { exact: true }).count()) > 0) {
+        if ((await topCard.getByText(truncateServiceName(s.nameEn), { exact: true }).count()) > 0) {
           found = true;
           break;
         }

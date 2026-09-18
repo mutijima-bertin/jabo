@@ -228,11 +228,19 @@ test.describe("redesign journeys", () => {
       await expect(page.getByRole("button", { name: titleEn })).toBeVisible();
     }
 
-    // Capped view points at the uncapped page ("View all work" link renders
-    // only while items are actually hidden). While on the homepage the
-    // lightbox navigates ONLY the visible (capped) items.
-    await expect(page.getByRole("link", { name: "View all work" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "View all work" })).toHaveAttribute("href", "/portfolio");
+    // Capped view points at the uncapped page ("View all work" LINK renders
+    // only while items are actually hidden — the home grid caps at
+    // Math.min(6, catalog)). The fresh seed ships 3, so no CTA exists then;
+    // only a catalog > 6 renders it. While on the homepage the lightbox
+    // navigates ONLY the visible (capped) items either way.
+    const viewAllLink = page.getByRole("link", { name: "View all work" });
+    if (portfolio.length > 6) {
+      await expect(viewAllLink).toBeVisible();
+      await expect(viewAllLink).toHaveAttribute("href", "/portfolio");
+    } else {
+      // Nothing hidden → no CTA on the homepage.
+      await expect(viewAllLink).toHaveCount(0);
+    }
     await grid.first().click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible({ timeout: 10000 });
@@ -255,9 +263,15 @@ test.describe("redesign journeys", () => {
     expect(slideCount, "hero carries the intro slide plus published covers").toBeGreaterThanOrEqual(3);
     await expect(counter).toHaveText(new RegExp(`^\\d{2} / ${String(slideCount).padStart(2, "0")}$`));
 
-    // Following the CTA lands on the full (uncapped) catalog.
-    await page.getByRole("link", { name: "View all work" }).click();
-    await expect(page).toHaveURL(/\/portfolio$/);
+    // Following the CTA lands on the full (uncapped) catalog. With no
+    // homepage CTA (catalog ≤ 6) navigate straight to /portfolio — either
+    // path must show the SAME full, uncapped count.
+    if (portfolio.length > 6) {
+      await viewAllLink.click();
+      await expect(page).toHaveURL(/\/portfolio$/);
+    } else {
+      await page.goto("/portfolio");
+    }
     const fullGrid = page.locator(".grid-cols-1 > button");
     await expect(fullGrid.first()).toBeVisible({ timeout: 10000 });
     expect(await fullGrid.count()).toBe(portfolio.length);
