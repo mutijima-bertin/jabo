@@ -3,17 +3,17 @@
 > Personal reference file for the founder. Updated end of each work session.
 > Plan of record: `PLAN.md` (repo root). Full engineering memory: `.opencode/memory/`.
 
-**Last updated: 2026-09-17**
+**Last updated: 2026-09-22**
 
 ---
 
 ## Current status
 
-- **Code: SHIPPABLE** — UX/journey overhaul complete (8 phases), all shipped on main, CI green.
-- **Git:** main branch, latest commit `cbedec6` (dashboard API + recharts). All phases pushed.
-- **Live stack (local docker):** frontend :3000, backend :4000, postgres. Running the latest code.
+- **Code: SHIPPABLE** — UX/journey overhaul complete (8 phases) **+ SEO overhaul COMPLETE (Phases 1–9)**, all shipped on main, CI nightly green 19–22 Sep.
+- **Git:** main branch, latest commit `fa10f17` (seo.spec.ts, Phase 9). Full SEO trail `c946d8f`→`b130e7f`→`bd3815e`→`8f1c532`→`4d2e2a3`→`a830529`→`2c04b8e`→`6dde47a`→`fa10f17` pushed (Phases 1–9).
+- **Live stack (local docker):** docker postgres + HOST node processes — frontend :3000 (next-server), backend :4000 (node dist/index.js). Running the latest code.
 - **Not deployed anywhere yet.** No domain, no live hosting. SMTP + Zavu + domain = next phase.
-- **Test gates:** e2e 56 pass / 3 skip / 0 fail · vitest 96/96 · lint 0 · tsc clean · build 14 routes.
+- **Test gates:** e2e **63 pass / 3 skip / 0 fail** (fresh seed) · vitest 96/96 · lint 0 · tsc clean · build 14 routes.
 
 ---
 
@@ -32,6 +32,24 @@ A client visiting the site sees, in one scroll:
 ---
 
 ## Session log
+
+### 2026-09-22 — SEO overhaul COMPLETE (Phases 1–9, main `fa10f17`)
+
+All nine SEO phases are shipped on `main` and pushed — full commit trail `c946d8f → b130e7f → bd3815e → 8f1c532 → 4d2e2a3 → a830529 → 2c04b8e → 6dde47a → fa10f17`:
+
+1. **Ph2 Foundation** (`c946d8f`) — `src/lib/seo.ts` (SITE_URL = `NEXT_PUBLIC_SITE_URL` ?? https://creativesoundstudio.rw, `absoluteUrl()`, shared SITE_TITLE/SITE_DESCRIPTION), metadataBase + title template + root OG.
+2. **Ph3 Per-page OG** (`b130e7f`) — per-page OG, noindex /login /account, client-component splits (LoginClient/AccountClient/NotFoundContent).
+3. **Fresh-seed CI fixes** (`bd3815e`) — `lib/admin-charts.ts` `truncateServiceName` shared with Playwright, recharts tick `width: 400`, relational View-all-work assertions; fresh seed green (57/2/0), repro `bash /tmp/opencode/repro.sh` repo-golden.
+4. **Ph4 Sitemap/robots/canonical** (`8f1c532`) — dynamic sitemap (never 500), robots disallows /admin /login /account /track/, exactly-one-canonical sweep, `/track/<token>` noindex via server layout.
+5. **Ph5 JSON-LD** (`4d2e2a3`) — `lib/jsonld.tsx`: LocalBusiness home, Service ItemList /services, Article+BreadcrumbList /blog/[slug], portfolio ItemList; real data only.
+6. **Ph6 OG image** (`a830529`) — branded typographic `public/og-default.png` via `scripts/og-image.mjs`, wired as shared `OG_IMAGE` (user sign-off).
+7. **Ph7 On-page quality** (`2c04b8e`) — alt-text sweep (home 21/47, services 11/11, portfolio 16/16), heading hierarchy, internal links.
+8. **Ph8 Keyword copy + permit guides** (`6dde47a`) — service copy rewritten for Tier-1 keywords (livestreaming/drone/wedding); **seed gained `rwanda-filming-permit-guide` + `rwanda-drone-permit-guide` (EDUCATIONAL, published)** + Service.linkedPostSlug wiring.
+9. **Ph9 seo.spec.ts** (`fa10f17`) — e2e SEO contract spec (281 lines): title/desc/canonical on 8 static routes, OG+Twitter on money pages, robots.txt, sitemap set-equality vs live published posts, JSON-LD parse per page, noindex surfaces; RELATIONAL (seo.ts literals + live `/public/posts` slugs, `isFixturePost` filters E2E-authored fixtures).
+
+**Gates:** e2e **63 pass / 3 skip / 0 fail** fresh-seed (+7 seo tests; the 2 seeded guides flipped blog.spec:102 empty-state test to its by-design skip) · vitest 96/96 · lint 0 · tsc clean · CI Nightly green 19–22 Sep.
+
+**Next (NOT done — do not mark complete):** SMTP live sends (needs user's real Resend API key; `env.smtpConfigured` toggles; e2e uses dev mailbox `.mailbox` dumps), real production domain swap (`SITE_URL` → still placeholder https://creativesoundstudio.rw; on deploy just set `NEXT_PUBLIC_SITE_URL`), per-post OG covers (derive after domain is live), minor blog like-button race flake (self-heals; UI count vs admin-API read settle — optional future deflake).
 
 ### 2026-09-12 — Admin dashboard overhaul (VERIFIED SHIPPABLE)
 - New design language: warm-ink/brass admin theme, full UI kit (`frontend/src/lib/ui.ts`), spec at `docs/design/admin-interface-spec.md`
@@ -67,13 +85,13 @@ The full end-to-end user journey was rebuilt across 8 commits on main:
 
 ## Verification numbers (current)
 
-| Gate | Admin overhaul | +P1 & P2 | +UX/journey overhaul |
-|---|---|---|---|
-| Backend tests | 49/49 | **57/57** | **96/96** |
-| Frontend lint | 0 errors | 0 errors (3 tolerated e2e warnings) | 0 errors |
-| Frontend build | 14 routes | 14 routes | 14 routes |
-| E2E | 36 pass / 3 skip / 0 fail | **40 pass / 3 skip / 0 fail** | **56 pass / 3 skip / 0 fail** |
-| Uploads | 79 files | **111 files** (WebP q82, ≤1920px) | 111 files (unchanged) |
+| Gate | Admin overhaul | +P1 & P2 | +UX/journey overhaul | +SEO 1–9 |
+|---|---|---|---|---|
+| Backend tests | 49/49 | **57/57** | **96/96** | **96/96** |
+| Frontend lint | 0 errors | 0 errors (3 tolerated e2e warnings) | 0 errors | 0 errors |
+| Frontend build | 14 routes | 14 routes | 14 routes | 14 routes |
+| E2E | 36 pass / 3 skip / 0 fail | **40 pass / 3 skip / 0 fail** | **56 pass / 3 skip / 0 fail** | **63 pass / 3 skip / 0 fail** |
+| Uploads | 79 files | **111 files** (WebP q82, ≤1920px) | 111 files (unchanged) | 111 files (unchanged) |
 
 ---
 
@@ -87,11 +105,11 @@ The full end-to-end user journey was rebuilt across 8 commits on main:
 
 ## Next phases (order)
 
-1. SMTP credentials → real magic-link + review-request emails (currently gated at `env.smtpConfigured`)
+1. SMTP credentials → real magic-link + review-request emails (currently gated at `env.smtpConfigured`; user must provide the real Resend API key — everything else wired, `.mailbox` dumps verify templates in dev)
 2. Zavu WhatsApp integration (sender number + template approval; tracking-link domain verification pending)
-3. Domain + real deploy (VPS + compose)
+3. Domain + real deploy (VPS + compose): **SEO just needs the env flip — on deploy set `NEXT_PUBLIC_SITE_URL` to the real domain** (still placeholder https://creativesoundstudio.rw); per-post OG covers can be derived once the domain is live
 4. Content: real blog posts, client testimonials seeding, stats
-5. Possible future (not approved): Google review request link; RW translation quality pass on Phase 2/3/5 keys; nothing post-phase-18 scheduled. Nightly CI view-count test now stable.
+5. Possible future (not approved): Google review request link; RW translation quality pass on Phase 2/3/5 keys; minor blog like-button race flake (self-heals; UI count vs admin-API read settle — optional future deflake). Nightly CI view-count test now stable.
 
 ---
 
