@@ -231,7 +231,7 @@ const en = {
   footer_rights: "All rights reserved.",
   page_services_title: "Services",
   page_services_sub:
-    "Every production includes professional editing, online delivery, and a personal tracking link from booking to final delivery.",
+    "Wedding & gusaba photography, corporate video, event livestreaming, and drone coverage in Kigali, Rwanda — every production includes professional editing, online delivery, and a personal tracking link from booking to final delivery.",
   page_portfolio_title: "Portfolio",
   page_portfolio_sub:
     "A selection of recent work — weddings, corporate documentaries, live events, and institutional coverage.",
@@ -671,7 +671,7 @@ const rw: Record<keyof typeof en, string> = {
   footer_rights: "Uburenganzira bwose burakingiwe.",
   page_services_title: "Serivisi",
   page_services_sub:
-    "Buri murimo urimo gutunganya amashusho, gutanga online, n'urugero rwo gukurikirana kuva mu kwandikisha kugeza ku gutanga.",
+    "Amafoto y'ubukwe n'ubusaba, amashusho y'ibigo, ibirori biriho ku mubare mubanza, n'amafoto y'igisore i Kigali, u Rwanda — buri murimo urimo gutunganya amashusho, gutanga online, n'urugero rwo gukurikirana kuva mu kwandikisha kugeza ku gutanga.",
   page_portfolio_title: "Amafoto",
   page_portfolio_sub:
     "Urugero rw'imirimo y'igihe gishaje — ubukwe, documentaire z'ibigo, ibirori biriho, n'iby'inzego.",
