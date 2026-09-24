@@ -21,10 +21,10 @@ export function cleanupEmailHits() {
 
 setInterval(cleanupEmailHits, 60_000).unref();
 
-/** Per-normalized-email limit, e.g. max 5 bookings per email per hour. */
+/** Per-normalized-email limit, e.g. max 5 bookings per email per hour. Falls back to the contact form's `email` field. */
 export function perEmailLimit(windowMs: number, max: number, message: string) {
   return (_req: any, res: any, next: any) => {
-    const email = String(_req.body?.contactEmail ?? "").toLowerCase().trim();
+    const email = String(_req.body?.contactEmail ?? _req.body?.email ?? "").toLowerCase().trim();
     if (!email) {
       next();
       return;

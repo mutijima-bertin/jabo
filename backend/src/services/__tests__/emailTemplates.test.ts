@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   adminPanelUrl,
   bookingReceived,
+  contactMessage,
   esc,
   loginLink,
   newBookingAdmin,
@@ -241,6 +242,71 @@ describe("testimonialPublished", () => {
     expect(mail.subject).toBe("Your testimonial is live — Creative Sound Studio");
     expect(mail.html).toContain("Alain");
     expect(mail.html).toContain("http://localhost:3000/login");
+  });
+});
+
+describe("contactMessage", () => {
+  it("builds an EN admin alert with sender details, message and admin panel CTA", () => {
+    const mail = contactMessage({
+      name: "Alain Bizimana",
+      email: "alain@example.com",
+      phone: "+250788123456",
+      subject: "Wedding videography quote",
+      message: "Hi, we would love a quote for a full wedding film next January.",
+      language: "en",
+      adminPanelUrl: "http://localhost:4000/admin/bookings",
+    });
+    expect(mail.subject).toBe("New message from Alain Bizimana — Creative Sound Studio");
+    expect(mail.html).toContain("Alain Bizimana");
+    expect(mail.html).toContain("alain@example.com");
+    expect(mail.html).toContain("+250788123456");
+    expect(mail.html).toContain("Wedding videography quote");
+    expect(mail.html).toContain("Hi, we would love a quote for a full wedding film next January.");
+    expect(mail.html).toContain("http://localhost:4000/admin/bookings");
+  });
+
+  it("escapes a user-injected <script> in name, subject and message", () => {
+    const mail = contactMessage({
+      name: 'Hacker <script>alert(1)</script>',
+      email: "hacker@example.com",
+      phone: "+250700000000",
+      subject: 'Hi <script>steal()</script>',
+      message: 'Hello <script>alert("pwned")</script> world',
+      language: "en",
+      adminPanelUrl: "http://localhost:4000/admin/bookings",
+    });
+    expect(mail.html).not.toContain("<script>");
+    expect(mail.html).toContain("&lt;script&gt;");
+  });
+
+  it("renders a missing phone as an em dash", () => {
+    const mail = contactMessage({
+      name: "Aline",
+      email: "aline@example.com",
+      phone: null,
+      subject: "Studio session",
+      message: "Please send availability for a studio session next week.",
+      language: "en",
+      adminPanelUrl: "http://localhost:4000/admin/bookings",
+    });
+    expect(mail.html).toContain(">—<");
+  });
+
+  it("switches the copy to Kinyarwanda when language is rw", () => {
+    const mail = contactMessage({
+      name: "Aline",
+      email: "aline@example.com",
+      phone: null,
+      subject: "Studio session",
+      message: "Please send availability for a studio session next week.",
+      language: "rw",
+      adminPanelUrl: "http://localhost:4000/admin/bookings",
+    });
+    expect(mail.html).toContain("Ubutumwa bushya bwo ku rubuga");
+    expect(mail.html).toContain("Amazina");
+    expect(mail.html).toContain("Imeyili");
+    expect(mail.html).toContain("Umutwe");
+    expect(mail.html).toContain("Ubutumwa");
   });
 });
 

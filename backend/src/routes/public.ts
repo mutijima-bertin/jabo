@@ -8,6 +8,8 @@ export const publicRouter = Router();
 
 const createBookingLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 30, message: "TOO_MANY_BOOKINGS" });
 const trackLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 240, message: "TOO_MANY_REQUESTS" });
+// Contact-form submissions are message-shaped spam → tight per-IP cap.
+const contactLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 20, message: "TOO_MANY_MESSAGES" });
 // Feed/news-adjacent endpoints are unauthenticated → same 240/hr per-IP cap as tracking.
 const postLikeLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 240, message: "TOO_MANY_REQUESTS" });
 // Post views increment `views` per hit without auth — throttle per-IP like likes
@@ -27,6 +29,14 @@ publicRouter.post(
   bookingsController.create
 );
 publicRouter.get("/bookings/track/:token", trackLimiter, bookingsController.trackByToken);
+
+// ---------- Contact ----------
+publicRouter.post(
+  "/contact",
+  contactLimiter,
+  perEmailLimit(60 * 60 * 1000, 5, "TOO_MANY_MESSAGES_FOR_EMAIL"),
+  publicController.contact
+);
 
 // ---------- Blog ----------
 publicRouter.get("/public/posts", postsController.listPosts);

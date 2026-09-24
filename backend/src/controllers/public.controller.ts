@@ -1,9 +1,11 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 import * as serviceModel from "../models/service.model";
 import * as portfolioModel from "../models/portfolioItem.model";
 import * as clientLogoModel from "../models/clientLogo.model";
 import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
+import { notifyAdminContactMessage, runFireAndForget } from "../services/notifications";
 
 /** Public, unauthenticated catalog reads (published rows only where applicable). */
 
@@ -30,4 +32,60 @@ export async function listTestimonials(_req: Request, res: Response): Promise<vo
 export async function getSettings(_req: Request, res: Response): Promise<void> {
   const settings = await siteSettingModel.listAll();
   res.json(settings);
+}
+
+const contactSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name is required")
+    .max(120)
+    .refine((v) => !/[\r\n\x00-\x1f]/.test(v), { message: "Name contains invalid characters" }),
+  email: z.string().email("A valid email is required"),
+  phone: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? "").replace(/\s+/g, ""))
+    .pipe(
+      z
+        .string()
+        .refine((v) => v === "" || /^\+[1-9]\d{7,14}$/.test(v), {
+          message: "Phone must be a valid international number, e.g. +2507XXXXXXXX",
+        }),
+    )
+    // Empty/whitespace-only → undefined so the dispatcher stores/renders "—".
+    .transform((v) => (v === "" ? undefined : v)),
+  subject: z
+    .string()
+    .trim()
+    .min(3, "Subject is required")
+    .max(200)
+    .refine((v) => !/[\r\n\x00-\x1f]/.test(v), { message: "Subject contains invalid characters" }),
+  message: z.string().trim().min(10, "Message must be at least 10 characters").max(3000),
+  language: z.enum(["en", "rw"]).default("en"),
+});
+
+/**
+ * Public contact form: POST /contact. Validates, then dispatches the
+ * admin email in the background — the 201 response never waits on the send.
+ * No database writes.
+ */
+export async function contact(req: Request, res: Response): Promise<void> {
+  const parsed = contactSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => ({ field: i.path.join("."), message: i.message })) });
+    return;
+  }
+  const input = parsed.data;
+  runFireAndForget(() =>
+    notifyAdminContactMessage({
+      name: input.name,
+      email: input.email,
+      phone: input.phone ?? null,
+      subject: input.subject,
+      message: input.message,
+      language: input.language,
+    })
+  );
+  res.status(201).json({ ok: true });
 }

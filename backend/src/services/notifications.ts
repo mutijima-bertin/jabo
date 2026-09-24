@@ -8,6 +8,7 @@ import { generateMagicToken, magicLinkUrl } from "./magiclink";
 import {
   adminPanelUrl,
   bookingReceived,
+  contactMessage,
   esc,
   loginLink,
   newBookingAdmin,
@@ -266,6 +267,35 @@ export async function notifyAdminTestimonialSubmitted(params: {
     if (!res.sent) {
       console.log(`[mailer] New testimonial ${params.author} -> admin ${adminEmail}`);
       await dumpHtml("admin-testimonial", html);
+    }
+  }
+}
+
+/**
+ * Admin alert when the public contact form is submitted. Fire-and-forget from
+ * the controller (never blocks the 201). Email only — no DB rows, no schema.
+ */
+export async function notifyAdminContactMessage(params: {
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  language: "en" | "rw" | null;
+}): Promise<void> {
+  if (env.adminEmails.length === 0) {
+    console.log(`[mailer] Admin notification skipped (ADMIN_EMAILS empty): contact from ${params.email}`);
+    return;
+  }
+  const { subject, html } = contactMessage({
+    ...params,
+    adminPanelUrl: adminPanelUrl(env.appUrl),
+  });
+  for (const adminEmail of env.adminEmails) {
+    const res = await sendEmail({ to: adminEmail, subject, html });
+    if (!res.sent) {
+      console.log(`[mailer] New message from ${params.name} -> admin ${adminEmail}`);
+      await dumpHtml("admin-contact", html);
     }
   }
 }

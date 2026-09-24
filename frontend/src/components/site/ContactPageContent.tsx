@@ -4,13 +4,16 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { CONTACT } from "@/lib/site";
+import { cardSurface, cx } from "@/lib/ui";
 import { PageHeading } from "@/components/shared/PageHeading";
+import { ContactForm } from "@/components/site/ContactForm";
 import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/social-icons";
 
 /**
  * /contact page body. Client component so the heading, notes and labels
- * follow the active locale. The three contact rows + socials mirror the
- * Footer's contact column so every touchpoint behaves identically.
+ * follow the active locale. Two columns: the three contact rows + socials
+ * (mirroring the Footer's contact column) on the left, and the contact
+ * form on the right — the CTA strip spans full width underneath.
  */
 export function ContactPageContent() {
   const { t } = useI18n();
@@ -27,10 +30,13 @@ export function ContactPageContent() {
     <div className="mx-auto max-w-7xl px-4 py-16">
       <div className="mx-auto max-w-3xl">
         <PageHeading title="contact_title" sub="contact_sub" />
+      </div>
 
-        <div className="mt-10 rounded-3xl border border-ink/10 bg-white/70 p-6 shadow-sm md:p-10">
-          {/* Three big contact rows — each one is a working touchpoint. */}
-          <div className="space-y-4">
+      <div className="mx-auto mt-10 grid max-w-5xl items-start gap-6 lg:grid-cols-2">
+        {/* Direct channels — three big contact rows, each one a working touchpoint. */}
+        <section className={cx(cardSurface, "p-6 shadow-sm md:p-8")}>
+          <h2 className="font-serif text-xl font-semibold">{t("contact_info_title")}</h2>
+          <div className="mt-5 space-y-4">
             {/* WhatsApp */}
             <a
               href={CONTACT.whatsappUrl}
@@ -97,17 +103,28 @@ export function ContactPageContent() {
               </li>
             ))}
           </ul>
+        </section>
 
-          {/* Compact CTA strip — the natural next action after contact. */}
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl bg-green px-6 py-8 text-center sm:flex-row sm:px-8 sm:text-left">
-            <p className="font-serif text-xl font-semibold text-cream">{t("blog_cta_title")}</p>
-            <Link
-              href="/book"
-              className="shrink-0 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
-            >
-              {t("hero_cta_book")}
-            </Link>
+        {/* Contact form — bilingual, mirrors the booking form patterns. */}
+        <section className={cx(cardSurface, "p-6 shadow-sm md:p-8")}>
+          <h2 className="font-serif text-xl font-semibold">{t("contact_form_title")}</h2>
+          <p className="mt-1.5 text-sm text-ink/55">{t("contact_form_sub")}</p>
+          <div className="mt-6">
+            <ContactForm />
           </div>
+        </section>
+      </div>
+
+      {/* Compact CTA strip — the natural next action after contact. */}
+      <div className="mx-auto mt-6 max-w-5xl">
+        <div className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-green px-6 py-8 text-center sm:flex-row sm:px-8 sm:text-left">
+          <p className="font-serif text-xl font-semibold text-cream">{t("blog_cta_title")}</p>
+          <Link
+            href="/book"
+            className="shrink-0 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
+          >
+            {t("hero_cta_book")}
+          </Link>
         </div>
       </div>
     </div>

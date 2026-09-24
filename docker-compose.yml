@@ -30,13 +30,14 @@ services:
       APP_URL: ${APP_URL:-http://localhost:3000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}
-      ADMIN_EMAILS: ${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-${ADMIN_EMAIL}}
       MAGIC_LINK_TTL_HOURS: "168"
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-Creative Sound Studio <onboarding@resend.dev>}
       ZAVU_API_KEY: ${ZAVU_API_KEY:-}
       ZAVU_SENDER: ${ZAVU_SENDER:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}

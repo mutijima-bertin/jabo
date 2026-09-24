@@ -368,6 +368,46 @@ export function reviewRequest(params: {
   };
 }
 
+// ---------------------------------------------------------------------------
+// 8. Contact form message (admin)
+// ---------------------------------------------------------------------------
+export function contactMessage(params: {
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  language: "en" | "rw" | null;
+  adminPanelUrl: string;
+}): { subject: string; html: string } {
+  const lang: Lang = params.language === "rw" ? "rw" : "en";
+  const subject = `New message from ${params.name} — Creative Sound Studio`;
+  const body = `
+    <p style="margin:0 0 18px;font-family:Georgia,'Times New Roman',serif;font-size:22px;color:${COLOR.ink};font-weight:600">${esc(t(lang, "New contact message", "Ubutumwa bushya bwo ku rubuga"))}</p>
+    <p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:${COLOR.ink}">
+      ${esc(t(lang, "A client sent you a message through the website contact form. Reply to them directly at the email above.", "Umukiriya yakohereje ubutumwa akoresheje fomu yo ku rubuga. Musubize kuri imeyili iri hejuru."))}
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 16px;padding:14px 18px;background:${COLOR.cream};border-radius:10px;border:1px solid ${COLOR.line}">
+      ${metaRow(t(lang, "Name", "Amazina"), params.name)}
+      ${metaRow(t(lang, "Email", "Imeyili"), params.email)}
+      ${metaRow(t(lang, "Phone", "Telefone"), params.phone ?? "—")}
+      ${metaRow(t(lang, "Subject", "Umutwe"), params.subject)}
+    </table>
+    <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${COLOR.ink};font-weight:600">${esc(t(lang, "Message", "Ubutumwa"))}</p>
+    <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid ${COLOR.brass};background:${COLOR.cream};font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.7;color:${COLOR.ink}">${esc(params.message)}</blockquote>`;
+  return {
+    subject,
+    html: layout({
+      preheader: `New message from ${esc(params.name)} — ${esc(params.subject)}`,
+      body,
+      // The admin replies to the sender directly from their mail client — the
+      // CTA only opens the admin panel (no user-facing action needed).
+      cta: { href: params.adminPanelUrl, label: "Open admin panel" },
+      lang,
+    }),
+  };
+}
+
 /** Admin panel URL for notification emails (English only). */
 export function adminPanelUrl(base: string): string {
   return `${base}/admin/bookings`;
