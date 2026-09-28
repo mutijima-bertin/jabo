@@ -23,7 +23,7 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Inbox } from "lucide-react";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
-import type { DashboardStats } from "@/lib/api";
+import type { DashboardRange, DashboardStats } from "@/lib/api";
 import { cardCls, cardHeaderTitle, cx, emptyStateIcon, emptyStateIconWrap, emptyStateTitle } from "@/lib/ui";
 import { truncateServiceName } from "@/lib/admin-charts";
 
@@ -85,10 +85,16 @@ interface DashboardChartsProps {
   stats: DashboardStats["stats"];
   bookingsByDay: DashboardStats["bookingsByDay"];
   topServices: DashboardStats["topServices"];
+  /** Window the series covers (7/14/30/90) — the area-chart titles follow it. */
+  days: DashboardRange;
 }
 
-export default function DashboardCharts({ stats, bookingsByDay, topServices }: DashboardChartsProps) {
+export default function DashboardCharts({ stats, bookingsByDay, topServices, days }: DashboardChartsProps) {
   const { t } = useI18n();
+  // Every "last N days" string on this card is derived from the prop, so the
+  // heading, the chart's accessible name and the empty state never disagree.
+  const rangeTitle = t("chart_range_title").replace("{n}", String(days));
+  const rangeAria = t("chart_range_area_aria").replace("{n}", String(days));
 
   // -------------------------------------------------------------------------
   // Derived, sanitized series (empty states replace flat charts — see header)
@@ -120,18 +126,18 @@ export default function DashboardCharts({ stats, bookingsByDay, topServices }: D
 
   return (
     <>
-      {/* ---- Bookings — last 14 days (area) ---- */}
+      {/* ---- Bookings — last {days} days (area) ---- */}
       <section className={cx(cardCls, "p-5")} aria-labelledby="dash-chart-area-title">
         <h2 id="dash-chart-area-title" className={cardHeaderTitle}>
-          Bookings — last 14 days
+          {rangeTitle}
         </h2>
-        <p className="mt-1 text-xs text-admin-muted">New bookings per day, oldest to newest.</p>
+        <p className="mt-1 text-xs text-admin-muted">{t("chart_range_sub")}</p>
         {hasDayData ? (
-          <div className="mt-4" role="img" aria-label="Area chart, new bookings per day over the last 14 days">
+          <div className="mt-4" role="img" aria-label={rangeAria}>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart
                 data={bookingsByDay}
-                title="Area chart: bookings per day over the last 14 days"
+                title={rangeAria}
                 margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
               >
                 <defs>
@@ -178,7 +184,7 @@ export default function DashboardCharts({ stats, bookingsByDay, topServices }: D
             </ResponsiveContainer>
           </div>
         ) : (
-          emptyBlock("New bookings in the last 14 days will appear here.")
+          emptyBlock(t("chart_range_empty").replace("{n}", String(days)))
         )}
       </section>
 

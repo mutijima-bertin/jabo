@@ -6,8 +6,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, Inbox, Loader2, RefreshCw } from "lucide-react";
 import { useAdminFetch } from "@/lib/admin";
-import type { DashboardStats } from "@/lib/api";
+import type { DashboardRange, DashboardStats } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
+import { AdminAttention } from "@/components/admin/AdminAttention";
+import { AdminHealthStrip } from "@/components/admin/AdminHealthStrip";
 import {
   badgeMuted,
   btnGhost,
@@ -22,12 +24,17 @@ import {
   emptyStateIconWrap,
   emptyStateTitle,
   errorBanner,
+  filterChipActive,
+  filterChipInactive,
+  filterRow,
   iconBtnSecondary,
   linkCls,
   loadingState,
   pageHeader,
   pageSub,
   pageTitle,
+  rangeRow,
+  sectionLabel,
   skeletonCard,
   skeletonRows,
   skeletonText,
@@ -42,6 +49,11 @@ import {
   tdCls,
   thCls,
   theadRow,
+  upcomingMore,
+  upcomingRow,
+  upcomingRowContact,
+  upcomingRowDate,
+  upcomingRowService,
 } from "@/lib/ui";
 import { formatDate } from "@/lib/format";
 
@@ -54,6 +66,12 @@ const STATUS_STAT_KEY: Record<string, keyof DashboardStats["stats"]> = {
   COMPLETED: "completed",
   CANCELLED: "cancelled",
 };
+
+/** `?days=` presets for the area chart — 14 matches the API default. */
+const RANGES: readonly DashboardRange[] = [7, 14, 30, 90];
+
+/** How many upcoming rows the card draws before the "+N more" line. */
+const UPCOMING_VISIBLE = 8;
 
 /**
  * Chart region (recharts) is lazily loaded client-only so the chart library
@@ -111,7 +129,9 @@ export function AdminDashboard({ token, onOpenBookings }: { token: string; onOpe
   const { t, locale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
-  const { data, error, reload } = useAdminFetch<DashboardStats>("/admin/dashboard", token);
+  // Chart window — owned here and sent as ?days=; 14 is the API default.
+  const [days, setDays] = useState<DashboardRange>(14);
+  const { data, error, reload } = useAdminFetch<DashboardStats>(`/admin/dashboard?days=${days}`, token);
   const [refreshing, setRefreshing] = useState(false);
   const [updated, setUpdated] = useState(false);
 
@@ -149,6 +169,15 @@ export function AdminDashboard({ token, onOpenBookings }: { token: string; onOpe
           {updated ? t("admin_dash_updated") : ""}
         </span>
       </div>
+
+      {/* Attention queue — FIRST block, above the stat cards (Tier-1). Own
+          fetch on the notifications endpoint; renders nothing when empty. */}
+      <AdminAttention token={token} />
+
+      {/* System-health strip — slim band between attention and the stat grid.
+          Own fetch on /admin/health (uptime + 24h failed sends); silent until
+          it has something to report, danger-styled with a retry on failure. */}
+      <AdminHealthStrip token={token} />
 
       {error ? (
         <div className="mt-6">
@@ -209,12 +238,68 @@ export function AdminDashboard({ token, onOpenBookings }: { token: string; onOpe
             ))}
           </div>
 
+          {/* Upcoming productions — next 14 days, hidden entirely when empty.
+              NOT range-driven: ?days= only moves the area chart. */}
+          {(data.upcoming?.length ?? 0) > 0 && (
+            <section className={cx(cardCls, "mt-6")} aria-labelledby="dash-upcoming-title">
+              <div className={cardHeader}>
+                <h2 id="dash-upcoming-title" className={cardHeaderTitle}>
+                  {t("admin_upcoming_title")}
+                </h2>
+                <span className={badgeMuted}>{data.upcoming.length}</span>
+              </div>
+              <ul aria-label={t("admin_upcoming_aria")}>
+                {data.upcoming.slice(0, UPCOMING_VISIBLE).map((b) => (
+                  <li key={b.id} className={cx(upcomingRow, "border-t border-admin-line first:border-t-0")}>
+                    <span className={upcomingRowDate}>{formatDate(b.eventDate, locale) || "—"}</span>
+                    <button
+                      type="button"
+                      className={linkCls}
+                      onClick={() => navigate(`tab=bookings&open=${encodeURIComponent(b.id)}`)}
+                      aria-label={`${t("admin_bookings_open")} ${b.reference}`}
+                    >
+                      {b.reference}
+                    </button>
+                    <span className={upcomingRowService}>{b.serviceName || "—"}</span>
+                    <span className={upcomingRowContact}>{b.contactName}</span>
+                    <span className={statusPill(b.status)}>{t(statusKey(b.status))}</span>
+                  </li>
+                ))}
+              </ul>
+              {data.upcoming.length > UPCOMING_VISIBLE && (
+                <p className={upcomingMore}>
+                  {t("admin_upcoming_more").replace("{n}", String(data.upcoming.length - UPCOMING_VISIBLE))}
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* Chart date range — 7/14/30/90 chips; refetches ?days=<n> */}
+          <div className={rangeRow}>
+            <p className={sectionLabel}>{t("chart_range_label")}</p>
+            <div className={filterRow} role="group" aria-label={t("chart_range_label")}>
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={days === r ? filterChipActive : filterChipInactive}
+                  aria-pressed={days === r}
+                  aria-label={t("chart_range_days").replace("{n}", String(r))}
+                  onClick={() => setDays(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Charts + quick actions — recharts is lazy-loaded client-only (phase 7B) */}
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <DashboardCharts
               stats={data.stats}
               bookingsByDay={data.bookingsByDay}
               topServices={data.topServices}
+              days={days}
             />
             <QuickActions onOpenBookings={onOpenBookings} />
           </div>

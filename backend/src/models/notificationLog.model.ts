@@ -20,3 +20,14 @@ export function create(entry: {
     },
   });
 }
+
+/**
+ * Failed delivery attempts in the trailing `sinceMs` window — the admin health
+ * endpoint's single source of truth. The row's `sentAt` column is the attempt
+ * timestamp (defaults to now() on insert), so it is the "created" clock here.
+ */
+export function countFailedSince(sinceMs: number): Promise<number> {
+  return prisma.notificationLog.count({
+    where: { status: "failed", sentAt: { gte: new Date(Date.now() - sinceMs) } },
+  });
+}

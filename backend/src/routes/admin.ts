@@ -5,6 +5,9 @@ import * as adminBookings from "../controllers/adminBookings.controller";
 import * as adminCatalog from "../controllers/adminCatalog.controller";
 import * as adminPosts from "../controllers/adminPosts.controller";
 import * as adminClients from "../controllers/adminClients.controller";
+import * as adminNotifications from "../controllers/adminNotifications.controller";
+import * as adminSearch from "../controllers/adminSearch.controller";
+import * as adminHealth from "../controllers/adminHealth.controller";
 
 export const adminRouter = Router();
 
@@ -16,6 +19,18 @@ const uploadsLimiter = limiter({ windowMs: 60 * 60 * 1000, max: 20, message: "RA
 
 // ---------- Dashboard ----------
 adminRouter.get("/admin/dashboard", adminBookings.dashboard);
+
+// ---------- Global search (⌘K palette) ----------
+// Registered ahead of the "/admin/<resource>/:id" routes so a future top-level
+// catch-all can never shadow it.
+adminRouter.get("/admin/search", adminSearch.search);
+
+// ---------- Admin health (dashboard status strip) ----------
+adminRouter.get("/admin/health", adminHealth.check);
+
+// ---------- Admin notifications (in-app bell) ----------
+adminRouter.get("/admin/notifications", adminNotifications.listNotifications);
+adminRouter.post("/admin/notifications/read", adminNotifications.markNotificationsRead);
 
 // ---------- Bookings ----------
 adminRouter.get("/admin/bookings", adminBookings.listBookings);

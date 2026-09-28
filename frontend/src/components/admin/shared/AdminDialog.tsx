@@ -4,12 +4,14 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cx, dialogBackdrop, dialogFooter, dialogPanel, dialogPanelLg, dialogPanelSm, iconBtnGhost } from "@/lib/ui";
 import { useI18n } from "@/lib/i18n";
+import { useFocusTrap } from "./useFocusTrap";
 
 /**
  * Accessible dialog primitive — spec §6.3/§6.4 full a11y contract:
  * role="dialog" + aria-modal, ESC closes (stopped from bubbling), focus trap
- * (Tab/Shift+Tab wrap), programmatic initial focus on open, focus restore on
- * close, body scroll lock. Callers render header/body/footer via `children`.
+ * (Tab/Shift+Tab wrap, via the shared `useFocusTrap`), programmatic initial
+ * focus on open, focus restore on close, body scroll lock. Callers render
+ * header/body/footer via `children`.
  */
 export function AdminDialog({
   labelledBy,
@@ -25,7 +27,9 @@ export function AdminDialog({
   children: ReactNode;
 }) {
   const { t } = useI18n();
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Always active: this component only renders while the dialog is open, so the
+  // trap installs on mount and releases on unmount — same window as before.
+  const panelRef = useFocusTrap<HTMLDivElement>(true);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -43,35 +47,16 @@ export function AdminDialog({
       document.body.style.overflow = previousOverflow;
       restoreFocusRef.current?.focus();
     };
-  }, []);
+    // `panelRef` is a ref object — stable for the component's lifetime — so
+    // listing it keeps exhaustive-deps honest without re-running the effect.
+  }, [panelRef]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      // Must not bubble to the page (§6.4.2).
-      e.stopPropagation();
-      onClose();
-      return;
-    }
-    if (e.key !== "Tab") return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    // Focus trap (§6.4.3): wrap when focus leaves the panel bounds.
-    const focusables = Array.from(
-      panel.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      ),
-    );
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement;
-    if (e.shiftKey && (active === first || !panel.contains(active))) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && (active === last || !panel.contains(active))) {
-      e.preventDefault();
-      first.focus();
-    }
+    if (e.key !== "Escape") return;
+    // Must not bubble to the page (§6.4.2). Tab is the trap's job (§6.4.3),
+    // handled by `useFocusTrap` on the same panel.
+    e.stopPropagation();
+    onClose();
   }
 
   const panelClass = cx(

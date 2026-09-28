@@ -6,6 +6,8 @@ import * as clientLogoModel from "../models/clientLogo.model";
 import * as testimonialModel from "../models/testimonial.model";
 import * as siteSettingModel from "../models/siteSetting.model";
 import { notifyAdminContactMessage, runFireAndForget } from "../services/notifications";
+import { notifyAdmin } from "../services/adminNotifications";
+import * as contactMessageModel from "../models/contactMessage.model";
 
 /** Public, unauthenticated catalog reads (published rows only where applicable). */
 
@@ -68,7 +70,9 @@ const contactSchema = z.object({
 /**
  * Public contact form: POST /contact. Validates, then dispatches the
  * admin email in the background — the 201 response never waits on the send.
- * No database writes.
+ * Also stores a ContactMessage row (Tier-2 inbox seed) and writes the in-app
+ * NEW_CONTACT_MESSAGE bell row — both fire-and-forget via the same helper, so
+ * the synchronous 201 { ok: true } contract is unchanged.
  */
 export async function contact(req: Request, res: Response): Promise<void> {
   const parsed = contactSchema.safeParse(req.body);
@@ -87,5 +91,30 @@ export async function contact(req: Request, res: Response): Promise<void> {
       language: input.language,
     })
   );
+  // Store the message + raise the bell notification. Combined in one detached
+  // job so the row id can seed the bell payload; failures are swallowed (never
+  // await-able before the response).
+  runFireAndForget(async () => {
+    const row = await contactMessageModel.create({
+      name: input.name,
+      email: input.email,
+      phone: input.phone ?? null,
+      subject: input.subject,
+      message: input.message,
+      language: input.language,
+    });
+    await notifyAdmin(
+      "NEW_CONTACT_MESSAGE",
+      {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        subject: row.subject,
+        messagePreview: row.message.slice(0, 200),
+        language: row.language,
+      },
+      "?tab=dashboard&attention=contact"
+    );
+  });
   res.status(201).json({ ok: true });
 }

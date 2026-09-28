@@ -43,6 +43,14 @@ enum PostContentType {
   STUDIO_NEWS
 }
 
+enum AdminNotificationType {
+  NEW_BOOKING
+  STATUS_CHANGED
+  NEW_CONTACT_MESSAGE
+  TESTIMONIAL_SUBMITTED
+  SEND_FAILED
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -54,20 +62,20 @@ model User {
 }
 
 model Client {
-  id                  String    @id @default(cuid())
+  id                  String        @id @default(cuid())
   name                String
-  email               String?   @unique
+  email               String?       @unique
   phone               String?
   loginTokenHash      String?
   loginTokenExpiresAt DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
   bookings            Booking[]
   testimonials        Testimonial[]
 }
 
 model Service {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   nameEn         String
   nameRw         String
   descriptionEn  String?
@@ -78,38 +86,38 @@ model Service {
   icon           String?
   imageUrl       String? // picture for the public services bento cards (/uploads/... path)
   linkedPostSlug String? // slug of the deep-dive BlogPost — intentionally NO FK so deleting a post never cascades
-  featured       Boolean  @default(false)
-  published      Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  featured       Boolean   @default(false)
+  published      Boolean   @default(true)
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   bookings       Booking[]
 }
 
 model Booking {
-  id                 String        @id @default(cuid())
-  reference          String        @unique
-  serviceId          String
-  service            Service       @relation(fields: [serviceId], references: [id])
-  clientId           String?
-  client             Client?       @relation(fields: [clientId], references: [id])
-  contactName        String
-  contactEmail       String
-  contactPhone       String?
-  eventDate          DateTime?
-  location           String?
-  budgetRange        String?
-  details            String?
-  language           String        @default("en")
-  status             BookingStatus @default(PENDING)
-  magicTokenHash     String?       @unique
+  id                  String            @id @default(cuid())
+  reference           String            @unique
+  serviceId           String
+  service             Service           @relation(fields: [serviceId], references: [id])
+  clientId            String?
+  client              Client?           @relation(fields: [clientId], references: [id])
+  contactName         String
+  contactEmail        String
+  contactPhone        String?
+  eventDate           DateTime?
+  location            String?
+  budgetRange         String?
+  details             String?
+  language            String            @default("en")
+  status              BookingStatus     @default(PENDING)
+  magicTokenHash      String?           @unique
   magicTokenExpiresAt DateTime?
-  magicTokenRevoked  Boolean       @default(false)
-  lastNotifiedAt     DateTime?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  events             BookingEvent[]
-  notifications      NotificationLog[]
+  magicTokenRevoked   Boolean           @default(false)
+  lastNotifiedAt      DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  events              BookingEvent[]
+  notifications       NotificationLog[]
 
   @@index([serviceId])
   @@index([clientId])
@@ -117,12 +125,12 @@ model Booking {
 }
 
 model BookingEvent {
-  id        String       @id @default(cuid())
+  id        String        @id @default(cuid())
   bookingId String
-  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking   Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   status    BookingStatus
   note      String?
-  createdAt DateTime     @default(now())
+  createdAt DateTime      @default(now())
 }
 
 model NotificationLog {
@@ -188,22 +196,50 @@ model SiteSetting {
 }
 
 model BlogPost {
-  id             String           @id @default(cuid())
-  slug           String           @unique // URL slug, e.g. "behind-the-scenes-abis-2019"
-  titleEn        String
-  titleRw        String
-  excerptEn      String? // short summary for cards/meta
-  excerptRw      String?
-  contentEn      String // markdown body (GFM) — sanitize when rendering to HTML
-  contentRw      String
-  contentType    PostContentType  @default(PROJECT_RECAP)
-  coverImageUrl  String? // /uploads/... path, same convention as PortfolioItem.coverUrl
-  published      Boolean          @default(false) // draft vs published
-  views          Int              @default(0)
-  likes          Int              @default(0)
-  publishedAt    DateTime? // set when first published
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id            String          @id @default(cuid())
+  slug          String          @unique // URL slug, e.g. "behind-the-scenes-abis-2019"
+  titleEn       String
+  titleRw       String
+  excerptEn     String? // short summary for cards/meta
+  excerptRw     String?
+  contentEn     String // markdown body (GFM) — sanitize when rendering to HTML
+  contentRw     String
+  contentType   PostContentType @default(PROJECT_RECAP)
+  coverImageUrl String? // /uploads/... path, same convention as PortfolioItem.coverUrl
+  published     Boolean         @default(false) // draft vs published
+  views         Int             @default(0)
+  likes         Int             @default(0)
+  publishedAt   DateTime? // set when first published
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   @@index([published, publishedAt])
+}
+
+// In-app admin alerts (Tier 1 notification feature). Single-admin app for now —
+// no userId relation; staff accounts arrive in a later phase.
+model AdminNotification {
+  id        String                @id @default(cuid())
+  type      AdminNotificationType
+  payload   Json // free-form event data (booking id/reference, contact name, subject, message preview...) -> JSONB on PostgreSQL
+  linkHref  String? // deep-link target authored by the backend (e.g. "?tab=bookings&open=<id>"), NOT the full URL
+  readAt    DateTime? // null = unread
+  createdAt DateTime              @default(now())
+
+  @@index([readAt, createdAt]) // unread-count + recent queries
+}
+
+// Contact-form submissions (Tier 1 attention queue / Tier 2 inbox). Immutable by
+// design — no updatedAt. Written by POST /api/contact.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  language  String   @default("en")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

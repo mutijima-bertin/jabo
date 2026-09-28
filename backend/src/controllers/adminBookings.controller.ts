@@ -10,7 +10,26 @@ import * as clientModel from "../models/client.model";
 import { revokeMagicToken, updateBookingStatus } from "../services/bookings";
 
 // ---------- Dashboard ----------
-export async function dashboard(_req: Request, res: Response): Promise<void> {
+// Range options for the dashboard chart. The query param arrives as a string, so
+// it is coerced to a number and then narrowed to the allowed set (zod v4's
+// z.enum only covers strings, hence z.literal over the numeric tuple). An
+// unvalidated cast used to let anything through.
+const DASHBOARD_DAY_OPTIONS = [7, 14, 30, 90] as const;
+const dashboardQuerySchema = z.object({
+  days: z.coerce.number().pipe(z.literal(DASHBOARD_DAY_OPTIONS)).default(14),
+});
+
+/** Upcoming productions window + cap (soonest 20 events inside 14 days). */
+const UPCOMING_WINDOW_DAYS = 14;
+const UPCOMING_LIMIT = 20;
+
+export async function dashboard(req: Request, res: Response): Promise<void> {
+  const parsed = dashboardQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
+    return;
+  }
+  const days = parsed.data.days;
   const [
     total,
     pending,
@@ -27,6 +46,7 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
     postCount,
     portfolioCount,
     serviceCount,
+    upcoming,
   ] = await Promise.all([
     bookingModel.countAll(),
     bookingModel.countByStatus("PENDING"),
@@ -37,12 +57,13 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
     bookingModel.countByStatus("CANCELLED"),
     bookingModel.findRecentWithService(10),
     clientModel.count(),
-    bookingModel.countByDaySince(14),
+    bookingModel.countByDaySince(days),
     bookingModel.topServices(5),
     testimonialModel.countAll(),
     blogPostModel.countAll(),
     portfolioItemModel.countAll(),
     serviceModel.countAll(),
+    bookingModel.findUpcoming(UPCOMING_WINDOW_DAYS, UPCOMING_LIMIT),
   ]);
 
   res.json({
@@ -51,6 +72,18 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
     topServices,
     counts: { testimonials: testimonialCount, posts: postCount, portfolio: portfolioCount, services: serviceCount },
     recent,
+    // Always present (empty array when nothing is scheduled) — the dashboard
+    // renders the "upcoming productions" list without a null check.
+    upcoming: upcoming.map((b) => ({
+      id: b.id,
+      reference: b.reference,
+      status: b.status,
+      eventDate: b.eventDate ? b.eventDate.toISOString() : null,
+      contactName: b.contactName,
+      serviceName: b.service.nameEn,
+      location: b.location,
+      budgetRange: b.budgetRange,
+    })),
   });
 }
 
@@ -61,18 +94,25 @@ export async function dashboard(_req: Request, res: Response): Promise<void> {
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "IN_PRODUCTION", "DELIVERED", "COMPLETED", "CANCELLED"] as const;
 const bookingStatusEnum = z.enum(BOOKING_STATUSES);
 
+/** Free-text term for the bookings-list filter; same rule as the ⌘K palette. */
+const bookingQuerySchema = z.object({
+  status: bookingStatusEnum.optional(),
+  q: z
+    .string()
+    .trim()
+    .min(2, "q must be at least 2 characters")
+    .max(60, "q must be at most 60 characters")
+    .optional(),
+});
+
 export async function listBookings(req: Request, res: Response): Promise<void> {
-  const rawStatus = req.query.status;
-  if (rawStatus !== undefined) {
-    const parsed = bookingStatusEnum.safeParse(rawStatus);
-    if (!parsed.success) {
-      res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
-      return;
-    }
-    res.json(await bookingModel.listForAdmin(parsed.data));
+  const parsed = bookingQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "VALIDATION", issues: parsed.error.issues.map((i) => i.message) });
     return;
   }
-  res.json(await bookingModel.listForAdmin());
+  const { status, q } = parsed.data;
+  res.json(await bookingModel.listForAdmin(status, q));
 }
 
 export async function getBooking(req: Request, res: Response): Promise<void> {

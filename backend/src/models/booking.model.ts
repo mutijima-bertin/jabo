@@ -1,6 +1,7 @@
 import { prisma } from "../config/db";
 import { Prisma, type Booking, type BookingStatus } from "@prisma/client";
 import * as bookingEventModel from "./bookingEvent.model";
+import { bookingTextWhere } from "./search.model";
 
 /**
  * Data-access layer for Booking + related rows. Every query here mirrors the
@@ -20,8 +21,9 @@ export function countByStatus(status: BookingStatus): Promise<number> {
 }
 
 /**
- * 14-day UTC booking series, zero-filled. One entry per day from
- * `daysBack - 1` days ago through today, oldest → newest.
+ * `daysBack`-day UTC booking series, zero-filled. One entry per day from
+ * `daysBack - 1` days ago through today, oldest → newest. The dashboard range
+ * picker passes 7/14/30/90 (14 by default).
  * Dates are ISO YYYY-MM-DD (UTC). The series is computed entirely in UTC
  * (deterministic, no timezone drift).
  */
@@ -106,14 +108,56 @@ export function findRecentWithService(take: number) {
   });
 }
 
-/** Admin list; optional status filter (callers must pass a validated BookingStatus). */
-export function listForAdmin(status?: BookingStatus) {
+/**
+ * Admin list. Both filters are optional and AND together:
+ *   status — exact status (callers must pass a validated BookingStatus)
+ *   q      — free-text term; reuses the ⌘K booking predicate (reference /
+ *            contact name / contact email / service name) so the list filter
+ *            and the palette always agree. Row shape is unchanged.
+ */
+export function listForAdmin(status?: BookingStatus, q?: string) {
+  const where: Prisma.BookingWhereInput = {};
+  if (status) where.status = status;
+  if (q) Object.assign(where, bookingTextWhere(q));
   return prisma.booking.findMany({
-    where: status ? { status } : undefined,
+    where,
     orderBy: { createdAt: "desc" },
     include: {
       service: { select: { nameEn: true, nameRw: true } },
       notifications: { orderBy: { sentAt: "desc" }, take: 5 },
+    },
+  });
+}
+
+/** Terminal statuses — a completed or cancelled booking can never be "upcoming". */
+const UPCOMING_EXCLUDED_STATUSES: BookingStatus[] = ["COMPLETED", "CANCELLED"];
+
+/**
+ * Upcoming productions: events dated from now through `withinDays` from now,
+ * excluding the terminal statuses, soonest first. `eventDate` asc is the
+ * primary order; createdAt asc breaks ties on a shared event date so repeated
+ * dashboard loads return the same list. Rows with a null eventDate (no date
+ * chosen yet) never match — an unscheduled booking is not upcoming.
+ */
+export function findUpcoming(withinDays: number, take: number) {
+  const now = new Date();
+  const until = new Date(now.getTime() + withinDays * 24 * 60 * 60 * 1000);
+  return prisma.booking.findMany({
+    where: {
+      eventDate: { gte: now, lte: until },
+      status: { notIn: UPCOMING_EXCLUDED_STATUSES },
+    },
+    orderBy: [{ eventDate: "asc" }, { createdAt: "asc" }],
+    take,
+    select: {
+      id: true,
+      reference: true,
+      status: true,
+      eventDate: true,
+      contactName: true,
+      location: true,
+      budgetRange: true,
+      service: { select: { nameEn: true } },
     },
   });
 }

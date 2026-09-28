@@ -34,3 +34,20 @@ export function formatDate(iso: string | null, locale: "en" | "rw"): string {
     return "";
   }
 }
+
+/**
+ * Compact process uptime for the dashboard health strip — "3d 4h", "23h 12m",
+ * "45m". Unit abbreviations are locale-neutral (EN/RW both read d/h/m), so the
+ * caller interpolates the result into its own dictionary string via
+ * `.replace("{n}", …)`. Pure function — safe on server and client.
+ */
+export function formatUptime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  const total = Math.floor(seconds);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}

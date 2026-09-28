@@ -8,6 +8,7 @@ import * as bookingModel from "../models/booking.model";
 import { createClientLoginToken, getClientByLoginToken, issueClientJwt } from "../services/clientAuth";
 import { generateMagicToken, magicLinkUrl } from "../services/magiclink";
 import { notifyAdminTestimonialSubmitted, notifyClientLogin, runFireAndForget } from "../services/notifications";
+import { notifyAdmin } from "../services/adminNotifications";
 
 const loginRequestSchema = z.object({
   email: z.string().email(),
@@ -204,6 +205,19 @@ export async function postTestimonial(req: Request, res: Response): Promise<void
         contentEn: parsed.data.contentEn,
         contentRw: parsed.data.contentRw ?? null,
       })
+    );
+    // In-app admin bell: TESTIMONIAL_SUBMITTED (settings tab holds the review queue).
+    runFireAndForget(() =>
+      notifyAdmin(
+        "TESTIMONIAL_SUBMITTED",
+        {
+          testimonialId: testimonial.id,
+          author: client.name,
+          email: client.email ?? "",
+          contentPreview: parsed.data.contentEn.slice(0, 200),
+        },
+        "?tab=settings"
+      )
     );
     res.status(201).json({ testimonial: testimonialPayload(testimonial) });
   } catch (err) {

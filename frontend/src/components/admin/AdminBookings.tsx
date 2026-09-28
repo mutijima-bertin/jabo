@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Inbox, Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, Inbox, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
-import type { Booking } from "@/lib/api";
+import { SEARCH_MIN_TERM, type Booking } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
 import {
   adminFieldHint,
@@ -17,6 +17,7 @@ import {
   btnSecondary,
   btnSm,
   cardCls,
+  clearIcon,
   confirmBody,
   confirmBox,
   confirmTitle,
@@ -30,6 +31,10 @@ import {
   emptyStateIconWrap,
   emptyStateTitle,
   errorBanner,
+  fieldSearchClear,
+  fieldSearchIcon,
+  fieldSearchInput,
+  fieldSearchWrap,
   filterChipActive,
   filterChipInactive,
   filterRow,
@@ -57,6 +62,7 @@ import {
   timelineTitle,
 } from "@/lib/ui";
 import { formatDate } from "@/lib/format";
+import { useToast } from "@/lib/toast";
 import { AdminDialog } from "@/components/admin/shared/AdminDialog";
 
 // Mirrors the backend's FORWARD_STATUSES map (backend/src/services/bookings.ts).
@@ -69,6 +75,22 @@ const FORWARD: Record<string, string[]> = {
   CANCELLED: [],
 };
 
+/** Debounce before the typed term is mirrored into `?q=` (the URL is the source
+ *  of truth, so the list only refetches once the URL actually changes). */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * The `?q=` term the API may actually receive, or `null` when it must be dropped.
+ * The list endpoint validates `q` as `z.string().trim().min(2)` (same rule as the
+ * ⌘K palette, backend adminBookings controller), so a shorter term — a lone
+ * character, or whitespace the user typed — is a `400 VALIDATION` that would
+ * replace the list with an error banner. Trimming is a URL/fetch concern ONLY:
+ * the field keeps whatever was typed, and an empty/blank term means "no `q`",
+ * i.e. the full list.
+ */
+const apiSearchTerm = (term: string): string | null =>
+  term.trim().length >= SEARCH_MIN_TERM ? term.trim() : null;
+
 export function AdminBookings({ token }: { token: string }) {
   const { t, locale } = useI18n();
   const router = useRouter();
@@ -79,12 +101,69 @@ export function AdminBookings({ token }: { token: string }) {
   const rawStatus = searchParams.get("status") ?? "";
   const status = (STATUS_ORDER as readonly string[]).includes(rawStatus) ? rawStatus : "";
 
-  const { data: bookings, error, loading, reload } = useAdminFetch<Booking[]>(
-    status ? `/admin/bookings?status=${status}` : "/admin/bookings",
-    token,
-  );
+  // Free-text search is URL-bound the same way: ?q=<term>, mirrored by a local
+  // input so typing stays instant while the list follows the debounced URL.
+  const q = searchParams.get("q") ?? "";
+  const [term, setTerm] = useState(q);
+  // Tracks what THIS component last pushed so the sync effect below can tell
+  // its own echo (back from the router) apart from an external change.
+  const pushedRef = useRef(q);
+
+  // Debounced write-through: typing → ?q= (preserving ?status= and ?open=).
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      const nextTerm = apiSearchTerm(term);
+      if (nextTerm) params.set("q", nextTerm);
+      else params.delete("q");
+      const next = params.toString();
+      // The echo marker is what the URL will read back — the trimmed term, or ""
+      // once the param is gone — so the mirror effect below recognises its own
+      // push and never rewrites the field the user is still typing in.
+      pushedRef.current = nextTerm ?? "";
+      if (next !== searchParams.toString()) router.replace(`${pathname}?${next}`);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [term, pathname, router, searchParams]);
+
+  // External ?q= changes (back/forward, a deep link) mirror back into the field.
+  // Deferred by a tick so the no-sync-setState-in-effect rule stays happy.
+  useEffect(() => {
+    if (q === pushedRef.current) return;
+    pushedRef.current = q;
+    const handle = setTimeout(() => setTerm(q), 0);
+    return () => clearTimeout(handle);
+  }, [q]);
+
+  // List endpoint: the status filter and the search term ride together
+  // (?open= stays in the URL for the deep-link effect and never hits the API).
+  // The term is re-checked here too, so a hand-typed or back/forward `?q=` below
+  // the floor lists everything for the debounce window instead of 400-ing.
+  const listTerm = apiSearchTerm(q);
+  const listParams = new URLSearchParams();
+  if (status) listParams.set("status", status);
+  if (listTerm) listParams.set("q", listTerm);
+  const listPath = listParams.toString() ? `/admin/bookings?${listParams.toString()}` : "/admin/bookings";
+
+  const { data: bookings, error, loading, reload } = useAdminFetch<Booking[]>(listPath, token);
 
   const [selected, setSelected] = useState<Booking | null>(null);
+
+  // ?open=<bookingId> deep-link (spec §6.1 extension): the bell's linkHref can
+  // carry a booking to preview. Opens via the EXISTING dialog path/setSelected —
+  // never a second dialog. Re-runs whenever the param value CHANGES (deep-links
+  // arriving while this tab is already active) and whenever the list (re)loads.
+  // A consumed-ref guards against re-opening after a manual close + a reload
+  // (e.g. status change while `?open=` still sits in the URL).
+  const openId = searchParams.get("open") ?? "";
+  const consumedOpenRef = useRef("");
+  useEffect(() => {
+    if (!openId || !bookings) return;
+    const match = bookings.find((b) => b.id === openId);
+    if (!match || consumedOpenRef.current === openId) return;
+    consumedOpenRef.current = openId;
+    setSelected(match);
+  }, [openId, bookings]);
 
   const setStatus = (next: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -103,7 +182,34 @@ export function AdminBookings({ token }: { token: string }) {
         </div>
       </div>
 
-      <nav className={cx(filterRow, "mt-6")} role="navigation" aria-label={t("admin_bookings_filter")}>
+      {/* Free-text search — URL-bound (?q=), debounced, aligned with the chips. */}
+      <div className={cx(fieldSearchWrap, "mt-6 w-full sm:max-w-sm")}>
+        <label htmlFor="bookings-search" className="sr-only">
+          {t("bookings_search_label")}
+        </label>
+        <Search className={fieldSearchIcon} aria-hidden="true" />
+        <input
+          id="bookings-search"
+          type="search"
+          className={fieldSearchInput}
+          placeholder={t("bookings_search_placeholder")}
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+        />
+        {term && (
+          <button
+            type="button"
+            className={fieldSearchClear}
+            aria-label={t("bookings_search_clear")}
+            onClick={() => setTerm("")}
+          >
+            <X className={clearIcon} />
+          </button>
+        )}
+      </div>
+      {term && <p className={adminFieldHint}>{t("bookings_search_hint")}</p>}
+
+      <nav className={cx(filterRow, "mt-4")} role="navigation" aria-label={t("admin_bookings_filter")}>
         <button
           type="button"
           className={status === "" ? filterChipActive : filterChipInactive}
@@ -240,6 +346,9 @@ function BookingDialog({
 }) {
   const { t, locale } = useI18n();
   const handleSessionExpired = useSessionGuard();
+  // Toast announcer — the shell mounts the provider; the undo action rides a
+  // card, so it stays reachable after this dialog is closed.
+  const { push } = useToast();
   // Seed with the row snapshot for instant render; the detail fetch below adds
   // events (the list endpoint returns notifications but NOT events).
   const [detail, setDetail] = useState<Booking>(booking);
@@ -271,29 +380,70 @@ function BookingDialog({
 
   async function applyStatus(next: string) {
     if (!detail) return;
+    // Snapshot BEFORE the PATCH: undo replays exactly this pair (status + the
+    // note that rode along with it), so the original wording is preserved.
+    const previousStatus = detail.status;
+    const noteText = note.trim();
     setBusy(next);
     setError("");
     setNoteSaved(false);
     try {
-      const hadNote = note.trim().length > 0;
       await adminApi.patch(`/admin/bookings/${detail.id}/status`, token, {
         status: next,
-        ...(hadNote ? { note: note.trim() } : {}),
+        ...(noteText ? { note: noteText } : {}),
       });
       setNote("");
-      setNoteSaved(hadNote);
+      setNoteSaved(noteText.length > 0);
       const fresh = await adminApi.get<Booking>(`/admin/bookings/${detail.id}`, token);
       setDetail(fresh);
       setSaved(t(statusKey(next)));
       onChanged();
+      // Confirmation + one-tap undo. By the time the toast exists the list is
+      // already reloaded and `detail` already re-fetched, so the dialog can
+      // never show a stale status next to the card.
+      push("success", t("toast_status_changed"), {
+        actionLabel: t("toast_undo"),
+        onAction: () => void undoStatus(previousStatus, noteText),
+      });
     } catch (e) {
       if ((e as Error).message === "NOT_AUTHENTICATED") {
         handleSessionExpired();
         return;
       }
+      // A FAILED change keeps the existing banner path — no toast, so a failure
+      // is never dressed up as a confirmation.
       setError((e as Error).message || t("admin_error_generic"));
     } finally {
       setBusy("");
+    }
+  }
+
+  /**
+   * Replay a status change backwards (the toast's "Undo"). A rejected revert
+   * is NEVER silent: the backend answers INVALID_TRANSITION / STATUS_UNCHANGED
+   * (someone else already moved the booking, or the old status is no longer
+   * reachable), so the dialog shows the banner AND a destructive toast that
+   * carries the reason code.
+   */
+  async function undoStatus(previousStatus: string, originalNote: string) {
+    try {
+      await adminApi.patch(`/admin/bookings/${detail.id}/status`, token, {
+        status: previousStatus,
+        ...(originalNote ? { note: originalNote } : {}),
+      });
+      const fresh = await adminApi.get<Booking>(`/admin/bookings/${detail.id}`, token);
+      setDetail(fresh);
+      setSaved(t(statusKey(previousStatus)));
+      onChanged();
+      push("success", t("toast_undo_done"));
+    } catch (e) {
+      if ((e as Error).message === "NOT_AUTHENTICATED") {
+        handleSessionExpired();
+        return;
+      }
+      const reason = (e as Error).message;
+      setError(reason || t("admin_error_generic"));
+      push("danger", reason ? t("toast_undo_failed").replace("{error}", reason) : t("toast_undo_error"));
     }
   }
 

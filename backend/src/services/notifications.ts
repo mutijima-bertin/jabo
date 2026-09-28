@@ -20,6 +20,7 @@ import {
 } from "./emailTemplates";
 import * as notificationLogModel from "../models/notificationLog.model";
 import * as bookingModel from "../models/booking.model";
+import { notifyAdmin } from "./adminNotifications";
 
 /**
  * Run an async function in the background, detached from the request path.
@@ -37,14 +38,37 @@ async function log(entry: {
   ok: boolean;
   error?: string;
 }) {
+  const status: "sent" | "skipped" | "failed" =
+    entry.ok
+      ? "sent"
+      : entry.error === "SMTP not configured" || entry.error?.includes("Zavu API key not configured")
+        ? "skipped"
+        : "failed";
   await notificationLogModel.create({
     bookingId: entry.bookingId,
     channel: entry.channel,
     kind: entry.kind,
     recipient: entry.recipient,
-    status: entry.ok ? "sent" : entry.error === "SMTP not configured" || entry.error?.includes("Zavu API key not configured") ? "skipped" : "failed",
+    status,
     error: entry.error,
   });
+  // In-app admin bell: SEND_FAILED fires exactly where the failure is recorded
+  // (one row per failed delivery attempt). Fire-and-forget; notifyAdmin swallows
+  // its own errors, so the log audit row above can never be lost to a bell-side
+  // hiccup, and the sender path never waits on the bell.
+  if (status === "failed") {
+    runFireAndForget(() =>
+      notifyAdmin(
+        "SEND_FAILED",
+        {
+          channel: entry.channel,
+          recipient: entry.recipient,
+          error: entry.error ? entry.error.slice(0, 200) : null,
+        },
+        null
+      )
+    );
+  }
 }
 
 /**

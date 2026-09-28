@@ -3,6 +3,7 @@ import { BookingStatus } from "@prisma/client";
 import { env } from "../config/env";
 import { generateMagicToken } from "./magiclink";
 import { notifyAdminBookingReceived, notifyClientBookingReceived, notifyClientReviewRequest, notifyClientStatusChanged, runFireAndForget } from "./notifications";
+import { notifyAdmin } from "./adminNotifications";
 import * as bookingModel from "../models/booking.model";
 import * as clientModel from "../models/client.model";
 import * as serviceModel from "../models/service.model";
@@ -83,6 +84,15 @@ export async function createBooking(input: CreateBookingInput): Promise<{ bookin
   // Fire-and-forget — booking creation must never wait on external notification sends.
   runFireAndForget(() => notifyClientBookingReceived(booking, token));
   runFireAndForget(() => notifyAdminBookingReceived(booking, service.nameEn));
+  // In-app admin bell: NEW_BOOKING, deep-linked to the bookings tab. fire-and-forget;
+  // notifyAdmin never throws, so this can never break the caller.
+  runFireAndForget(() =>
+    notifyAdmin(
+      "NEW_BOOKING",
+      { bookingId: booking.id, reference: booking.reference, clientName: booking.contactName, serviceName: service.nameEn },
+      `?tab=bookings&open=${booking.id}`
+    )
+  );
 
   return { booking, token };
 }
@@ -103,6 +113,15 @@ export async function updateBookingStatus(bookingId: string, status: BookingStat
   if (status === "DELIVERED") {
     runFireAndForget(() => notifyClientReviewRequest(updated));
   }
+  // In-app admin bell: STATUS_CHANGED (previous -> new), deep-linked to the
+  // booking row. `booking.status` is captured BEFORE the transition above.
+  runFireAndForget(() =>
+    notifyAdmin(
+      "STATUS_CHANGED",
+      { bookingId, reference: updated.reference, from: booking.status, to: updated.status },
+      `?tab=bookings&open=${bookingId}`
+    )
+  );
 }
 
 export async function revokeMagicToken(bookingId: string): Promise<void> {
