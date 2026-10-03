@@ -1,15 +1,24 @@
 import { BRAND } from "@/lib/constants";
 
 /**
- * Canonical origin. Always absolute (metadataBase requirement). Placeholder
- * until production deployment; set NEXT_PUBLIC_SITE_URL to override.
+ * Canonical origin. Always absolute (metadataBase requirement). Falls back to
+ * the production placeholder; set NEXT_PUBLIC_SITE_URL to override.
  *
  * NEXT_PUBLIC_* vars are inlined at BUILD time, which is acceptable here:
  * each deployment builds its own image (`docker compose up -d --build
- * frontend`), so the placeholder is baked in per environment. A real domain
- * later only needs the env var set in the build — no code change.
+ * frontend`), so the value is baked in per environment. A real domain later
+ * only needs the env var set in the build — no code change.
+ *
+ * The `||` is deliberate and must NOT become `??`: the value arrives via a
+ * Dockerfile build ARG (`ARG NEXT_PUBLIC_SITE_URL`), so it is frequently
+ * present-but-EMPTY rather than absent — e.g. docker-compose's
+ * `${NEXT_PUBLIC_SITE_URL:-}` when no .env entry exists, or an unset shell var
+ * exported as "". `??` only falls back on null/undefined, so an empty string
+ * survived it and made `absoluteUrl()` call `new URL(path, "")`, which throws
+ * `TypeError: Invalid URL` and kills the build at "collect page data for
+ * /_not-found". `||` treats empty the same as unset and restores the placeholder.
  */
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://creativesoundstudio.rw";
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://creativesoundstudio.rw";
 
 /**
  * Site-wide <title> default and meta/OG description — shared by the root

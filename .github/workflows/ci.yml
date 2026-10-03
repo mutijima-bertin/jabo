@@ -115,6 +115,7 @@ jobs:
         run: |
           docker build \
             --build-arg BACKEND_URL=http://backend:4000 \
+            --build-arg NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL || 'https://creativesoundstudio.rw' }} \
             -t "ghcr.io/${{ github.repository_owner }}/jabo-frontend:main" \
             -t "ghcr.io/${{ github.repository_owner }}/jabo-frontend:sha-${GITHUB_SHA::7}" \
             ./frontend

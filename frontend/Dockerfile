@@ -13,6 +13,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Backend origin for the /uploads rewrite — read by next.config.ts at build time.
 ARG BACKEND_URL
 ENV BACKEND_URL=$BACKEND_URL
+# Canonical site URL for SEO/OpenGraph — inlined by Next at build time.
+ARG NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN npm run build
 
 FROM base AS runtime
