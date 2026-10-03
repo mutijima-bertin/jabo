@@ -121,6 +121,17 @@ api-design, backend-patterns, coding-standards, frontend-patterns, frontend-slid
 - Chart-tick formatter is shared (`lib/admin-charts.ts`); e2e asserts truncated labels, never untruncated API strings.
 - ALL e2e changes validated against fresh seed via `/tmp/opencode/repro.sh` before pushing (dev DB masks seed-only failures).
 
+### Decisions locked (Cloudflare production hardening — 2026-10-03, UNPUSHED)
+- **Single origin:** `creativesoundstudio.rw`, Cloudflare in front, single server, Caddy terminating Origin CA TLS → Next.js → Express. NO `api.` subdomain (avoids CORS sync + second cert).
+- **GHCR deploy (no build-on-server):** pull prebuilt `ghcr.io/mutijima-bertin/jabo-{backend,frontend}`; server needs PAT scoped `read:packages`. CI publish-images has `continue-on-error: true` (verify digests match commit).
+- **Build arg real:** `NEXT_PUBLIC_SITE_URL` declared as ARG+ENV in frontend Dockerfile; SEO `absoluteUrl()` uses `||` (not `??`) + real default to avoid empty-string `new URL(path,"")` trap.
+- **SSR API origin:** `apiOrigin()` must differ browser/SSR (relative `/api` in browser; SSR cannot use `localhost:4000` inside frontend container — SSR data fetching was broken before; fixed).
+- **Trust proxy:** `trust proxy: 1` is correct because Caddy REPLACES `X-Forwarded-For` with `CF-Connecting-IP` (one entry); do NOT append (`+X-Forwarded-For`) or rate limiting breaks.
+- **Images-only uploads:** video not stored (YouTube embed future). Requires `frame-src` CSP + Lightbox/Portfolio changes if iframes added later.
+- **3 e2e specs documented as failing:** `booking.spec.ts:207`, `client-testimonial.spec.ts:153`, `clients.spec.ts:92` — login-request 5/10min/IP budget exhaustion on full run (do not relax security limit).
+- **Cloudflare Free gotchas:** Rocket Loader can break RSC hydration; Email Address Obfuscation needs `cdnjs.cloudflare.com` decoder (blocked by CSP) so text may stay obfuscated; Bot Fight Mode can lock out admin logins. Both toggles OFF.
+- **Prod hardening:** prod hard-fails without `POSTGRES_PASSWORD`; only `127.0.0.1:3000` and `127.0.0.1:4000` published; no Postgres port. Caddy per-site log valid. `docs/OPERATIONS.md` updated (incl. §10). See `cloudflare-prod-hardening-2026-10-03.md`.
+
 ### Decisions locked (Tier-1 admin)
 - Admin shell is FLUID `max-w-[1600px]` (full-screen feel on wide monitors), `px-4 md:px-6 lg:px-8 py-6`; table cells `px-5 py-3`. User-requested deviation from admin spec §3.3 — treat a "fix" back to a fixed column as a regression.
 - Sticky topbar opens the main column (topbar → mobile pill nav → content); `z-30` topbar < `z-40` bell popover < `z-50` dialogs/palette < `z-[60]` toasts, so Undo raised from inside a dialog stays visible.
