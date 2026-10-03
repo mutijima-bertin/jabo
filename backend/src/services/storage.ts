@@ -5,27 +5,23 @@ import sharp from "sharp";
 
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
 
+// Images only. Video is deliberately NOT stored here: studio video lives on
+// YouTube and is embedded by URL, so keeping an upload path for mp4/webm would
+// only add an unused, expensive-to-serve code path (and a large-body attack
+// surface). isAllowedMime() rejects video, so any attempt to store it fails
+// closed with UNSUPPORTED_FILE_TYPE.
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
 
 // Raster images normalized to WebP on write; GIF is excluded so animation stays intact.
 const WEBP_CONVERSION_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const WEBP_QUALITY = 82;
 const MAX_IMAGE_DIMENSION = 1920;
 
+/** Hard ceiling on the DECODED image bytes, checked before any processing. */
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 export function isAllowedMime(mime: string): boolean {
-  return IMAGE_TYPES.has(mime) || VIDEO_TYPES.has(mime);
-}
-
-export function isVideoMime(mime: string): boolean {
-  return VIDEO_TYPES.has(mime);
-}
-
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 60 * 1024 * 1024;
-
-export function maxBytesFor(mime: string): number {
-  return isVideoMime(mime) ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+  return IMAGE_TYPES.has(mime);
 }
 
 const EXT_BY_MIME: Record<string, string> = {
@@ -33,8 +29,6 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
-  "video/mp4": "mp4",
-  "video/webm": "webm",
 };
 
 export function extFor(mime: string): string {
@@ -53,10 +47,6 @@ export function magicBytesMatch(mime: string, buf: Buffer): boolean {
       return b.length > 5 && (b.toString("ascii", 0, 6) === "GIF87a" || b.toString("ascii", 0, 6) === "GIF89a");
     case "image/webp":
       return b.length > 11 && b.toString("ascii", 0, 4) === "RIFF" && b.toString("ascii", 8, 12) === "WEBP";
-    case "video/mp4":
-      return b.length > 11 && b.toString("ascii", 4, 8) === "ftyp";
-    case "video/webm":
-      return b.length > 3 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3;
     default:
       return false;
   }
@@ -87,18 +77,17 @@ async function convertToWebp(buffer: Buffer): Promise<Buffer> {
 /**
  * Persists a base64 data URL to disk after verifying declared MIME against
  * actual content. JPEG/PNG/WebP images are re-encoded to WebP (quality 82,
- * fitted inside 1920×1920, never upscaled); GIFs and videos are written
- * byte-for-byte. Returns the public URL path.
+ * fitted inside 1920×1920, never upscaled); GIFs are written byte-for-byte so
+ * animation stays intact. Returns the public URL path.
  */
 export async function saveDataUrl(dataUrl: string, mime: string): Promise<string> {
   const match = dataUrl.match(/^data:[^;]+;base64,(.+)$/);
   if (!match) throw new Error("INVALID_DATA_URL");
   const buffer = Buffer.from(match[1], "base64");
-  if (buffer.length > maxBytesFor(mime)) throw new Error("FILE_TOO_LARGE");
+  if (buffer.length > MAX_IMAGE_BYTES) throw new Error("FILE_TOO_LARGE");
   if (!magicBytesMatch(mime, buffer)) throw new Error("CONTENT_MISMATCH");
 
-  const folder = isVideoMime(mime) ? "videos" : "images";
-  const dir = path.join(UPLOADS_DIR, folder);
+  const dir = path.join(UPLOADS_DIR, "images");
   fs.mkdirSync(dir, { recursive: true });
 
   // Size cap + magic bytes above run against the ORIGINAL bytes; conversion
@@ -108,5 +97,5 @@ export async function saveDataUrl(dataUrl: string, mime: string): Promise<string
   const ext = toWebp ? "webp" : extFor(mime);
   const fileName = `${Date.now()}-${crypto.randomBytes(12).toString("hex")}.${ext}`;
   fs.writeFileSync(path.join(dir, fileName), fileBuffer);
-  return `/uploads/${folder}/${fileName}`;
+  return `/uploads/images/${fileName}`;
 }

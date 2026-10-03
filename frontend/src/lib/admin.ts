@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiOrigin } from "./apiOrigin";
 const TOKEN_KEY = "css_admin_token";
 
 export function getToken(): string | null {
@@ -48,7 +48,7 @@ export function useAdminAuth() {
  * login page itself.
  */
 export async function adminFetch<T>(path: string, token: string, opts: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}/api${path}`, {
+  const res = await fetch(`${apiOrigin()}/api${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
@@ -91,7 +91,7 @@ export const adminApi = {
  * the status.
  */
 export async function adminUpload(token: string, dataUrl: string): Promise<{ url: string; remaining?: number }> {
-  const res = await fetch(`${API_URL}/api/admin/uploads`, {
+  const res = await fetch(`${apiOrigin()}/api/admin/uploads`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

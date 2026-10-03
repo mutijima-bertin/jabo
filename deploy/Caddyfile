@@ -1,0 +1,98 @@
+# Caddy — the ONLY public entrypoint to the stack.
+#
+# Topology:
+#
+#   visitor ──TLS──> Cloudflare edge ──TLS──> Caddy (:443) ──HTTP──> Next.js (:3000)
+#                                                            └── /api + /uploads rewritten
+#                                                                               │
+#                                                                       Express API (:4000)
+#
+# Why TLS terminates twice: Cloudflare's edge presents the public certificate,
+# and the edge→origin hop is encrypted with a Cloudflare Origin CA certificate
+# so the site's own Cloudflare SSL mode can be "Full (strict)" rather than
+# "Flexible" (which is plaintext end to end and must never be used).
+#
+# The host firewall must allow 80/443 ONLY from Cloudflare's published IP
+# ranges — that restriction is what actually hides the origin, and it is also
+# what makes the CF-Connecting-IP header below trustworthy.
+#
+# Install:
+#   sudo mkdir -p /etc/caddy && sudo chown caddy:caddy /etc/caddy
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo systemctl reload caddy
+#
+# ---------------------------------------------------------------------------
+# ORIGIN CERTIFICATE — generate in the Cloudflare dashboard:
+#   SSL/TLS → Origin Server → Create Certificate
+#     Hostnames: creativesoundstudio.rw  (and www only if you add a DNS record
+#                for it — the SEO canonical is the APEX, see below)
+#     Validity:  15 years
+#     Key type:  RSA (2048)
+#   Copy the PEM into /etc/caddy/origin-cert.pem and the key into
+#   /etc/caddy/origin-key.pem (chmod 600). Never commit either — .gitignore
+#   already blocks *.pem.
+
+{
+	# No plaintext HTTP admin API; nothing on this box needs it.
+	admin off
+}
+
+creativesoundstudio.rw {
+	tls /etc/caddy/origin-cert.pem /etc/caddy/origin-key.pem
+
+	# Cloudflare overwrites X-Forwarded-For with its own edge IP by default,
+	# which would discard the real visitor address. Re-derive it from
+	# CF-Connecting-IP, which Cloudflare guarantees and which cannot be forged
+	# because the firewall only admits Cloudflare. Express reads this via
+	# `trust proxy` (backend/src/app.ts) to key its rate limiters.
+	#
+	# INVARIANT — this `header_up` must REPLACE the header with exactly one value,
+	# never append. `trust proxy: 1` in backend/src/app.ts tells Express to trust
+	# one hop, i.e. read the RIGHTMOST entry of X-Forwarded-For.
+	#
+	# It is safe to pair a 3-hop chain with `trust proxy: 1` because the header
+	# shape arriving at Express is single-entry:
+	#   - Caddy replaces X-Forwarded-For with CF-Connecting-IP  -> 1 entry
+	#   - Next.js's rewrite proxy forwards that header UNCHANGED (verified: a
+	#     two-entry XFF reaches Express still two-entry), so no hop is appended
+	# Verified locally 2026-10-03 by rate-limit bucketing: varying the leftmost
+	# XFF entry kept the same bucket, varying the rightmost created a new one.
+	# If you ever switch to `header_up +X-Forwarded-For` (append) or Next starts
+	# appending its own hop, raise the trust proxy count to match — see
+	# docs/OPERATIONS.md §10 "Rate limiting behind Cloudflare".
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+	}
+
+	encode zstd gzip
+
+	# Caddy streams request bodies through without buffering or a size cap, so
+	# base64 image uploads (15 MB ceiling, see backend/src/app.ts) pass intact.
+	# Cloudflare's own 100 MB Free-plan cap applies upstream of this hop.
+	log {
+		output file /var/log/caddy/creativesoundstudio.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+		format json
+	}
+}
+
+# Plain HTTP exists only to redirect stragglers. Cloudflare's "Always Use HTTPS"
+# already redirects at the edge, so anything arriving here is direct-to-origin
+# traffic that the firewall should mostly have dropped.
+http://creativesoundstudio.rw {
+	redir https://{host}{uri} permanent
+}
+
+# www is intentionally NOT served.
+#
+# The whole SEO surface is apex-only — there is no www reference anywhere in
+# src/lib/seo.ts, the sitemap, robots.txt or the canonical URLs — so adding a
+# www hostname would create a second origin for the same content and a
+# duplicate-content decision to get wrong. If you ever add a www DNS record,
+# redirect it here instead:
+#
+# http://www.creativesoundstudio.rw, https://www.creativesoundstudio.rw {
+# 	redir https://creativesoundstudio.rw{uri} permanent
+# }

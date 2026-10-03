@@ -1,3 +1,17 @@
+# Base stack — valid for BOTH local dev and production.
+#
+# Hardening that applies everywhere:
+#   - Only the frontend and backend are published, and ONLY on loopback. The
+#     public entrypoint is Caddy (deploy/Caddyfile), which is the sole process
+#     permitted to reach the app. Postgres is never published here.
+#   - The DB password comes from the environment. The fallback exists so a fresh
+#     clone runs locally with zero setup; docker-compose.prod.yml turns it into a
+#     HARD FAILURE, so css123 can never reach a real server.
+#
+# Port publishing is additive across compose files, so removing a published port
+# requires it to be absent from the base file rather than unset in an override.
+# That is why 5432 lives in docker-compose.override.yml (dev-only) and not here.
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -5,10 +19,8 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: css
-      POSTGRES_PASSWORD: css123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-css123}
       POSTGRES_DB: creativesoundstudio
-    ports:
-      - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -26,12 +38,19 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://css:css123@postgres:5432/creativesoundstudio
+      DATABASE_URL: postgresql://css:${POSTGRES_PASSWORD:-css123}@postgres:5432/creativesoundstudio
+      # Public site origin. Drives tracking links (APP_URL), magic-link
+      # dashboard URLs (FRONTEND_URL) and the CORS allowlist (FRONTEND_ORIGIN).
+      # In production all three are https://creativesoundstudio.rw — CORS only
+      # matters as defence in depth now that the browser calls /api same-origin.
       APP_URL: ${APP_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      API_URL: ${API_URL:-http://localhost:4000}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-${ADMIN_EMAIL}}
-      MAGIC_LINK_TTL_HOURS: "168"
+      MAGIC_LINK_TTL_HOURS: ${MAGIC_LINK_TTL_HOURS:-168}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_SECURE: ${SMTP_SECURE:-false}
@@ -42,8 +61,9 @@ services:
       ZAVU_SENDER: ${ZAVU_SENDER:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       UPLOADS_DIR: /app/uploads
+    # Loopback only — Caddy proxies in from the outside; nothing else may reach it.
     ports:
-      - "4000:4000"
+      - "127.0.0.1:4000:4000"
     volumes:
       - uploads-data:/app/uploads
 
@@ -51,18 +71,32 @@ services:
     build:
       context: ./frontend
       args:
-        # Inlined into next.config.ts at build time for the /uploads rewrite.
+        # Inlined into next.config.ts at build time and used for the /api and
+        # /uploads rewrites — this is the container-network origin, never a
+        # public one.
         BACKEND_URL: http://backend:4000
+        # Canonical origin for metadataBase, sitemap, robots and OG URLs.
+        # Build-time only: set NEXT_PUBLIC_SITE_URL in .env (or the shell) when
+        # building to override. The default below is the production domain, NOT
+        # an empty string: the Dockerfile forwards this arg as
+        # `ARG NEXT_PUBLIC_SITE_URL`, so `${VAR:-}` would bake an empty value
+        # into the image whenever .env is silent — which is the normal case —
+        # and src/lib/seo.ts would then have nothing to fall back to. Keep this
+        # in sync with the placeholder in src/lib/seo.ts; see
+        # docs/OPERATIONS.md §10.
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://creativesoundstudio.rw}
     image: jabo-frontend:latest
     container_name: css-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:4000
+      # Server-side rewrite targets (runtime, read by next.config.ts on start).
       BACKEND_URL: http://backend:4000
+    # Loopback only. NEXT_PUBLIC_API_URL is intentionally NOT set: the browser
+    # uses same-origin /api paths, which keeps the image host-agnostic.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
 volumes:
   postgres-data:

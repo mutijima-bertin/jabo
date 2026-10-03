@@ -1,0 +1,16 @@
+# Local-dev only. Docker Compose AUTO-LOADS this file for a bare `docker compose
+# up`, so it applies on a workstation and NEVER on the server (production runs
+# with explicit -f flags, which disables auto-loading).
+#
+# Its only job is publishing Postgres on loopback so host tooling — psql,
+# Prisma Studio, a migration run outside the container — can reach the dev
+# database. The base file deliberately leaves 5432 unpublished; that is what
+# keeps the database unreachable from outside the compose network in production.
+#
+# Loopback (127.0.0.1) rather than a bare port: even in dev the DB should not be
+# listening on every interface.
+
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"

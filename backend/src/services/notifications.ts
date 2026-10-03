@@ -228,7 +228,7 @@ export async function notifyClientReviewRequest(booking: Booking): Promise<void>
  */
 export async function notifyClientLogin(client: { id: string; name: string; email: string | null }, loginUrl: string): Promise<void> {
   if (!client.email) return;
-  const { subject, html } = loginLink({ client, loginUrl });
+  const { subject, html } = loginLink({ client, loginUrl, siteUrl: env.appUrl });
   const clientEmail = client.email;
 
   // CRITICAL e2e invariant: the "Magic login" line must print synchronously in

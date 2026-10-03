@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiOrigin } from "./apiOrigin";
 
 export class ApiError extends Error {
   status: number;
@@ -11,7 +11,7 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}/api${path}`, {
+  const res = await fetch(`${apiOrigin()}/api${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",

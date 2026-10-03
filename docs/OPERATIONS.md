@@ -266,14 +266,17 @@ Details and per-table reference: [docs/DATABASE.md](DATABASE.md).
 | `ADMIN_PASSWORD` | root `.env` | backend | Admin login password | owner's real password — never commit |
 | `JWT_SECRET` | root `.env` | backend | Signs auth tokens. Startup refuses known-insecure values | prod: `openssl rand -hex 32` |
 | `APP_URL` | root `.env` | backend | Base URL for booking *tracking* links (`/track/<token>`) | `http://localhost:3000` / prod: site domain |
-| `FRONTEND_URL` | backend env (default applies) | backend | Base URL for client *portal login* links | default `http://localhost:3000`; **add explicitly for prod** |
-| `FRONTEND_ORIGIN` | backend env (default applies) | backend | CORS allowed origin for browser→API calls | default `http://localhost:3000`; prod: site domain |
+| `FRONTEND_URL` | root `.env` (passed by compose) | backend | Base URL for client *portal login* links | `http://localhost:3000` / prod: site domain |
+| `FRONTEND_ORIGIN` | root `.env` (passed by compose) | backend | CORS allowed origin for browser→API calls | `http://localhost:3000` / prod: site domain |
 | `DATABASE_URL` | compose (auto) / `backend/.env` | backend | Postgres connection string | auto in docker; localhost form for local dev |
+| `POSTGRES_PASSWORD` | root `.env` | postgres | DB password. **Required in prod** (`docker-compose.prod.yml` fails without it) | `css123` in dev only |
 | `ZAVU_API_KEY`, `ZAVU_SENDER` | root `.env` + `backend/.env` | backend | Zavu SMS sending (booking notifications) | live key already in use; keep out of git |
 | `SMTP_HOST/PORT/USER/PASS` | root `.env` | backend | Email sending. **Unconfigured** = emails print to logs instead | empty in dev / prod: real provider required |
-| `MAGIC_LINK_TTL_HOURS` | compose (fixed `"168"`) | backend | Booking tracking-link lifetime | 168 h |
-| `NEXT_PUBLIC_API_URL` | `frontend/.env.local`, compose env | frontend browser code | Address browsers use to reach the API | `http://localhost:4000`; prod: real API URL **at build time** |
-| `BACKEND_URL` | compose build arg + `frontend/.env.local` | next.config.ts | Backend origin for the `/uploads/:path*` rewrite (baked at build) | `http://backend:4000` in docker, `http://localhost:4000` locally |
+| `MAIL_FROM` | root `.env` | backend | From-address. Requires a **verified Resend domain** or sends fail silently | `onboarding@resend.dev` until verified |
+| `MAGIC_LINK_TTL_HOURS` | root `.env` | backend | Booking tracking-link lifetime | 168 h |
+| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | frontend browser code | Overrides the API origin. **Leave empty in prod** — the browser uses same-origin `/api` paths via the rewrite, which keeps the image host-agnostic | empty / dev only |
+| `NEXT_PUBLIC_SITE_URL` | root `.env` (compose build arg) | seo.ts | `metadataBase`, sitemap, robots, OG URLs. Build-time only | `https://creativesoundstudio.rw` |
+| `BACKEND_URL` | compose build arg + runtime env | next.config.ts | Backend origin for the `/api/:path*` and `/uploads/:path*` rewrites | `http://backend:4000` in docker, `http://localhost:4000` locally |
 
 Two rules worth remembering:
 
@@ -281,6 +284,8 @@ Two rules worth remembering:
    A value added only to `backend/.env` will NOT reach the dockerized backend.
 2. Anything `NEXT_PUBLIC_*` is baked into the frontend bundle **at image build time**, not read
    from the environment afterwards. Changing it means rebuilding the frontend image.
+   `NEXT_PUBLIC_API_URL` is deliberately empty in production so there is nothing to rebuild
+   when the domain changes; `NEXT_PUBLIC_SITE_URL` is the one that genuinely must be baked.
 
 ---
 
@@ -298,19 +303,44 @@ cd frontend && npm run lint
 cd frontend && npx playwright test
 ```
 
-Playwright facts (`frontend/playwright.config.ts`): base URL `http://localhost:3000`, Chromium,
-failed tests retried once, traces kept for failures. Tests drive the **real** site at :3000 and
-API at :4000 — start docker first (`docker compose up -d`), then test.
+Playwright facts (`frontend/playwright.config.ts`): base URL `http://localhost:3000`
+(override with `E2E_BASE_URL`), Chromium, failed tests retried once, traces kept for failures.
+Tests drive the **real** site at :3000 and the API behind it — start docker first
+(`docker compose up -d`), then test.
 
-**Rate-limit caveat:** two login-endpoint limiters guard against enumeration —
-`/api/clients/login-request` at **5 req / 10 min / IP** and `/api/auth/login` at **10 req / 10 min / IP**
-(`TOO_MANY_ATTEMPTS`). The suite stays under budget, but back-to-back full runs within 10 minutes can
-flake on HTTP 429 from either. Wait ~10 minutes between full reruns.
+**Known-failing specs — rate limiting (verified 2026-10-03, NOT fixed).** Three specs fail
+deterministically on a full run, on a cold backend, *before and after* the Cloudflare hardening:
 
-**Security posture (2026-09-11):** admin uploads rate-limited to 20/hr/IP, post views/likes to 240/hr/IP;
+```
+booking.spec.ts:207          dashboard lists all bookings and opens the timeline
+client-testimonial.spec.ts:153  client submits a testimonial
+clients.spec.ts:92           magic link logs the client in
+```
+
+Cause: every request originates from one IP when the suite runs locally, and
+`/api/clients/login-request` allows only **5 req / 10 min / IP**. The three specs above each request
+a magic link, so a single full run exhausts the budget and the UI never reaches
+"Check your email". Reproduced identically on unmodified `HEAD`, so it is pre-existing and not a
+regression from the single-origin rewrite.
+
+Confirm the cause before investigating further — `POST /api/clients/login-request` answers
+`429 TOO_MANY_ATTEMPTS` once the budget is gone. Real fixes, none taken yet (they change either a
+security limit or test behaviour, so they need a decision): make the limit configurable via env and
+raise it under test, or give those specs their own limiter budget.
+
+`admin-notifications.spec.ts` is separately **order/state flaky**: it passes 4/4 in isolation but can
+fail after repeated full runs against a database that has accumulated notifications. Reset the
+database between runs rather than chasing it.
+
+**Security posture (2026-09-11, updated 2026-10-03):** admin uploads rate-limited to 20/hr/IP, post views/likes to 240/hr/IP;
 all three containers run as non-root (uid 1000, uploads dir chowned);
-a Content-Security-Policy header is served on every frontend route — in production the `connect-src`
-directive must point at the public API origin, not `http://localhost:4000`.
+a Content-Security-Policy header is served on every frontend route.
+
+In production `connect-src` is `'self'` **only** — the browser reaches the API through the
+`/api/:path*` rewrite on the same origin, so no external origin is needed. `http://localhost:4000`
+is added back only in development. The CSP deliberately excludes `cdnjs.cloudflare.com`: that CDN
+hosts Cloudflare's email-obfuscation decoder and Rocket Loader bootstrap, and allowing it would
+re-open both failure modes described in §10. `frontend/e2e/seo.spec.ts` enforces this.
 
 ---
 
@@ -381,28 +411,124 @@ the warning is safe to ignore — pages render correctly.
 
 ## 10. Going live — production checklist
 
-Hosting-provider-neutral (any VPS or host that runs Docker). Work top to bottom.
+Target shape: **one public hostname, Cloudflare in front, one server, Docker Compose.**
 
-**Secrets and accounts**
+```
+visitor ──TLS──> Cloudflare ──TLS──> Caddy (:443) ──HTTP──> Next.js (:3000)
+                                                          └── /api + /uploads ──> Express (:4000)
+                                                                    Postgres: unpublished, compose-internal only
+```
 
-- [ ] Set a strong `ADMIN_PASSWORD` and a unique `JWT_SECRET` (`openssl rand -hex 32`). Never reuse dev values.
-- [ ] Keep the real `.env` out of git (it is gitignored; `.env.example` documents the shape).
+Single-origin is deliberate. The browser calls `/api` on the same hostname and
+`next.config.ts` rewrites it to the backend, so there is no `api.` subdomain, no CORS
+handshake to keep in sync, and one certificate to manage.
 
-**Email — make magic links actually arrive**
+### DNS — Cloudflare (do this before the server exists)
 
-- [ ] Fill `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` with a real transactional email provider. Until then, client portal links only exist in container logs.
+| Type | Name | Value | Proxy |
+|------|------|-------|-------|
+| A | `@` | server IPv4 | **Proxied (orange)** |
 
-**URLs and origins**
+Do **not** add a `www` record. The SEO surface is apex-only — no `www` reference exists in
+`seo.ts`, the sitemap, `robots.txt`, or any canonical — so a second hostname would only create
+a duplicate-content decision. `deploy/Caddyfile` carries a commented redirect if you ever want one.
 
-- [ ] Set `FRONTEND_URL` (portal login links) and `APP_URL` (tracking links) to the real site domain — note neither is currently passed in `docker-compose.yml`; add them to the backend `environment:` block.
-- [ ] Set `FRONTEND_ORIGIN` to the same domain (CORS allows exactly this origin for browser→API calls).
-- [ ] Browser-side code reaches the API at whatever `NEXT_PUBLIC_API_URL` was at **build time**; pass it as a frontend build arg pointing at the public API URL (e.g. `https://api.yourdomain.rw`) and rebuild. Also point `BACKEND_URL` at the same public origin so `/uploads` keeps working.
+- [ ] Resend: **"Sign in to Cloudflare"** on the sending domain's Records tab (Domain Connect) —
+      this writes the SPF/DKIM records correctly. Skip the manual table below if you use it.
+- [ ] Manual fallback (paste values verbatim from Resend; it validates exact strings):
 
-**HTTPS**
+  | Type | Name | Value | Proxy |
+  |------|------|-------|-------|
+  | MX | `send` | `feedback-smtp.<region>.amazonses.com` | n/a |
+  | TXT | `send` | `v=spf1 include:amazonses.com ~all` | grey |
+  | TXT | `resend._domainkey` | `p=…` (copy from Resend) | **grey** |
+  | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:hello@creativesoundstudio.rw` | grey |
 
-- [ ] Terminate TLS with a reverse proxy in front of the stack (Caddy or nginx+certbot) forwarding :80/:443 → :3000, plus the API hostname → :4000. Do not expose raw ports to the internet.
+  Three traps: append a **trailing dot** to the MX value or Cloudflare appends your domain to it;
+  omit your domain from the *names* (Resend shows `send.example.com`, Cloudflare wants `send`);
+  and DKIM records must be **DNS-only** — proxied records never resolve as CNAME/MX and
+  verification silently fails. Domains created after August 2026 may show CNAME records instead
+  of the MX/TXT pair; follow Resend's table when it does.
 
-**Data safety**
+### Cloudflare settings — check every one of these
+
+- [ ] **SSL/TLS → Full (strict).** Not Flexible (plaintext edge→origin). Create an Origin Server
+      certificate (hostnames: `creativesoundstudio.rw`, RSA 2048, 15 years) and install the
+      PEM/key per `deploy/Caddyfile`.
+- [ ] **Speed → Optimization → Rocket Loader: OFF.** It adds `data-cfasync="false"` to every
+      `<script>`, inverting the ordered execution Next's RSC hydration depends on. The symptom
+      is `Uncaught ReferenceError: $RC is not defined` or a page that renders but is dead to
+      clicks. Our CSP cannot prevent this — the attribute rewrite lands before CSP is evaluated.
+- [ ] **Scrape Shield → Email Address Obfuscation: OFF.** It replaces email text nodes with
+      `data-cfemail` ciphertext and relies on a `cdnjs.cloudflare.com` decoder that our CSP
+      blocks, so the address would stay encrypted permanently. `/contact` renders the address
+      as its primary call to action, so this is a revenue-path break. It rewrites text nodes
+      only, so the `mailto:` href would keep working while the visible label turned to a hex
+      string — the worst kind of half-broken.
+- [ ] **Security → Settings → Bot Fight Mode:** note its state. On the Free plan you cannot write
+      a WAF exception, so if it challenges your own `/admin` logins the only fix is turning it off.
+- [ ] **Always Use HTTPS** and **Automatic HTTPS Rewrites**: on.
+- [ ] Leave caching at default. Cloudflare does not cache HTML without "Cache Everything", so
+      canonicals, OG tags and `sitemap.xml` pass through untouched. Optionally add one Cache Rule
+      for `/uploads/*` (Free includes 10).
+
+### Server
+
+- [ ] Provision a host (Hetzner CX/CPX in Falkenstein/Nuremberg/Helsinki, or Vultr Johannesburg for
+      the shortest Kigali path). 2 vCPU / 4 GB covers all three containers with room to spare.
+- [ ] Install Docker + Compose, then allow **only Cloudflare's IP ranges** on 80/443. This is what
+      actually hides the origin — and it is what makes the `CF-Connecting-IP` header that
+      `deploy/Caddyfile` forwards trustworthy.
+- [ ] Strong `ADMIN_PASSWORD`, unique `JWT_SECRET` (`openssl rand -hex 32`), and
+      `POSTGRES_PASSWORD` (`openssl rand -hex 32`). The prod compose file fails hard if the last
+      one is missing, so `css123` cannot reach a real server.
+
+### URLs and origins
+
+- [ ] `APP_URL`, `FRONTEND_URL`, `FRONTEND_ORIGIN` = `https://creativesoundstudio.rw`.
+      Compose now passes all three — previously `FRONTEND_URL`/`FRONTEND_ORIGIN` were missing,
+      so magic links would have emitted `localhost:3000`.
+- [ ] Leave `NEXT_PUBLIC_API_URL` **empty** (same-origin rewrite handles it) and set
+      `NEXT_PUBLIC_SITE_URL=https://creativesoundstudio.rw`.
+
+### Rate limiting behind Cloudflare
+
+The chain to Express is client → Cloudflare → Caddy → Next → Express, which is more hops than
+the usual single-proxy case, so `trust proxy` deserves a word.
+
+`app.set("trust proxy", 1)` (in `backend/src/app.ts`) tells Express to read the **rightmost**
+entry of `X-Forwarded-For`. That stays correct for a 3-hop chain only because of two properties,
+both verified on 2026-10-03 against the running stack:
+
+- Caddy **replaces** `X-Forwarded-For` with `CF-Connecting-IP`, leaving one entry.
+  (`header_up X-Forwarded-For {...}` replaces. `header_up +X-Forwarded-For {...}` appends and
+  would break this — do not "fix" it that way.)
+- Next's rewrite proxy **forwards that header unchanged**, so no extra hop is appended. Proof: a
+  two-entry XFF arrives at Express still two-entry, and rate-limit bucketing followed the
+  rightmost entry.
+
+Behaviour to preserve: two visitors get separate budgets on `/api/auth/login` (10/10min/IP) and
+`/api/admin/uploads` (20/hr/IP). The failure mode to watch for is the opposite — every visitor
+sharing one budget, so strangers lock each other out.
+
+Re-verify after any change to Caddy or the proxy setup:
+
+```sh
+# 9 requests from one "IP", then a 10th -> 429
+for i in $(seq 1 10); do curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+  http://localhost:3000/api/auth/login -H 'Content-Type: application/json' \
+  -H 'X-Forwarded-For: 203.0.113.9' \
+  -d '{"email":"nobody@example.com","password":"wrong"}'; done
+# a different forwarded IP must still show a full budget
+curl -sI -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' \
+  -H 'X-Forwarded-For: 198.51.100.42' \
+  -d '{"email":"nobody@example.com","password":"wrong"}' | grep -i ratelimit
+```
+
+Spoofed `X-Forwarded-For` values create their own buckets, so this does not consume the local
+`127.0.0.1` budget the Playwright suite relies on.
+
+### Data safety
 
 - [ ] Data lives in named volumes `postgres-data` and `uploads-data`. They survive `docker compose down` but NOT host loss — back both up.
 - [ ] Nightly database dump (cron):
@@ -418,19 +544,85 @@ Hosting-provider-neutral (any VPS or host that runs Docker). Work top to bottom.
   (Volume name is prefixed with the compose project name; check with `docker volume ls`.)
 - [ ] Test a restore once: `cat backup.sql | docker exec -i css-postgres psql -U css -d creativesoundstudio` into a scratch database.
 
-**Releases**
+### Releases (manual SSH)
 
-- [ ] Deploy = pull code, `docker compose build backend frontend`, `docker compose up -d`. Migrations apply automatically on backend boot (`migrate deploy`) — no manual schema steps.
-- [ ] After each release, smoke-test (section 2 checks) and eyeball `docker compose logs --tail=20 backend`.
+- [ ] **Authenticate to GHCR** (packages are private by default). Create a GitHub PAT scoped
+      `read:packages` (sufficient for pulling), run as the user that runs compose, and never
+      commit or echo the token to logs/history:
+  ```sh
+  echo "$GHCR_PAT" | docker login ghcr.io -u mutijima-bertin --password-stdin
+  ```
 
-**Monitoring basics**
+- [ ] Pull prebuilt images — CI publishes `ghcr.io/mutijima-bertin/jabo-{frontend,backend}` on
+      merge to `main`. Explicit `-f` flags are required, which also stops Compose auto-loading
+      the dev override that publishes Postgres. **Verify the images are fresh before deploying**
+      (see note below):
+  ```sh
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
+  ```
+  Migrations apply automatically on backend boot (`migrate deploy`) — no manual schema steps.
 
-- [ ] Watch `/api/health` (returns `{status:"ok",db:"up"}`, HTTP 503 when the DB is down) with any uptime checker.
+- [ ] **Verify image freshness.** CI's `publish-images` job has `continue-on-error: true`; if the
+      GHCR push fails, CI stays green and `:main` still points at the PREVIOUS commit's image.
+      Before deploying, confirm the remote digests match the commit being deployed:
+  ```sh
+  docker manifest inspect ghcr.io/mutijima-bertin/jabo-backend:main
+  docker manifest inspect ghcr.io/mutijima-bertin/jabo-frontend:main
+  ```
+      Compare the digest from these manifests against what you expect for the deployed commit.
+      A mismatch means the publish failed — re-run the workflow or fall back to building on the
+      server.
+- [ ] After each release, smoke-test (section 2 checks) and eyeball
+      `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=20 backend`.
+
+### Post-deploy verification
+
+`frontend/e2e/seo.spec.ts` is **read-only** (only `goto`/`get`), so it is the one spec safe to
+point at production. Scope it explicitly — the rest of the suite creates bookings and
+testimonials and must never run against the live site.
+
+- [ ] Confirm the Cloudflare toggles against the real response, not just the dashboard:
+  ```sh
+  curl -s https://creativesoundstudio.rw | grep -c 'data-cfasync'                    # 0
+  curl -s https://creativesoundstudio.rw | grep -c 'data-cfemail'                     # 0
+  curl -s https://creativesoundstudio.rw | grep -c 'hello@creativesoundstudio.rw'    # >0
+  ```
+- [ ] Run the automated guard (asserts all three, plus the CSP excludes the Cloudflare CDN):
+  ```sh
+  cd frontend && E2E_BASE_URL=https://creativesoundstudio.rw npx playwright test e2e/seo.spec.ts
+  ```
+  The edge-transform test reports SKIPPED without `E2E_BASE_URL` — it cannot detect Cloudflare
+  from localhost, so never read a green local run as proof.
+
+- [ ] `curl -s https://creativesoundstudio.rw/api/health` → `{"status":"ok","db":"up"}`.
+- [ ] Submit a test booking; confirm the confirmation email's tracking link is
+      `https://creativesoundstudio.rw/track/<token>` and not `localhost`.
+- [ ] Upload one image in the admin panel; confirm it renders through `/uploads/*`.
+- [ ] Watch `/api/health` with an uptime checker (HTTP 503 when the DB is down).
 - [ ] Restart policy is already `unless-stopped` on all three services — containers come back after reboot/crash.
-- [ ] Glance at `docker compose logs` weekly; the backend crashes loudly instead of silently, so absence of FATAL lines is meaningful.
+- [ ] Glance at the logs weekly; the backend crashes loudly instead of silently, so absence of FATAL lines is meaningful.
+
+### Known launch limits
+
+- [ ] **Video is not stored.** Studio video lives on YouTube and is embedded by URL. Uploads accept
+      images only (`isAllowedMime` rejects `video/*`); the JSON body ceiling is 15 MB, which covers
+      a 10 MB image after base64 inflation. Cloudflare's Free-plan 100 MB request cap is therefore
+      never the binding constraint.
+- [ ] `mediaType: "video"` still exists on portfolio items but only changes an alt-text word
+      ("videography" vs "photography") — it does not alter rendering. YouTube embeds would need a
+      separate feature: a real video URL field, an iframe branch in `Lightbox.tsx`, a poster image
+      plus play glyph in `PortfolioGrid`, and a `frame-src` directive in the CSP (there is none
+      today, so iframes fall back to `default-src 'self'` and are blocked).
+- [ ] A CI-built frontend image gets `NEXT_PUBLIC_SITE_URL` as a build arg (via the GitHub Actions
+      repository variable `vars.NEXT_PUBLIC_SITE_URL`, defaulting to `https://creativesoundstudio.rw`)
+      and is inlined at build time by `frontend/Dockerfile`. This replaces the implicit fallback;
+      the value is explicit and configurable.
 
 ---
 
-*Every fact in this file was verified against the repository on 2026-08-24: `docker-compose.yml`,
-both Dockerfiles, `backend/src/index.ts`, `backend/src/config/env.ts`, service/controller sources,
-`frontend/next.config.ts`, Playwright config and specs, and `docs/DATABASE.md`.*
+*Every fact in this file was verified against the repository on 2026-10-03: `docker-compose.yml`,
+`docker-compose.override.yml`, `docker-compose.prod.yml`, `deploy/Caddyfile`, both Dockerfiles,
+`backend/src/index.ts`, `backend/src/app.ts`, `backend/src/config/env.ts`, `backend/src/services/storage.ts`,
+`backend/src/services/emailTemplates.ts`, `frontend/next.config.ts`, `frontend/src/lib/apiOrigin.ts`,
+Playwright config and specs, and `docs/DATABASE.md`.*

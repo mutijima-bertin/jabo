@@ -1,0 +1,23 @@
+# Production overlay. Apply with EXPLICIT -f flags, which also stops Compose
+# from auto-loading docker-compose.override.yml (the dev file that publishes
+# Postgres on 5432):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-build
+#
+# What this changes vs the base file:
+#   1. POSTGRES_PASSWORD has no dev fallback — omitting it fails the deploy
+#      immediately instead of silently shipping css123.
+#   2. Images are pulled from GHCR (published by .github/workflows/ci.yml) and
+#      tagged per release, rather than built on the server.
+
+services:
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the production .env (openssl rand -hex 32)}
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER:-mutijima-bertin}/jabo-backend:${IMAGE_TAG:-main}
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER:-mutijima-bertin}/jabo-frontend:${IMAGE_TAG:-main}

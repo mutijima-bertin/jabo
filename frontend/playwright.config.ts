@@ -23,7 +23,12 @@ export default defineConfig({
   retries: 1,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:3000",
+    // Default local dev. Override with E2E_BASE_URL to point the suite at a
+    // deployed origin — used to run the read-only specs (seo.spec.ts) against
+    // production for the Cloudflare edge-transform checks, which cannot be
+    // exercised from localhost because Cloudflare is not in that request path.
+    // Never point the mutating specs at production.
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "retain-on-failure",
   },
   // "setup" logs in ONCE and writes e2e/.auth/admin.json (see e2e/auth.ts for

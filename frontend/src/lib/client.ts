@@ -5,7 +5,8 @@
  * token storage (css_admin_token in src/lib/admin.ts) so a client session
  * never collides with an admin session in the same browser.
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+import { apiOrigin } from "./apiOrigin";
+
 const TOKEN_KEY = "css_client_token";
 
 export function getClientToken(): string | null {
@@ -23,7 +24,7 @@ export function clearClientToken() {
 
 /** Authenticated fetch for client endpoints. Throws "NOT_AUTHENTICATED" on 401 (stale/expired JWT). */
 export async function clientFetch<T>(path: string, token: string, opts: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_URL}/api${path}`, {
+  const res = await fetch(`${apiOrigin()}/api${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",

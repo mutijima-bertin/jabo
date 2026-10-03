@@ -219,6 +219,8 @@ export function statusChanged(params: {
 export function loginLink(params: {
   client: { name: string | null };
   loginUrl: string;
+  /** Public site origin (APP_URL) — shown as the fallback link under the CTA. */
+  siteUrl: string;
 }): { subject: string; html: string } {
   const subject = "Access your booking dashboard — Creative Sound Studio";
   const body = `
@@ -233,7 +235,9 @@ export function loginLink(params: {
       preheader: "Your booking dashboard sign-in link (valid 15 minutes)",
       body,
       cta: { href: params.loginUrl, label: "Open my dashboard" },
-      subLink: { href: "https://creativesoundstudio.rw", label: "creativesoundstudio.rw" },
+      // Public site origin from APP_URL — previously hardcoded to the domain,
+      // which broke silently on any other deployment target.
+      subLink: { href: params.siteUrl, label: params.siteUrl.replace(/^https?:\/\//, "") },
     }),
   };
 }

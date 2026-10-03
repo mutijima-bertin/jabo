@@ -37,6 +37,14 @@ interface PostSummary {
 const PUBLIC_PAGES = ["/", "/services", "/about", "/portfolio", "/blog", "/book", "/contact", "/track"] as const;
 
 /**
+ * True only when E2E_BASE_URL points at a non-localhost origin. Gates the checks
+ * that assert on Cloudflare's edge behaviour — those are unreachable from
+ * localhost by definition, so they must report as SKIPPED (honest: no coverage)
+ * rather than PASSED (a false claim of coverage).
+ */
+const RUNS_AGAINST_PROD = /^https?:\/\/(?!localhost\b|127\.0\.0\.1)/.test(process.env.E2E_BASE_URL ?? "");
+
+/**
  * Next.js metadata rendering strips a single trailing slash from URL-shaped
  * fields (homepage canonical/og:url render as "…creativesoundstudio.rw" while
  * the app's absoluteUrl("/") value carries one). Compare normalized forms.
@@ -277,5 +285,65 @@ test.describe("SEO contract", () => {
         expect(content, `robots content on ${path}`).toContain("nofollow");
       }
     }
+  });
+
+  /**
+   * Cloudflare edge-transform guard — Rocket Loader + email obfuscation.
+   *
+   * Both features rewrite the response at Cloudflare's edge and break this app
+   * in ways that never surface locally:
+   *
+   *  - Email Obfuscation replaces email text nodes with `data-cfemail`
+   *    ciphertext and relies on a cdnjs.cloudflare.com decoder script. Our CSP
+   *    blocks that CDN, so if the feature were ever enabled the address would
+   *    stay encrypted forever and the contact page CTA would read as a hex
+   *    string. `/contact` renders hello@… as its PRIMARY call to action, so
+   *    that is a revenue-path break, not cosmetic.
+   *  - Rocket Loader adds `data-cfasync="false"` to every <script>, inverting
+   *    the ordered execution Next's RSC hydration depends on. This one is NOT
+   *    mitigated by the CSP: the attribute rewrite happens before CSP is even
+   *    evaluated, so blocking the bootstrap script cannot undo it.
+   *
+   * Tier 1 runs everywhere (it asserts OUR header, so it has teeth on
+   * localhost). Tier 2 requires E2E_BASE_URL, because Cloudflare is not in the
+   * localhost request path and a local run could never observe either feature.
+   */
+  const CDN = "cdnjs.cloudflare.com";
+  const CONTACT_EMAIL = "hello@creativesoundstudio.rw";
+
+  test("CSP keeps the Cloudflare CDN out of script-src", async ({ request }) => {
+    for (const path of ["/", "/contact"]) {
+      const res = await request.get(path);
+      expect(res.status(), `${path} must respond`).toBe(200);
+      const csp = res.headers()["content-security-policy"] ?? "";
+      expect(csp, `CSP header must be present on ${path}`).not.toBe("");
+      expect(csp, `script-src must be self-only on ${path}`).toContain("script-src 'self'");
+      // The safety net for email obfuscation: its decoder is on the Cloudflare
+      // CDN, so allowing that origin would re-enable the encrypted-text failure.
+      expect(csp, `CSP must not allow ${CDN} on ${path}`).not.toContain(CDN);
+    }
+  });
+
+  test("Cloudflare injects no Rocket Loader / email-obfuscation transforms", async ({ request }) => {
+    test.skip(
+      !RUNS_AGAINST_PROD,
+      "edge transforms only exist behind Cloudflare — set E2E_BASE_URL=https://<domain> to enforce",
+    );
+
+    for (const path of ["/", "/contact"]) {
+      const res = await request.get(path);
+      const html = await res.text();
+
+      expect(html, `no email obfuscation on ${path}`).not.toContain("data-cfemail");
+      expect(html, `no Rocket Loader on ${path}`).not.toContain("data-cfasync");
+      expect(html, `no Cloudflare obfuscation spans on ${path}`).not.toContain("__cf_email__");
+      expect(html, `no Cloudflare CDN script on ${path}`).not.toContain(CDN);
+    }
+
+    // The positive assertion: the address must be real, readable text. The
+    // negative checks above only prove absence — this proves the email still
+    // renders, which is what the contact CTA depends on.
+    const contact = await request.get("/contact");
+    expect(await contact.text(), "/contact must render the contact email as plain text").toContain(CONTACT_EMAIL);
   });
 });

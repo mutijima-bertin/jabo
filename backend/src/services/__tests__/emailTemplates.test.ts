@@ -183,11 +183,39 @@ describe("layout footer", () => {
 
 describe("loginLink", () => {
   it("points the CTA at the magic login URL", () => {
-    const mail = loginLink({ client: { name: "Alain" }, loginUrl: "http://localhost:3000/login?token=css_abc" });
+    const mail = loginLink({
+      client: { name: "Alain" },
+      loginUrl: "http://localhost:3000/login?token=css_abc",
+      siteUrl: "http://localhost:3000",
+    });
     expect(mail.subject).toBe("Access your booking dashboard — Creative Sound Studio");
     expect(mail.html).toContain("http://localhost:3000/login?token=css_abc");
     expect(mail.html).toContain("Open my dashboard");
     expect(mail.html).toContain("15 minutes");
+  });
+
+  it("derives the sub-link from siteUrl, not a hardcoded domain", () => {
+    const mail = loginLink({
+      client: { name: "Alain" },
+      loginUrl: "https://creativesoundstudio.rw/login?token=css_abc",
+      siteUrl: "https://creativesoundstudio.rw",
+    });
+    // Host shown as the visible label, full origin as the href.
+    expect(mail.html).toContain(">creativesoundstudio.rw<");
+    expect(mail.html).toContain('href="https://creativesoundstudio.rw"');
+
+    // A different deployment target must be honoured end to end.
+    const staging = loginLink({
+      client: { name: "Alain" },
+      loginUrl: "https://staging.example.com/login?token=css_abc",
+      siteUrl: "https://staging.example.com",
+    });
+    expect(staging.html).toContain(">staging.example.com<");
+    expect(staging.html).toContain('href="https://staging.example.com"');
+    // The SUB-LINK must come from siteUrl. Scoped to the ">host<" label form:
+    // the email footer legitimately keeps the studio's real contact address
+    // (hello@creativesoundstudio.rw), which is a brand fact, not a deploy target.
+    expect(staging.html).not.toContain(">creativesoundstudio.rw<");
   });
 });
 
