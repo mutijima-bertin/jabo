@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import type { Testimonial } from "@/lib/api";
 import { cardSurface } from "@/lib/ui";
 import { SectionTitle } from "@/components/shared/SectionTitle";
@@ -47,7 +48,7 @@ export function TestimonialsSection({ items }: { items: Testimonial[] }) {
         {hidden > 0 && (
           <p className="mt-8 text-center text-sm text-ink/50">
             <Link
-              href="/book"
+              href={localizedPath(locale, "/book")}
               className="font-semibold text-brass-deep underline decoration-2 underline-offset-4 transition hover:text-brass"
             >
               {t("testimonials_more").replace("{n}", String(hidden))}

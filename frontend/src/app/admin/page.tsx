@@ -18,6 +18,7 @@ import { BRAND } from "@/lib/constants";
 import { clearToken, useAdminAuth } from "@/lib/admin";
 import { formatDate } from "@/lib/format";
 import { useI18n, type DictKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { ToastProvider } from "@/lib/toast";
 import {
   accountChip,
@@ -174,10 +175,13 @@ function AdminShellInner() {
   );
 
   // Logout is cheap and reversible — no confirm (spec §4.2).
+  // The bare "/" is a 308 to /en now (src/proxy.ts), which would cost a
+  // redirect hop and show EN even to a Kinyarwanda-preferring admin — so send
+  // them straight to the localized home in their own language.
   const logout = useCallback(() => {
     clearToken();
-    router.replace("/");
-  }, [router]);
+    router.replace(localizedPath(locale, "/"));
+  }, [locale, router]);
 
   // `g` + key → tab jump. Registered at the shell level (like the palette's own
   // ⌘K listener) so the chord works from every admin tab, and it reuses

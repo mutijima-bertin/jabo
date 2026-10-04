@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { CheckCircle2, Circle, Loader2, Mail, Phone } from "lucide-react";
 import { api, type Booking } from "@/lib/api";
 import { STATUS_ORDER, statusKey, useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { WhatsAppIcon } from "@/components/shared/social-icons";
@@ -170,7 +171,7 @@ export default function TrackPage() {
           </a>
         </div>
         <Link
-          href="/book"
+          href={localizedPath(locale, "/book")}
           className="mt-4 inline-block text-sm font-semibold text-ink/50 transition hover:text-brass"
         >
           {t("track_book_another")}

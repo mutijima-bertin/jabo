@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import NotFoundContent from "./NotFoundContent";
+import NotFoundContent from "@/components/site/NotFoundContent";
 
 // SEO phase 3: Next.js already injects `noindex` for 404 responses; the
 // explicit robots block + proper title keep the themed page consistent and

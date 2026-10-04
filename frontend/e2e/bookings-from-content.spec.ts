@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { API, getAdminToken } from "./auth";
+import { en } from "./routes";
 // The category↔service matching util is a pure TS module (no test runner in
 // this repo — only Playwright e2e), so it is covered HERE, driven by the live
 // catalog, instead of introducing a new dev dependency (hard rule).
@@ -10,11 +11,11 @@ import { categoryMatchesService, confidentServiceForCategory } from "../src/lib/
  *
  * Covers:
  *  (a) post pages: reading-time indicator in the meta row, and the per-type
- *      booking CTA whose href is /book?service=<id> when a service lists the
- *      post as its linkedPostSlug, else the generic /book; clicking the
+ *      booking CTA whose href is /en/book?service=<id> when a service lists
+ *      the post as its linkedPostSlug, else the generic /en/book; clicking
  *      prefilled CTA really preselects that service on the booking form.
  *  (b) the portfolio lightbox: the "Book this type" link resolves to the
- *      service the item's category maps to CONFIDENTLY, else /book — asserted
+ *      service the item's category maps to CONFIDENTLY, else /en/book — asserted
  *      both through the UI and through the pure matching util against the
  *      live catalog (the util's e2e coverage).
  *
@@ -142,7 +143,7 @@ test.describe("content journey CTAs", () => {
       });
       expect(put.status(), `link service ${svc!.id} → ${slug}`).toBe(200);
 
-      await page.goto(`/blog/${slug}`);
+      await page.goto(en(`/blog/${slug}`));
       await expect(page.getByRole("heading", { name: `CTA Linked ${RUN}` })).toBeVisible();
 
       // Reading-time indicator in the meta row (words/200, min 1).
@@ -151,11 +152,11 @@ test.describe("content journey CTAs", () => {
       // PROJECT_RECAP CTA label + linked-service href — never guessed.
       const cta = page.locator("article").getByRole("link", { name: "Book a shoot like this", exact: true });
       await expect(cta).toBeVisible();
-      await expect(cta).toHaveAttribute("href", `/book?service=${svc!.id}`);
+      await expect(cta).toHaveAttribute("href", en(`/book?service=${svc!.id}`));
 
-      // Clicking the prefilled CTA lands on /book with the service preselected.
+      // Clicking the prefilled CTA lands on the booking page, service preselected.
       await cta.click();
-      await expect(page).toHaveURL(/\/book\?service=/, { timeout: 10000 });
+      await expect(page).toHaveURL(en(`/book?service=${svc!.id}`), { timeout: 10000 });
       await expect(page.locator("form").locator("select").first()).toHaveValue(svc!.id);
 
       // Restore the service link right away (defensive: before the outer finally).
@@ -198,7 +199,7 @@ test.describe("content journey CTAs", () => {
     }
   });
 
-  test("post without a linked service shows a generic /book CTA with nothing preselected", async ({
+  test("post without a linked service shows a generic booking CTA with nothing preselected", async ({
     page,
     request,
   }) => {
@@ -209,24 +210,24 @@ test.describe("content journey CTAs", () => {
     try {
       post = await createPost(request, slug, `CTA Generic ${RUN}`, "EDUCATIONAL");
 
-      await page.goto(`/blog/${slug}`);
+      await page.goto(en(`/blog/${slug}`));
       await expect(page.getByRole("heading", { name: `CTA Generic ${RUN}` })).toBeVisible();
       await expect(page.locator("article").getByText(/\d+ min read/)).toBeVisible();
 
-      // EDUCATIONAL label; NO service references this slug → bare /book.
+      // EDUCATIONAL label; NO service references this slug → bare booking page.
       const cta = page.locator("article").getByRole("link", { name: "Book a private session", exact: true });
       await expect(cta).toBeVisible();
-      await expect(cta).toHaveAttribute("href", "/book");
+      await expect(cta).toHaveAttribute("href", en("/book"));
 
       await cta.click();
-      await expect(page).toHaveURL(/\/book$/, { timeout: 10000 });
+      await expect(page).toHaveURL(en("/book"), { timeout: 10000 });
       await expect(page.locator("form").locator("select").first()).toHaveValue("");
     } finally {
       if (post) await deletePost(request, post.id);
     }
   });
 
-  test("lightbox 'Book this type' resolves confident category matches, else /book — util covered via live data", async ({
+  test("lightbox 'Book this type' resolves confident category matches — util covered via live data", async ({
     page,
     request,
   }) => {
@@ -252,17 +253,17 @@ test.describe("content journey CTAs", () => {
     // --- UI: first item — href must equal the util's prediction ---
     const first = portfolio[0];
     const firstExpected = confidentServiceForCategory(first.category ?? "", services);
-    const firstHref = firstExpected ? `/book?service=${firstExpected.id}` : "/book";
+    const firstHref = firstExpected ? en(`/book?service=${firstExpected.id}`) : en("/book");
     const firstLabel = firstExpected ? "Book this type of work" : "Book a production";
 
-    await page.goto("/portfolio");
+    await page.goto(en("/portfolio"));
     const cards = page.locator(".grid-cols-1 > button");
     await expect(cards.first()).toBeVisible({ timeout: 10000 });
     await cards.first().click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
-    const bookLink = dialog.locator('a[href*="/book"]').first();
+    const bookLink = dialog.locator(`a[href*="${en("/book")}"]`).first();
     await expect(bookLink).toBeVisible();
     await expect(bookLink).toHaveAttribute("href", firstHref);
     await expect(bookLink).toHaveText(firstLabel);
@@ -280,7 +281,7 @@ test.describe("content journey CTAs", () => {
     await expect(dialog2).toBeVisible();
     const prefilled = dialog2.getByRole("link", { name: "Book this type of work", exact: true });
     await expect(prefilled).toBeVisible();
-    await expect(prefilled).toHaveAttribute("href", `/book?service=${matched.id}`);
+    await expect(prefilled).toHaveAttribute("href", en(`/book?service=${matched.id}`));
     await page.keyboard.press("Escape");
     await expect(dialog2).toHaveCount(0);
   });

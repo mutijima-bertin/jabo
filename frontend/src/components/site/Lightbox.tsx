@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useI18n, type Locale } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import type { PortfolioItem, Service } from "@/lib/api";
 import { cachedServices, confidentServiceForCategory } from "@/lib/services";
 
@@ -148,7 +149,7 @@ export function Lightbox({ items, index, onClose, onNavigate }: LightboxProps) {
   // "Book this type" pre-selects a service ONLY when the item's category maps
   // to exactly one service; ambiguous/unmatched categories go to generic /book.
   const matched = confidentServiceForCategory(item.category ?? "", services);
-  const bookHref = matched ? `/book?service=${matched.id}` : "/book";
+  const bookHref = matched ? localizedPath(locale, `/book?service=${matched.id}`) : localizedPath(locale, "/book");
 
   return (
     <div

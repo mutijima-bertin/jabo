@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { Logo } from "@/components/shared/Logo";
 
 /** Themed 404 — client component so the copy follows the persisted locale
- * (server has no locale context; SSR defaults to English). */
+ * (server has no locale context; SSR defaults to English).
+ *
+ * The two links below are LOCALIZED destinations, so they carry the locale
+ * segment even though this file sits in the bare `(site)` group: the 404 route
+ * itself has no segment, but "/blog" only exists as "/en/blog" or "/rw/blog".
+ * `locale` here is the persisted preference, so a Kinyarwanda-preferring visitor
+ * who hits a bad URL is sent to the Kinyarwanda blog. */
 export default function NotFoundContent() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   return (
     <div className="mx-auto max-w-lg px-4 py-28 text-center md:py-36">
@@ -17,13 +24,13 @@ export default function NotFoundContent() {
       <p className="mt-4 leading-relaxed text-ink/60">{t("notfound_body")}</p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
         <Link
-          href="/"
+          href={localizedPath(locale, "/")}
           className="rounded-full bg-brass-deep px-7 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark"
         >
           {t("notfound_back_home")}
         </Link>
         <Link
-          href="/blog"
+          href={localizedPath(locale, "/blog")}
           className="rounded-full border border-ink/15 px-7 py-3.5 text-sm font-bold text-ink/70 transition hover:border-brass hover:text-brass"
         >
           {t("notfound_read_blog")}

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { portfolioTitle, Lightbox } from "@/components/site/Lightbox";
 import type { PortfolioItem } from "@/lib/api";
 
@@ -76,7 +77,7 @@ export function PortfolioGrid({ items, maxItems }: { items: PortfolioItem[]; max
       <div className="rounded-2xl border border-dashed border-ink/15 bg-white/50 px-6 py-16 text-center">
         <p className="font-serif text-lg text-ink/60">{t("portfolio_empty_title")}</p>
         <Link
-          href="/book"
+              href={localizedPath(locale, "/book")}
           className="mt-5 inline-block text-sm font-semibold text-brass-deep underline decoration-2 underline-offset-4 transition hover:text-brass"
         >
           {t("book_now")}
@@ -121,7 +122,7 @@ export function PortfolioGrid({ items, maxItems }: { items: PortfolioItem[]; max
               {t("portfolio_empty_filter_action")}
             </button>
             <Link
-              href="/book"
+          href={localizedPath(locale, "/book")}
               className="text-sm font-medium text-ink/60 underline-offset-4 transition hover:text-brass-deep hover:underline"
             >
               {t("book_now")}
@@ -171,7 +172,7 @@ export function PortfolioGrid({ items, maxItems }: { items: PortfolioItem[]; max
       {maxItems && filtered.length > maxItems && (
         <div className="mt-10 text-center">
           <Link
-            href="/portfolio"
+            href={localizedPath(locale, "/portfolio")}
             className="inline-flex items-center gap-2 font-serif text-lg font-semibold text-brass-deep underline decoration-2 underline-offset-4 transition hover:text-brass"
           >
             {t("portfolio_view_all")}

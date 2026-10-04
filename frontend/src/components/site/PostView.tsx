@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Clock, Eye, Heart } from "lucide-react";
 import { useI18n, postTypeKey, type DictKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import type { PostFull, PostSummary, Service } from "@/lib/api";
 import { formatDate, readingMinutes } from "@/lib/format";
 import { CONTACT } from "@/lib/site";
@@ -38,7 +39,7 @@ function bookCtaKey(contentType: string): DictKey {
  * /book link. Never guess a service.
  */
 function PostCta({ post }: { post: PostFull }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ function PostCta({ post }: { post: PostFull }) {
   }, []);
 
   const linked = services.find((s) => s.linkedPostSlug === post.slug);
-  const href = linked ? `/book?service=${linked.id}` : "/book";
+  const href = linked ? localizedPath(locale, `/book?service=${linked.id}`) : localizedPath(locale, "/book");
   const label = t(bookCtaKey(post.contentType));
 
   return (
@@ -132,7 +133,7 @@ export function PostView({ post }: { post: PostFull }) {
   return (
     <article className="mx-auto max-w-4xl px-4 py-16 md:py-20">
       <Link
-        href="/blog"
+        href={localizedPath(locale, "/blog")}
         className="inline-flex items-center gap-2 text-sm font-medium text-ink/60 transition hover:text-brass"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden />

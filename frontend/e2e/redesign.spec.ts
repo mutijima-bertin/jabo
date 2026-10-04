@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
 import { API, getAdminToken } from "./auth";
+import { en } from "./routes";
 
 /**
  * redesign.spec.ts — E2E coverage for the picture-first redesign (Phase A+B).
@@ -170,7 +171,7 @@ test.describe("redesign journeys", () => {
   });
 
   test("hero renders full-viewport with visible controls", async ({ page }) => {
-    await page.goto("/");
+    await page.goto(en("/"));
 
     const hero = page.locator('section[aria-roledescription="carousel"]');
     await expect(hero).toBeVisible();
@@ -203,7 +204,7 @@ test.describe("redesign journeys", () => {
     const imaged = logos.filter((l) => l.imageUrl).length;
     expect(logos.length, "seed ships 4 name-only logos; imports may add image logos").toBeGreaterThanOrEqual(4);
 
-    await page.goto("/");
+    await page.goto(en("/"));
 
     const wall = page.locator("section").filter({ has: page.getByRole("heading", { name: "Trusted by" }) });
     await expect(wall.getByRole("heading", { name: "Trusted by" })).toBeVisible({ timeout: 10000 });
@@ -236,7 +237,7 @@ test.describe("redesign journeys", () => {
     const viewAllLink = page.getByRole("link", { name: "View all work" });
     if (portfolio.length > 6) {
       await expect(viewAllLink).toBeVisible();
-      await expect(viewAllLink).toHaveAttribute("href", "/portfolio");
+      await expect(viewAllLink).toHaveAttribute("href", en("/portfolio"));
     } else {
       // Nothing hidden → no CTA on the homepage.
       await expect(viewAllLink).toHaveCount(0);
@@ -268,9 +269,9 @@ test.describe("redesign journeys", () => {
     // path must show the SAME full, uncapped count.
     if (portfolio.length > 6) {
       await viewAllLink.click();
-      await expect(page).toHaveURL(/\/portfolio$/);
+      await expect(page).toHaveURL(en("/portfolio"));
     } else {
-      await page.goto("/portfolio");
+      await page.goto(en("/portfolio"));
     }
     const fullGrid = page.locator(".grid-cols-1 > button");
     await expect(fullGrid.first()).toBeVisible({ timeout: 10000 });
@@ -308,7 +309,7 @@ test.describe("redesign journeys", () => {
       }
 
       // Fresh SSR navigation so the grid sees the updated catalog.
-      await page.goto("/portfolio");
+      await page.goto(en("/portfolio"));
       const gridRoot = page.locator("main"); // single PortfolioGrid instance on this page
 
       // All items visible under "All" (the grid is the only .grid-cols-1 on this page).
@@ -349,7 +350,7 @@ test.describe("redesign journeys", () => {
   });
 
   test("lightbox opens, navigates, closes", async ({ page }) => {
-    await page.goto("/portfolio");
+    await page.goto(en("/portfolio"));
 
     // Cards are <button aria-label="{title}"> in the single grid on /portfolio.
     const firstCard = page.locator(".grid-cols-1 > button").first();
@@ -380,7 +381,7 @@ test.describe("redesign journeys", () => {
   });
 
   test("services bento renders prices and placeholder cards", async ({ page, request }) => {
-    await page.goto("/");
+    await page.goto(en("/"));
     const bento = page.locator("#services");
     await expect(bento.getByRole("heading", { name: "Services & pricing" })).toBeVisible();
 

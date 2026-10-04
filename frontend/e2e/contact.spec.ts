@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { en } from "./routes";
 
 /**
  * contact.spec.ts — E2E for the public /contact bilingual form.
@@ -49,7 +50,7 @@ function trackContactPosts(page: import("@playwright/test").Page): () => number 
 test("contact form happy path: unique data → success panel → send-another re-arms the form", async ({ page }) => {
   const email = `contact-${RUN}@test.local`;
 
-  await page.goto("/contact");
+  await page.goto(en("/contact"));
   await expect(page.getByRole("heading", { name: "Contact us" })).toBeVisible({ timeout: 15000 });
 
   // All fields, including the optional phone (PhoneInput, labelled via
@@ -76,7 +77,7 @@ test("contact form happy path: unique data → success panel → send-another re
 test("invalid email shows the localized inline error WITHOUT hitting the API", async ({ page }) => {
   const countContactPosts = trackContactPosts(page);
 
-  await page.goto("/contact");
+  await page.goto(en("/contact"));
   await expect(page.getByRole("heading", { name: "Contact us" })).toBeVisible({ timeout: 15000 });
 
   // Everything valid EXCEPT the email, so only the email error can paint.
@@ -101,7 +102,7 @@ test("invalid email shows the localized inline error WITHOUT hitting the API", a
 test("message shorter than 10 chars shows the localized message error and blocks submit", async ({ page }) => {
   const countContactPosts = trackContactPosts(page);
 
-  await page.goto("/contact");
+  await page.goto(en("/contact"));
   await expect(page.getByRole("heading", { name: "Contact us" })).toBeVisible({ timeout: 15000 });
 
   await page.getByPlaceholder("Jean Uwimana").fill(NAME);

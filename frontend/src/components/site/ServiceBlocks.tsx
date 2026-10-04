@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { serviceIcon } from "@/components/shared/service-icons";
 import type { Service } from "@/lib/api";
 
@@ -31,7 +32,7 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
         const num = String(i + 1).padStart(2, "0");
         // EN-first alt, keyword-natural, honest (real service data only).
         const alt = `${svc.nameEn} — ${svc.category} in Kigali, Rwanda`;
-        const guideHref = svc.linkedPostSlug ? `/blog/${svc.linkedPostSlug}` : null;
+        const guideHref = svc.linkedPostSlug ? localizedPath(locale, `/blog/${svc.linkedPostSlug}`) : null;
 
         return (
           <li key={svc.id}>
@@ -77,7 +78,7 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
                     ServiceBento) so the block is clickable without duplicated
                     sr-only text; the Book chip below rides above it via z-10. */}
                 <Link
-                  href={guideHref ?? `/book?service=${svc.id}`}
+                  href={guideHref ?? localizedPath(locale, `/book?service=${svc.id}`)}
                   className="after:absolute after:inset-0 after:rounded-2xl"
                 >
                   <h2 className="mt-4 font-serif text-xl font-semibold leading-snug transition-colors group-hover:text-brass-deep">
@@ -90,7 +91,7 @@ export function ServiceBlocks({ services }: { services: Service[] }) {
                     <p className="text-sm font-semibold text-brass-deep">{price}</p>
                   )}
                   <Link
-                    href={`/book?service=${svc.id}`}
+                    href={localizedPath(locale, `/book?service=${svc.id}`)}
                     className={`relative z-10 inline-flex items-center gap-1 text-xs font-semibold text-brass-deep transition hover:text-brass ${
                       price ? "" : "ml-auto"
                     }`}

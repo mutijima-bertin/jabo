@@ -1,19 +1,14 @@
-import { Nav } from "@/components/site/Nav";
-import { Footer } from "@/components/site/Footer";
-import { WhatsAppFab } from "@/components/site/WhatsAppFab";
+import { SiteChrome } from "@/components/site/SiteChrome";
 
 /**
- * Public site chrome (spec: cream theme, Nav + Footer + WhatsApp FAB).
- * All marketing/brochure pages live in the `(site)` route group so the admin
- * routes (`/admin`, `/admin/login`) render WITHOUT this chrome (QA #2).
+ * Chrome for the BARE routes — `/login`, `/account`, `/track`, `/track/<token>`.
+ * No locale prop: those URLs carry no locale segment (see lib/locale.ts), so
+ * the language follows the persisted `css_locale` preference instead, which is
+ * what a client following an emailed magic link expects.
+ *
+ * The localized marketing routes live in the sibling `(public)/[locale]` group
+ * and render the identical chrome through the same `SiteChrome` component.
  */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <Nav />
-      <main className="flex-1">{children}</main>
-      <Footer />
-      <WhatsAppFab />
-    </>
-  );
+  return <SiteChrome>{children}</SiteChrome>;
 }

@@ -1,8 +1,14 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isLocale, type Locale } from "@/lib/locale";
 
-export type Locale = "en" | "rw";
+// Re-exported so the ~20 existing `import type { Locale } from "@/lib/i18n"`
+// call sites keep compiling. The single definition now lives in lib/locale.ts
+// alongside the URL-segment helpers — the locale type is no longer a
+// client-only concern, since it also types the `[locale]` route segment and the
+// `absoluteUrl(path, locale)` SEO overload.
+export type { Locale };
 
 const en = {
   nav_home: "Home",
@@ -1090,20 +1096,63 @@ interface I18nCtx {
 
 const Ctx = createContext<I18nCtx>({ locale: "en", setLocale: () => {}, t: (k) => en[k] });
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocale] = useState<Locale>("en");
+/**
+ * Locale provider. Two distinct modes, keyed off the optional `locale` prop:
+ *
+ *  - PROP SUPPLIED (localized routes under `[locale]`) — the URL is the single
+ *    source of truth. localStorage must NOT be read back here: doing so after
+ *    hydration would paint Kinyarwanda on a /rw/* page and then immediately
+ *    repaint English from a stale "en" preference — a visible flash of the
+ *    wrong language on exactly the URLs this refactor exists to get indexed
+ *    correctly. The preference is still WRITTEN on toggle so the bare routes
+ *    can follow it.
+ *
+ *  - PROP ABSENT (bare routes: /account, /login, /track, /admin) — the old
+ *    behaviour, unchanged: localStorage decides. Those routes carry no locale
+ *    segment, so a Kinyarwanda-preferring client who landed on an emailed
+ *    /track/<token> link should still get Kinyarwanda.
+ *
+ * The two are composed by DERIVATION (`localeProp ?? stored`) rather than by
+ * copying the prop into state inside an effect. Deriving matters for two
+ * reasons: the prop is authoritative on the very first render, so there is no
+ * window in which a /rw/ page renders English; and client-side navigation
+ * between locales (/en/x → /rw/x) re-derives on the spot with no cascading
+ * render. `stored` only ever holds the localStorage preference, so there is
+ * nothing to keep in sync.
+ *
+ * NOTE: this provider deliberately does NOT write `<html lang>`. Two instances
+ * exist — this one in the root layout, plus a `locale`-propped one inside
+ * `(public)/[locale]/layout.tsx` — and an effect writing `lang` from both would
+ * race: React flushes child effects first, so the prop-less root instance (which
+ * resolves to DEFAULT_LOCALE on empty storage) would land LAST and clobber the
+ * correct value on every `/rw/*` page. `HtmlLangSync` owns that write instead,
+ * deriving it from the URL, which has exactly one unambiguous answer.
+ */
+export function I18nProvider({ children, locale: localeProp }: { children: React.ReactNode; locale?: Locale }) {
+  const [stored, setStored] = useState<Locale>(DEFAULT_LOCALE);
 
   useEffect(() => {
-    const saved = localStorage.getItem("css_locale") as Locale | null;
+    // Localized route: the URL already decided. Skip the localStorage read
+    // entirely (see the mode note above).
+    if (localeProp) return;
+    const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is unavailable during SSR; restore the persisted locale after mount
-    if (saved === "en" || saved === "rw") setLocale(saved);
-  }, []);
+    if (saved !== null && isLocale(saved)) setStored(saved);
+  }, [localeProp]);
+
+  const locale = localeProp ?? stored;
 
   const value: I18nCtx = {
     locale,
     setLocale: (l) => {
-      setLocale(l);
-      localStorage.setItem("css_locale", l);
+      // Always persist — this is what a bare route reads on its next visit, and
+      // what makes a Kinyarwanda-preferring client get Kinyarwanda on /account
+      // even though that URL has no locale segment.
+      localStorage.setItem(LOCALE_STORAGE_KEY, l);
+      // On a bare route this call IS the switch. On a localized route the URL is
+      // authoritative and the visible language follows the new path, so moving
+      // the state here would be fighting the prop.
+      if (!localeProp) setStored(l);
     },
     t: (k) => dicts[locale][k],
   };

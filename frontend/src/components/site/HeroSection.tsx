@@ -5,6 +5,7 @@ import { ArrowDown, ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from "l
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { s, type SettingsMap } from "@/lib/content";
 import type { PortfolioItem } from "@/lib/api";
 
@@ -258,7 +259,7 @@ export function HeroSection({
                     {slide.showCta && (
                       <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
                         <Link
-                          href="/book"
+                          href={localizedPath(locale, "/book")}
                           tabIndex={active ? undefined : -1}
                           className="group inline-flex items-center gap-2 rounded-full bg-brass-deep px-7 py-3.5 text-sm font-bold text-cream transition hover:bg-brass-dark"
                         >

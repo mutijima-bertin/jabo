@@ -1,41 +1,45 @@
 import type { Metadata } from "next";
-import { BRAND } from "@/lib/constants";
-import { absoluteUrl, OG_IMAGE } from "@/lib/seo";
 import { JsonLd, breadcrumbListJsonLd, blogItemListJsonLd } from "@/lib/jsonld";
 import { api, type PostSummary } from "@/lib/api";
 import { BlogList } from "@/components/site/BlogList";
+import { absoluteUrl, localeMetadata } from "@/lib/seo";
+import { isLocale } from "@/lib/locale";
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
-  alternates: { canonical: absoluteUrl("/blog") },
-  openGraph: {
-    title: `Blog — ${BRAND}`,
-    description: `Notes, highlights and client stories from behind the lens at ${BRAND} — Kigali, Rwanda.`,
-    url: absoluteUrl("/blog"),
-    images: [OG_IMAGE],
-    siteName: BRAND,
-    locale: "en_RW",
-    type: "website",
-  },
-};
+interface Props {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ page?: string }>;
+}
+
+// Per-locale metadata + self-canonical + hreflang — see `localeMetadata`.
+//
+// Canonical deliberately ignores `?page=N`: the paginated index is one
+// document, and self-canonicalising page 7 to /blog would be fine, but
+// canonicalising page 7 to page 1 is not — it drops the deeper pages from the
+// index and creates a duplicate-content signal. Each locale self-canonicalises
+// to its own un-paginated index.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = isLocale(raw) ? raw : "en";
+  return localeMetadata(locale, "/blog", "blog");
+}
 
 const PAGE_SIZE = 8;
 
 // Breadcrumb trail shared by both render paths (backend up or down): the index
-// has no pagination nuances worth reflecting in the trail.
-const BLOG_CRUMBS = [
-  { name: "Home", url: absoluteUrl("/") },
-  { name: "Blog", url: absoluteUrl("/blog") },
-] as const;
+// has no pagination nuances worth reflecting in the trail. Built per-locale so
+// the JSON-LD trail matches the URL the reader is actually on.
+function blogCrumbs(locale: "en" | "rw") {
+  return [
+    { name: "Home", url: absoluteUrl("/", locale) },
+    { name: "Blog", url: absoluteUrl("/blog", locale) },
+  ] as const;
+}
 
-export default async function BlogPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string }>;
-}) {
-  const params = await searchParams;
-  const rawPage = params.page;
+export default async function BlogPage({ params, searchParams }: Props) {
+  const { locale: raw } = await params;
+  const locale = isLocale(raw) ? raw : "en";
+  const sp = await searchParams;
+  const rawPage = sp.page;
 
   // Fetch on the server (no-store, so always fresh); BlogList is a small
   // client component that renders cards with the active locale.
@@ -52,7 +56,7 @@ export default async function BlogPage({
   if (posts === null) {
     return (
       <>
-        <JsonLd data={breadcrumbListJsonLd(BLOG_CRUMBS)} />
+        <JsonLd data={breadcrumbListJsonLd(blogCrumbs(locale))} />
         <BlogList posts={null} totalCount={0} page={1} pageSize={PAGE_SIZE} />
       </>
     );
@@ -68,8 +72,8 @@ export default async function BlogPage({
     <>
       {/* SEO phase 5 — breadcrumbs + an ItemList of BlogPosting entries for the
           real published posts (all loaded rows; the visible slice is paginated). */}
-      <JsonLd data={breadcrumbListJsonLd(BLOG_CRUMBS)} />
-      <JsonLd data={blogItemListJsonLd(posts)} />
+      <JsonLd data={breadcrumbListJsonLd(blogCrumbs(locale))} />
+      <JsonLd data={blogItemListJsonLd(posts, locale)} />
       <BlogList posts={pagePosts} totalCount={posts.length} page={page} pageSize={PAGE_SIZE} />
     </>
   );

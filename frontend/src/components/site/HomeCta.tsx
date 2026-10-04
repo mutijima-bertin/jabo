@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 
 /**
  * Homepage closing CTA — the green band with the booking link. Client
@@ -9,7 +10,7 @@ import { useI18n } from "@/lib/i18n";
  * story?" reuses the shared blog CTA title key).
  */
 export function HomeCta() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   return (
     <section className="bg-green">
@@ -17,7 +18,7 @@ export function HomeCta() {
         <h2 className="font-serif text-3xl font-semibold text-cream md:text-4xl">{t("blog_cta_title")}</h2>
         <p className="mt-4 text-cream/70">{t("home_cta_body")}</p>
         <Link
-          href="/book"
+          href={localizedPath(locale, "/book")}
           className="mt-8 inline-block rounded-full bg-brass-deep px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark"
         >
           {t("hero_cta_book")}

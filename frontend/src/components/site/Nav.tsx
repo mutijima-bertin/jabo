@@ -5,23 +5,28 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { Logo } from "@/components/shared/Logo";
 
 export function Nav() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const [open, setOpen] = useState(false);
 
+  // `localizedPath` (not `/${locale}…`) so every entry below is a BARE route
+  // constant that stays in lockstep with PUBLIC_PATHS in lib/locale.ts — the
+  // locale segment is applied in exactly one place. Before the `[locale]`
+  // refactor these were bare literals and /about was a 404.
   const links = [
-    { href: "/", label: t("nav_home") },
-    { href: "/services", label: t("nav_services") },
-    { href: "/portfolio", label: t("nav_portfolio") },
-    { href: "/blog", label: t("nav_blog") },
+    { href: localizedPath(locale, "/"), label: t("nav_home") },
+    { href: localizedPath(locale, "/services"), label: t("nav_services") },
+    { href: localizedPath(locale, "/portfolio"), label: t("nav_portfolio") },
+    { href: localizedPath(locale, "/blog"), label: t("nav_blog") },
   ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-ink/10 bg-cream/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link href="/" aria-label={`${BRAND} — home`} className="shrink-0">
+        <Link href={localizedPath(locale, "/")} aria-label={`${BRAND} — home`} className="shrink-0">
           <Logo className="h-10 w-auto" />
         </Link>
 
@@ -36,7 +41,7 @@ export function Nav() {
 
         <div className="hidden items-center gap-4 md:flex">
           <Link
-            href="/book"
+            href={localizedPath(locale, "/book")}
             className="rounded-full bg-brass-deep px-4 py-2 text-sm font-semibold text-cream transition hover:bg-brass-dark"
           >
             {t("nav_book")}
@@ -73,6 +78,9 @@ export function Nav() {
               </Link>
             ))}
             <Link
+              // /login is in the deliberately BARE set (lib/locale.ts): no
+              // locale segment, no localizedPath() — the page follows the
+              // persisted `css_locale` preference instead.
               href="/login"
               onClick={() => setOpen(false)}
               className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink/55 transition hover:bg-cream-alt hover:text-brass"
@@ -80,7 +88,7 @@ export function Nav() {
               {t("client_login_title")}
             </Link>
             <Link
-              href="/book"
+              href={localizedPath(locale, "/book")}
               onClick={() => setOpen(false)}
               className="mt-2 rounded-full bg-brass-deep px-4 py-2.5 text-center text-sm font-semibold text-cream transition hover:bg-brass-dark"
             >

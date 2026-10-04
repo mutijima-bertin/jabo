@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { cardSurface, cx } from "@/lib/ui";
 import { PageHeading } from "@/components/shared/PageHeading";
@@ -16,7 +17,7 @@ import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/so
  * form on the right — the CTA strip spans full width underneath.
  */
 export function ContactPageContent() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
 
   // Same 4 links/icons as the Footer social cluster.
   const socials = [
@@ -120,7 +121,7 @@ export function ContactPageContent() {
         <div className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-green px-6 py-8 text-center sm:flex-row sm:px-8 sm:text-left">
           <p className="font-serif text-xl font-semibold text-cream">{t("blog_cta_title")}</p>
           <Link
-            href="/book"
+            href={localizedPath(locale, "/book")}
             className="shrink-0 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
           >
             {t("hero_cta_book")}

@@ -1,26 +1,57 @@
 "use client";
 
+import { useCallback } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Languages, Mail, MapPin, Phone } from "lucide-react";
 import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath, swapLocaleInPath, type Locale } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
 import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/social-icons";
 
 export function Footer() {
   const { t, locale, setLocale } = useI18n();
+  const pathname = usePathname();
+  const router = useRouter();
   const year = new Date().getFullYear();
 
+  // BARE route constants + localizedPath(), same contract as Nav: the locale
+  // segment is applied by the helper, not by string concatenation here.
   const quickLinks = [
-    { href: "/", label: t("nav_home") },
-    { href: "/services", label: t("nav_services") },
-    { href: "/portfolio", label: t("nav_portfolio") },
-    { href: "/#about", label: t("nav_about") },
-    { href: "/blog", label: t("nav_blog") },
-    { href: "/contact", label: t("nav_contact") },
-    { href: "/book", label: t("nav_book") },
+    { href: localizedPath(locale, "/"), label: t("nav_home") },
+    { href: localizedPath(locale, "/services"), label: t("nav_services") },
+    { href: localizedPath(locale, "/portfolio"), label: t("nav_portfolio") },
+    // Hash link, and the one entry a naive `/x` grep misses. localizedPath
+    // splits the fragment off BEFORE prefixing, so this yields "/en#about" and
+    // not "/en/#about" — the latter puts a slash segment in front of the hash
+    // and never reaches the home page's #about anchor.
+    { href: localizedPath(locale, "/#about"), label: t("nav_about") },
+    { href: localizedPath(locale, "/blog"), label: t("nav_blog") },
+    { href: localizedPath(locale, "/contact"), label: t("nav_contact") },
+    { href: localizedPath(locale, "/book"), label: t("nav_book") },
   ];
+
+  /**
+   * EN/RW toggle. It has to NAVIGATE, not just set state: on the 8 localized
+   * routes the URL segment is the source of truth for the language (the
+   * I18nProvider deliberately ignores localStorage there), so a setLocale-only
+   * toggle left the address bar on /en/... while the button claimed Kinyarwanda.
+   *
+   * `window.location` is read in the handler rather than via useSearchParams():
+   * this Footer is shared chrome on every route, and a useSearchParams() here
+   * would pull the whole chrome into a Suspense boundary and force dynamic
+   * rendering app-wide just to preserve `?page=2` on the blog pager. Reading it
+   * at click time costs nothing and keeps that query string across the switch.
+   */
+  const switchLocale = useCallback(
+    (next: Locale) => {
+      router.push(swapLocaleInPath(`${pathname}${window.location.search}${window.location.hash}`, next));
+      setLocale(next);
+    },
+    [pathname, router, setLocale],
+  );
 
   const socials = [
     { href: CONTACT.whatsappUrl, label: t("social_whatsapp"), Icon: WhatsAppIcon },
@@ -35,7 +66,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1.3fr]">
           {/* Brand */}
           <div>
-            <Link href="/" aria-label={`${BRAND} — home`}>
+            <Link href={localizedPath(locale, "/")} aria-label={`${BRAND} — home`}>
               <Logo className="h-12 w-auto" />
             </Link>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink/60">
@@ -61,6 +92,10 @@ export function Footer() {
             </ul>
 
             <div className="mt-5 flex flex-col gap-2 text-xs font-medium text-ink/50">
+              {/* /login and /track are in the deliberately BARE set (lib/locale.ts):
+                  clients paste them between devices and /track/<token> is emailed
+                  as a magic link, so they keep no locale segment and follow the
+                  persisted preference instead. */}
               <Link href="/login" className="w-fit underline-offset-2 transition hover:text-brass hover:underline">
                 {t("client_login_title")}
               </Link>
@@ -121,7 +156,7 @@ export function Footer() {
               </li>
             </ul>
             <button
-              onClick={() => setLocale(locale === "en" ? "rw" : "en")}
+              onClick={() => switchLocale(locale === "en" ? "rw" : "en")}
               className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream px-3.5 py-2 text-xs font-medium text-ink/70 transition hover:border-brass hover:text-brass"
               aria-label={t("footer_switch_language_aria")}
             >

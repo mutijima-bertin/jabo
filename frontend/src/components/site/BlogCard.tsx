@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Eye, Heart } from "lucide-react";
 import { useI18n, postTypeKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import type { PostSummary } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import { PostCover } from "@/components/site/PostCover";
@@ -15,7 +16,7 @@ export function BlogCard({ post }: { post: PostSummary }) {
 
   return (
     <Link
-      href={`/blog/${post.slug}`}
+      href={localizedPath(locale, `/blog/${post.slug}`)}
       // Prefetching would run the server page for in-viewport cards and
       // inflate the view counter without a real visit.
       prefetch={false}

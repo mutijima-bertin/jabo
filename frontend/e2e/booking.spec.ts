@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { execSync } from "child_process";
 import { readFileSync } from "fs";
 import { getAdminToken } from "./auth";
+import { en } from "./routes";
 
 const API = "http://localhost:4000/api";
 // Admin credentials from the environment (root .env via playwright.config.ts,
@@ -54,7 +55,7 @@ async function seedBooking(email: string): Promise<{ reference: string; trackUrl
 }
 
 test("public site renders live content from the API", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(en("/"));
   await expect(page.getByRole("heading", { name: /Capturing Rwanda/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Services & pricing" })).toBeVisible();
   await expect(page.getByText("Wedding & Event Photography")).toBeVisible();
@@ -62,7 +63,7 @@ test("public site renders live content from the API", async ({ page }) => {
 
 test("booking form creates a booking and shows the tracking link", async ({ page }) => {
   const email = `e2e-${Date.now()}@test.local`;
-  await page.goto("/book");
+  await page.goto(en("/book"));
   await page.selectOption("select", { index: 1 });
 
   // 1) Google-style phone input (component: PhoneInput). The country select
@@ -124,7 +125,7 @@ test("an invalid/incomplete phone is normalized away — no phone error, booking
   // an obviously-invalid national number must NOT surface a field error and
   // must NOT block the booking.
   const email = `e2e-phone-${Date.now()}@test.local`;
-  await page.goto("/book");
+  await page.goto(en("/book"));
   await page.selectOption("select", { index: 1 });
   await page.getByPlaceholder("Jean Uwimana").fill("E2E Client");
   await page.getByPlaceholder("you@example.com").fill(email);
@@ -153,7 +154,7 @@ test("a real 400 renders a localized inline field error — never the raw VALIDA
   // issue. The form must render the LOCALIZED inline field error (book_err_name)
   // and keep the raw backend "VALIDATION" code off the page.
   const email = `e2e-invalid-${Date.now()}@test.local`;
-  await page.goto("/book");
+  await page.goto(en("/book"));
   await page.selectOption("select", { index: 1 });
 
   // Valid phone (local format, spaced) + valid email — only the name is bad.
@@ -216,7 +217,7 @@ test("dashboard lists all bookings and View details opens the booking timeline",
   await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible({ timeout: 15000 });
   const magicToken = await fetchMagicToken(email);
   await page.goto(`/login?token=${magicToken}`);
-  await expect(page).toHaveURL(/\/account$/, { timeout: 15000 });
+  await expect(page).toHaveURL("/account", { timeout: 15000 });
 
   // The dashboard shows BOTH bookings (the "all my bookings" promise).
   await expect(page.getByRole("heading", { name: "My account" })).toBeVisible();
@@ -245,7 +246,7 @@ test("admin login works and dashboard loads", async ({ page }) => {
 });
 
 test("language switcher toggles Kinyarwanda", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(en("/"));
   // After the redesign the toggle lives in the footer (a pill with a
   // LOCALIZED aria-label — t("footer_switch_language_aria")) — scope the
   // locator to <footer>. EN shows "Switch language"; once flipped to RW the

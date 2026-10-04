@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { ApiError, api } from "@/lib/api";
 import { setClientToken } from "@/lib/client";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { inputCls, labelCls } from "@/lib/ui";
 import { Logo } from "@/components/shared/Logo";
@@ -14,7 +15,7 @@ import { Logo } from "@/components/shared/Logo";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function LoginInner() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -36,6 +37,8 @@ function LoginInner() {
       .post<{ token: string }>(`/clients/login/${token}`, {})
       .then((res) => {
         setClientToken(res.token);
+        // /account is in the deliberately BARE set (lib/locale.ts) — clients
+        // paste it between devices, so it keeps no locale segment.
         router.replace("/account");
       })
       .catch((err) => {
@@ -79,7 +82,7 @@ function LoginInner() {
           <h1 className="mt-6 font-serif text-3xl font-semibold leading-tight">{t("client_login_success_title")}</h1>
           <p className="mt-3 text-ink/65">{t("client_login_success_body")}</p>
           <Link
-            href="/"
+            href={localizedPath(locale, "/")}
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-brass-deep px-7 py-3 text-sm font-bold text-cream transition hover:bg-brass-dark"
           >
             <ArrowLeft className="h-4 w-4" />

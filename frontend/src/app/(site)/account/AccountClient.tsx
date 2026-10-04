@@ -7,6 +7,7 @@ import { ExternalLink, Loader2, LogOut, Mail, MapPin, Package, Phone, User } fro
 import type { ClientTestimonial } from "@/lib/api";
 import { clearClientToken, clientFetch, getClientToken, type ClientAccount } from "@/lib/client";
 import { statusKey, useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { inputCls, labelCls } from "@/lib/ui";
 import { Logo } from "@/components/shared/Logo";
@@ -59,6 +60,9 @@ export default function AccountClient() {
   useEffect(() => {
     const token = getClientToken();
     if (!token) {
+      // /login is in the deliberately BARE set (lib/locale.ts) — the same
+      // applies to every other `router.replace("/login")` below and to
+      // `/account` itself. They carry no locale segment by contract.
       router.replace("/login");
       return;
     }
@@ -174,6 +178,8 @@ export default function AccountClient() {
         method: "POST",
         body: JSON.stringify({}),
       });
+      // Backend-supplied absolute URL (a freshly minted /track/<token> magic
+      // link) — not an app route literal, so it is never locale-prefixed.
       router.push(res.trackUrl);
     } catch (err) {
       if ((err as Error).message === "NOT_AUTHENTICATED") {
@@ -265,7 +271,7 @@ export default function AccountClient() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-serif text-2xl font-semibold">{t("client_account_bookings")}</h2>
           <Link
-            href="/book"
+            href={localizedPath(locale, "/book")}
             className="inline-flex items-center gap-2 rounded-full border border-brass/40 bg-cream px-5 py-2 text-sm font-semibold text-brass-dark transition hover:bg-brass/10"
           >
             + {t("client_account_book_another")}

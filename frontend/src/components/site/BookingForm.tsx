@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { api, ApiError, type Service } from "@/lib/api";
 import { useI18n, type DictKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { fieldErrorText, inputCls, inputErrorCls, labelCls } from "@/lib/ui";
 import { PhoneInput } from "@/components/site/PhoneInput";
 import { useSelectedServiceId } from "@/components/site/BookingServiceContext";
@@ -155,7 +156,7 @@ export function BookingForm({ services, initialServiceId }: Props) {
         </div>
 
         <Link
-          href="/book"
+          href={localizedPath(locale, "/book")}
           className="mt-5 inline-block text-sm font-semibold text-ink/50 transition hover:text-brass"
         >
           {t("track_book_another")}

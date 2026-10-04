@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { SectionTitle } from "@/components/shared/SectionTitle";
 
 /**
@@ -63,7 +64,7 @@ export function AboutSection({
           <SectionTitle k="about_title" />
           <p className="mt-6 leading-relaxed text-ink/65">{story}</p>
           <Link
-            href="/about"
+            href={localizedPath(locale, "/about")}
             className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-brass-deep underline-offset-4 transition hover:text-brass hover:underline"
           >
             {t("about_read_story")} →

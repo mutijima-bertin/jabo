@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 import { API, getAdminToken } from "./auth";
+import { en } from "./routes";
 
 /**
  * responsive.spec.ts — E2E proof for the small-screen responsive pass (Phase 6).
@@ -90,7 +91,7 @@ test.describe("small-screen responsive pass", () => {
     for (const vp of VIEWPORTS) {
       await test.step(`${vp.width}px viewport`, async () => {
         await page.setViewportSize(vp);
-        await page.goto("/");
+        await page.goto(en("/"));
 
         const hero = page.locator('section[aria-roledescription="carousel"]');
         await expect(hero, `${vp.width}px: hero renders`).toBeVisible();
@@ -128,7 +129,7 @@ test.describe("small-screen responsive pass", () => {
   // ---------------------------------------------------------------------------
   test("hero progress segment click advances the slide at 320px", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 700 });
-    await page.goto("/");
+    await page.goto(en("/"));
 
     const hero = page.locator('section[aria-roledescription="carousel"]');
     const counter = hero.getByText(/^\d{2} \/ \d{2}$/).first();
@@ -167,7 +168,7 @@ test.describe("small-screen responsive pass", () => {
     const post = (await created.json()) as PostRow;
 
     try {
-      await page.goto(`/blog/${POST_SLUG}`);
+      await page.goto(en(`/blog/${POST_SLUG}`));
       await expect(page.locator("article")).toBeVisible();
       await expect(
         page.locator("article").getByRole("heading", { name: `Responsive Blog ${RUN}`, level: 1 }),
@@ -176,11 +177,11 @@ test.describe("small-screen responsive pass", () => {
       expect(await hasHorizontalOverflow(page), "320px: no horizontal body overflow on a blog post").toBe(false);
 
       // Reading time (readingMinutes(content) → "N min read") and the
-      // CLIENT_STORY per-type CTA link (no linked service → generic /book).
+      // CLIENT_STORY per-type CTA link (no linked service → generic booking page).
       await expect(page.locator("article").getByText(/\d+ min read/)).toBeVisible();
       const cta = page.locator("article").getByRole("link", { name: "Book your own story", exact: true });
       await expect(cta).toBeVisible();
-      await expect(cta).toHaveAttribute("href", "/book");
+      await expect(cta).toHaveAttribute("href", en("/book"));
     } finally {
       await request.delete(`${API}/admin/posts/${post.id}`, { headers: AUTH(token) }).catch(() => {});
     }

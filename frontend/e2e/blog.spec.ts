@@ -1,5 +1,6 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { API, getAdminToken } from "./auth";
+import { en } from "./routes";
 // Credentials come from the environment (root .env via playwright.config.ts,
 // or CI env) — never hardcoded. The admin account is seeded from these same
 // variables, so CI's placeholder values self-provision.
@@ -109,12 +110,12 @@ test.describe("blog journeys", () => {
     );
     expect(posts).toEqual([]);
 
-    await page.goto("/blog");
+    await page.goto(en("/blog"));
     await expect(page.getByRole("heading", { name: "Stories from the studio" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "No stories yet" })).toBeVisible();
     await expect(page.getByText("Book a shoot").first()).toBeVisible(); // empty-state CTA
-    // No blog cards at all (cards are anchors to /blog/<slug>).
-    await expect(page.locator('a[href^="/blog/"]')).toHaveCount(0);
+    // No blog cards at all (cards are anchors to /en/blog/<slug>).
+    await expect(page.locator(`a[href^="${en("/blog")}/"]`)).toHaveCount(0);
   });
 
   test("admin creates a published post through the Blog tab", async ({ page, request }) => {
@@ -173,9 +174,9 @@ test.describe("blog journeys", () => {
 
   test("published post card renders on the public index", async ({ page }) => {
     expect(published, "runs after the admin-create test").not.toBeNull();
-    await page.goto("/blog");
+    await page.goto(en("/blog"));
 
-    const card = page.locator(`a[href="/blog/${RUN_SLUG}"]`);
+    const card = page.locator(`a[href="${en(`/blog/${RUN_SLUG}`)}"]`);
     await expect(card).toBeVisible();
     await expect(card.getByRole("heading", { name: RUN_TITLE })).toBeVisible();
     await expect(card.getByText("Client story", { exact: true })).toBeVisible();
@@ -192,7 +193,7 @@ test.describe("blog journeys", () => {
 
     const v0 = (await apiGet<PostRow>(request, `/admin/posts/${id}`)).views;
 
-    await page.goto(`/blog/${RUN_SLUG}`);
+    await page.goto(en(`/blog/${RUN_SLUG}`));
     await expect(page.getByRole("heading", { name: RUN_TITLE })).toBeVisible();
     await expect(page.getByText("Back to blog")).toBeVisible();
     await expect(page.getByText(`E2E excerpt ${RUN}`).first()).toBeVisible();
@@ -201,10 +202,11 @@ test.describe("blog journeys", () => {
     // Reading time (words/200, min 1) sits in the meta row next to date/views.
     await expect(page.locator("article").getByText(/\d+ min read/)).toBeVisible();
     // Per-type CTA: this post is a Client story with NO linked service, so the
-    // CTA label is the CLIENT_STORY key and the href is the generic /book.
+    // CTA label is the CLIENT_STORY key and the href is the generic booking
+    // page — locale-prefixed like every other marketing link.
     const cta = page.locator("article").getByRole("link", { name: "Book your own story", exact: true });
     await expect(cta).toBeVisible(); // CTA block
-    await expect(cta).toHaveAttribute("href", "/book");
+    await expect(cta).toHaveAttribute("href", en("/book"));
 
     // Monotonic (>=) rather than exact: a sibling worker navigating to this
     // same public post (or reloading it) can bump the counter between our v0
@@ -224,7 +226,7 @@ test.describe("blog journeys", () => {
     expect(published, "runs after the admin-create test").not.toBeNull();
     const id = published!.id;
 
-    await page.goto(`/blog/${RUN_SLUG}`);
+    await page.goto(en(`/blog/${RUN_SLUG}`));
     const before = (await apiGet<PostRow>(request, `/admin/posts/${id}`)).likes;
     expect(await readCounter(page, "Likes")).toBe(before);
 
@@ -268,12 +270,12 @@ test.describe("blog journeys", () => {
     expect(list.some((p) => p.slug === DRAFT_SLUG)).toBe(false);
 
     // …not on /blog…
-    await page.goto("/blog");
+    await page.goto(en("/blog"));
     await expect(page.getByRole("heading", { name: DRAFT_TITLE })).toHaveCount(0);
 
     // …and a direct URL falls through to the themed 404 (drafts are filtered
     // server-side, so fetchPost → null → notFound()).
-    await page.goto(`/blog/${DRAFT_SLUG}`);
+    await page.goto(en(`/blog/${DRAFT_SLUG}`));
     await expect(page.getByRole("heading", { name: "This page is out of frame" })).toBeVisible();
   });
 
@@ -307,7 +309,7 @@ test.describe("blog journeys", () => {
     await expect(page.locator("tbody tr").filter({ hasText: RUN_TITLE })).toHaveCount(0);
 
     // Renamed title is what the public index now shows.
-    await page.goto("/blog");
+    await page.goto(en("/blog"));
     await expect(page.getByRole("heading", { name: RENAMED_TITLE })).toBeVisible();
     await expect(page.getByRole("heading", { name: RUN_TITLE })).toHaveCount(0);
 
@@ -335,7 +337,7 @@ test.describe("blog journeys", () => {
 
       // Admin list is empty and the public site is back to the empty state.
       expect(await apiGet<PostRow[]>(request, "/public/posts")).toEqual([]);
-      await page.goto("/blog");
+      await page.goto(en("/blog"));
       await expect(page.getByRole("heading", { name: "No stories yet" })).toBeVisible();
     }
   });
@@ -372,23 +374,23 @@ test.describe("blog journeys", () => {
 
       // Page 1: exactly 8 cards — the newest batch (all eight newest seeded
       // posts); the oldest seeded post is already off the page.
-      await page.goto("/blog");
+      await page.goto(en("/blog"));
       await expect(page.getByRole("heading", { name: "Stories from the studio" })).toBeVisible();
-      await expect(page.locator('a[href^="/blog/"]')).toHaveCount(8, { timeout: 10000 });
-      await expect(page.locator(`a[href="/blog/${slugs[slugs.length - 1]}"]`)).toBeVisible();
-      await expect(page.locator(`a[href="/blog/${slugs[0]}"]`)).toHaveCount(0);
+      await expect(page.locator(`a[href^="${en("/blog")}/"]`)).toHaveCount(8, { timeout: 10000 });
+      await expect(page.locator(`a[href="${en(`/blog/${slugs[slugs.length - 1]}`)}"]`)).toBeVisible();
+      await expect(page.locator(`a[href="${en(`/blog/${slugs[0]}`)}"]`)).toHaveCount(0);
       // Pager on page 1: "Older posts →" is the live link; "Newer posts" is a
       // muted span (no link yet); page indicator shows the derived total.
-      await expect(pager.getByRole("link", { name: /Older posts/ })).toHaveAttribute("href", "/blog?page=2");
+      await expect(pager.getByRole("link", { name: /Older posts/ })).toHaveAttribute("href", en("/blog?page=2"));
       await expect(pager.getByRole("link", { name: /Newer posts/ })).toHaveCount(0);
       await expect(pager.getByText(new RegExp(`^1 / ${totalPages}$`))).toBeVisible();
 
       // ?page=2 flips the window: the oldest seeded post is visible now, the
       // newest is gone, and "Newer posts" becomes the live link back to page 1.
-      await page.goto("/blog?page=2");
-      await expect(page.locator(`a[href="/blog/${slugs[0]}"]`)).toBeVisible();
-      await expect(page.locator(`a[href="/blog/${slugs[slugs.length - 1]}"]`)).toHaveCount(0);
-      await expect(pager.getByRole("link", { name: /Newer posts/ })).toHaveAttribute("href", "/blog?page=1");
+      await page.goto(en("/blog?page=2"));
+      await expect(page.locator(`a[href="${en(`/blog/${slugs[0]}`)}"]`)).toBeVisible();
+      await expect(page.locator(`a[href="${en(`/blog/${slugs[slugs.length - 1]}`)}"]`)).toHaveCount(0);
+      await expect(pager.getByRole("link", { name: /Newer posts/ })).toHaveAttribute("href", en("/blog?page=1"));
       await expect(pager.getByText(new RegExp(`^2 / ${totalPages}$`))).toBeVisible();
       // "Older posts" is muted ONLY on the last page (a 2-page catalog today,
       // but keep the assertion honest against a richer owner catalog).

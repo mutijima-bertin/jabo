@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Inbox, Loader2, Pencil, Stars } from "lucide-re
 import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
 import type { AdminPost, Service } from "@/lib/api";
 import { useI18n, type DictKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import {
   adminInputCls,
   adminSelectCls,
@@ -62,7 +63,7 @@ function normalize(s: Service): Partial<Service> & { id?: string } {
 }
 
 export function AdminServices({ token }: { token: string }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const handleSessionExpired = useSessionGuard();
   const { data: items, error: loadError, loading, reload, setData } = useAdminFetch<Service[]>("/admin/services", token);
   /** Blog rows feeding the linked-post dropdown. */
@@ -410,7 +411,16 @@ export function AdminServices({ token }: { token: string }) {
                       )}
                     </div>
                     {s.linkedPostSlug && (
-                      <a className={cx(linkCls, "mt-2 inline-flex items-center gap-1")} href={`/blog/${s.linkedPostSlug}`}>
+                      // A plain <a> on purpose: it leaves the admin shell for the
+                      // PUBLIC blog, and a full document load is what a 404-free
+                      // hand-off to the marketing site needs (the admin chrome is
+                      // not on /blog's route tree). Only the href changes here —
+                      // the label below stays the bare slug so admins still read
+                      // the slug they typed, not a localized path.
+                      <a
+                        className={cx(linkCls, "mt-2 inline-flex items-center gap-1")}
+                        href={localizedPath(locale, `/blog/${s.linkedPostSlug}`)}
+                      >
                         /blog/{s.linkedPostSlug}
                       </a>
                     )}

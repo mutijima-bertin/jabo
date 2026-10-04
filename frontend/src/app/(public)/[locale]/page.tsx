@@ -8,34 +8,38 @@ import { TrustBand } from "@/components/site/TrustBand";
 import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { ClientsWall } from "@/components/site/ClientsWall";
 import { AboutSection } from "@/components/site/AboutSection";
-import { BRAND } from "@/lib/constants";
-import { absoluteUrl, OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo";
 import { JsonLd, localBusinessJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
+import { isLocale } from "@/lib/locale";
+import { PAGE_META, localeMetadata } from "@/lib/seo";
 
-// Money page — explicit > inherited default. `absolute` pins the exact
-// keyword-rich title (the root template would otherwise re-append the brand).
-// The openGraph block mirrors the rendered title/description, pins the
-// canonical-home og:url and re-attaches the shared OG poster — Next merges
-// metadata shallowly, so a page-level openGraph replaces the root's entirely
-// (images included); re-stating a static `images` here keeps the default
-// graphic while the per-post cover previews ship in a later phase.
-export const metadata: Metadata = {
-  title: { absolute: SITE_TITLE },
-  description: SITE_DESCRIPTION,
-  alternates: { canonical: absoluteUrl("/") },
-  openGraph: {
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    url: absoluteUrl("/"),
-    images: [OG_IMAGE],
-    siteName: BRAND,
-    locale: "en_RW",
-    type: "website",
-  },
-};
+interface Props {
+  params: Promise<{ locale: string }>;
+}
 
-export default async function HomePage() {
+// Money page — explicit > inherited default. `localeMetadata` supplies the
+// localized title/description, a SELF-canonical (`/en` never points at `/rw`),
+// hreflang for both locales + x-default, and the per-route og:locale.
+//
+// BOTH locales use `title.absolute`, not the root's `%s — <brand>` template.
+// The homepage is the one page that already carries the brand inside its own
+// title (that is what makes it the keyword-rich money page), so running it
+// through the template produced the doubled
+// "Creative Sound Studio — … — Creative Sound Studio" — see the EN assertion in
+// e2e/seo.spec.ts, which pins "the brand appears exactly once".
+//
+// generateMetadata rather than a static `metadata` export because the copy now
+// depends on the `[locale]` segment.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale = isLocale(raw) ? raw : "en";
+  return { ...localeMetadata(locale, "/", "home"), title: { absolute: PAGE_META.home[locale].title } };
+}
+
+export default async function HomePage({ params }: Props) {
+  const { locale: raw } = await params;
+  const locale = isLocale(raw) ? raw : "en";
+
   const [settings, services, portfolio, testimonials, logos] = await Promise.all([
     fetchSettings(),
     fetchServices(),
@@ -48,7 +52,7 @@ export default async function HomePage() {
     <>
       {/* SEO phase 5 — real LocalBusiness identity (contacts from lib/site.ts,
           socials from the footer, price range derived from live service rows). */}
-      <JsonLd data={localBusinessJsonLd(services)} />
+      <JsonLd data={localBusinessJsonLd(services, locale)} />
       <HeroSection settings={settings} portfolio={portfolio} />
 
       {/* PORTFOLIO — the work leads the page */}

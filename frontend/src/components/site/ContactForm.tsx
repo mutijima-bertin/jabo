@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useI18n, type DictKey } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { fieldErrorText, inputCls, inputErrorCls, labelCls, textareaCls } from "@/lib/ui";
 import { PhoneInput } from "@/components/site/PhoneInput";
 
@@ -133,7 +134,7 @@ export function ContactForm() {
             {t("contact_send_another")}
           </button>
           <Link
-            href="/"
+            href={localizedPath(locale, "/")}
             className="inline-block text-sm font-semibold text-ink/50 transition hover:text-brass"
           >
             {t("contact_back_home")}

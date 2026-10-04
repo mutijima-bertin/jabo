@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Camera } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import type { PostSummary } from "@/lib/api";
 import { BlogCard } from "@/components/site/BlogCard";
 
@@ -21,10 +22,13 @@ interface BlogListProps {
  * that reuses the site's existing CTA copy. Client component because all
  * copy (header, pills, dates) comes from the useI18n() locale context.
  * Pagination is plain `?page=N` links (no router abstraction): the server
- * page slices to `pageSize` and the pager links back to the index.
+ * page slices to `pageSize` and the pager links back to the index. The pager
+ * hrefs go through `localizedPath` so `?page=N` stays OUTSIDE the locale
+ * segment ("/en/blog?page=2", never "/en?page=2/blog") — the helper splits the
+ * query off before prefixing and re-appends it.
  */
 export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
@@ -53,7 +57,7 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
             <nav aria-label="Pagination" className="mt-12 flex flex-wrap items-center justify-between gap-2">
               {hasPrev ? (
                 <Link
-                  href={`/blog?page=${page - 1}`}
+                  href={localizedPath(locale, `/blog?page=${page - 1}`)}
                   className="inline-flex min-w-0 items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
                 >
                   <span aria-hidden="true">←</span>
@@ -70,7 +74,7 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
               </span>
               {hasNext ? (
                 <Link
-                  href={`/blog?page=${page + 1}`}
+                  href={localizedPath(locale, `/blog?page=${page + 1}`)}
                   className="inline-flex min-w-0 items-center gap-2 rounded-full border border-ink/15 bg-white/60 px-5 py-2.5 text-sm font-semibold text-ink/75 transition hover:border-brass hover:text-brass"
                 >
                   {t("blog_pager_older")}
@@ -94,7 +98,7 @@ export function BlogList({ posts, totalCount, page, pageSize }: BlogListProps) {
             {t(posts === null ? "blog_unreachable_body" : "blog_body")}
           </p>
           <Link
-            href="/book"
+            href={localizedPath(locale, "/book")}
             className="mt-8 inline-block rounded-full bg-brass-deep px-8 py-4 text-sm font-bold text-cream transition hover:bg-brass-dark"
           >
             {t("blog_cta")}

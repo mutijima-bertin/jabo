@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useI18n } from "@/lib/i18n";
+import { localizedPath } from "@/lib/locale";
 import { serviceIcon } from "@/components/shared/service-icons";
 import type { Service } from "@/lib/api";
 
@@ -32,7 +33,11 @@ export function ServiceBento({ services }: { services: Service[] }) {
         // Featured layout: the first two services go span-3 (half width) when they have an image.
         const large = i < 2 && Boolean(svc.imageUrl);
         const onPhoto = Boolean(svc.imageUrl);
-        const href = svc.linkedPostSlug ? `/blog/${svc.linkedPostSlug}` : `/book?service=${svc.id}`;
+        // localizedPath keeps the `?service=` query OUT of the locale segment
+        // ("/en/book?service=3"), which naive concatenation would break.
+        const href = svc.linkedPostSlug
+          ? localizedPath(locale, `/blog/${svc.linkedPostSlug}`)
+          : localizedPath(locale, `/book?service=${svc.id}`);
         const num = String(i + 1).padStart(2, "0");
 
         return (
@@ -110,7 +115,7 @@ export function ServiceBento({ services }: { services: Service[] }) {
 
               {/* Book chip — sibling link above the body link; inverts on card hover */}
               <Link
-                href={`/book?service=${svc.id}`}
+                href={localizedPath(locale, `/book?service=${svc.id}`)}
                 className={`absolute bottom-4 right-4 z-20 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-150 ${
                   onPhoto
                     ? "border border-cream/60 bg-ink/40 text-cream backdrop-blur-sm"
