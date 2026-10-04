@@ -546,14 +546,8 @@ Spoofed `X-Forwarded-For` values create their own buckets, so this does not cons
 
 ### Releases (manual SSH)
 
-- [ ] **Authenticate to GHCR** (packages are private by default). Create a GitHub PAT scoped
-      `read:packages` (sufficient for pulling), run as the user that runs compose, and never
-      commit or echo the token to logs/history:
-  ```sh
-  echo "$GHCR_PAT" | docker login ghcr.io -u mutijima-bertin --password-stdin
-  ```
-
-- [ ] Pull prebuilt images — CI publishes `ghcr.io/mutijima-bertin/jabo-{frontend,backend}` on
+- [ ] Pull prebuilt images — **no registry login is required.** Both packages are currently public
+      on GHCR and pull anonymously. CI publishes `ghcr.io/mutijima-bertin/jabo-{frontend,backend}` on
       merge to `main`. Explicit `-f` flags are required, which also stops Compose auto-loading
       the dev override that publishes Postgres. **Verify the images are fresh before deploying**
       (see note below):
@@ -575,6 +569,15 @@ Spoofed `X-Forwarded-For` values create their own buckets, so this does not cons
       server.
 - [ ] After each release, smoke-test (section 2 checks) and eyeball
       `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs --tail=20 backend`.
+
+> **If the packages ever become private**, authentication returns — and it must be done as the user
+> that runs Compose, with the token kept out of shell history and logs:
+> ```sh
+> read -rs GHCR_PAT && echo "$GHCR_PAT" | docker login ghcr.io -u mutijima-bertin --password-stdin
+> unset GHCR_PAT
+> ```
+> Re-verify anonymous access after any change to package visibility, since a private package makes
+> every server's first `pull` fail with `unauthorized` rather than a clear message.
 
 ### Post-deploy verification
 
