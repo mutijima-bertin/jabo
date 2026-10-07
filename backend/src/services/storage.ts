@@ -7,13 +7,16 @@ import { put } from "@vercel/blob";
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
 
 /**
- * True when uploads must be persisted to Vercel Blob: the platform injects
- * BLOB_READ_WRITE_TOKEN (the read/write token for the project's Blob store).
- * Docker/local never set it, so they keep writing to UPLOADS_DIR exactly as
+ * True when uploads must be persisted to Vercel Blob. Two auth shapes exist:
+ * the static BLOB_READ_WRITE_TOKEN (injected when the store is created) and,
+ * on connected Vercel projects, OIDC auth (BLOB_STORE_ID + a platform-issued
+ * VERCEL_OIDC_TOKEN the SDK reads itself — no static token involved).
+ * Docker/local set neither, so they keep writing to UPLOADS_DIR exactly as
  * before — the disk path below is the fallback, not the exception.
  */
 export function blobStorageEnabled(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
+  return Boolean(process.env.VERCEL && process.env.BLOB_STORE_ID);
 }
 
 // Images only. Video is deliberately NOT stored here: studio video lives on
@@ -92,7 +95,7 @@ async function convertToWebp(buffer: Buffer): Promise<Buffer> {
  * animation stays intact.
  *
  * Storage backend is chosen by environment, NOT by this function's callers:
- * - Vercel (BLOB_READ_WRITE_TOKEN set): the bytes go to Vercel Blob under
+ * - Vercel (Blob store connected): the bytes go to Vercel Blob under
  *   `images/<timestamp>-<rand>.webp` — the same unique names as disk — because
  *   the function filesystem is read-only/ephemeral there.
  * - Docker/local (no token): written to UPLOADS_DIR/images as always.
@@ -105,7 +108,7 @@ export async function saveDataUrl(dataUrl: string, mime: string): Promise<string
   // writing to disk on Vercel would "succeed" and then vanish with the
   // instance, losing the upload silently.
   if (!blobStorageEnabled() && process.env.VERCEL) {
-    console.error("[storage] BLOB_READ_WRITE_TOKEN is not set while VERCEL=1 — refusing to write uploads to the ephemeral filesystem");
+    console.error("[storage] no Blob store is connected while VERCEL=1 — refusing to write uploads to the ephemeral filesystem");
     throw new Error("BLOB_STORAGE_NOT_CONFIGURED");
   }
 
