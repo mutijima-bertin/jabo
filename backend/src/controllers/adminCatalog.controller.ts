@@ -249,6 +249,12 @@ export async function upload(req: Request, res: Response): Promise<void> {
       res.status(422).json({ error: "IMAGE_PROCESSING_FAILED", message: "Image could not be processed" });
       return;
     }
+    if (msg === "BLOB_STORAGE_NOT_CONFIGURED") {
+      // Vercel without BLOB_READ_WRITE_TOKEN: a disk write would vanish with
+      // the instance, so storage refuses — surface why instead of a bare 500.
+      res.status(503).json({ error: "BLOB_STORAGE_NOT_CONFIGURED" });
+      return;
+    }
     res.status(500).json({ error: "INTERNAL" });
   }
 }

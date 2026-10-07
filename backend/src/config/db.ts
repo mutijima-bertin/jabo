@@ -14,4 +14,8 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cache on globalThis in EVERY environment (the previous NODE_ENV !==
+// "production" guard meant each Vercel production instance built its own
+// connection pool). Keeps the dev hot-reload behavior — tsx/vitest module
+// reloads reuse the existing client instead of leaking pools.
+globalForPrisma.prisma = prisma;

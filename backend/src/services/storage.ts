@@ -2,8 +2,19 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
+import { put } from "@vercel/blob";
 
 export const UPLOADS_DIR = path.resolve(__dirname, "../../uploads");
+
+/**
+ * True when uploads must be persisted to Vercel Blob: the platform injects
+ * BLOB_READ_WRITE_TOKEN (the read/write token for the project's Blob store).
+ * Docker/local never set it, so they keep writing to UPLOADS_DIR exactly as
+ * before — the disk path below is the fallback, not the exception.
+ */
+export function blobStorageEnabled(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+}
 
 // Images only. Video is deliberately NOT stored here: studio video lives on
 // YouTube and is embedded by URL, so keeping an upload path for mp4/webm would
@@ -75,20 +86,34 @@ async function convertToWebp(buffer: Buffer): Promise<Buffer> {
 }
 
 /**
- * Persists a base64 data URL to disk after verifying declared MIME against
- * actual content. JPEG/PNG/WebP images are re-encoded to WebP (quality 82,
- * fitted inside 1920×1920, never upscaled); GIFs are written byte-for-byte so
- * animation stays intact. Returns the public URL path.
+ * Persists a base64 data URL after verifying declared MIME against actual
+ * content. JPEG/PNG/WebP images are re-encoded to WebP (quality 82, fitted
+ * inside 1920×1920, never upscaled); GIFs are written byte-for-byte so
+ * animation stays intact.
+ *
+ * Storage backend is chosen by environment, NOT by this function's callers:
+ * - Vercel (BLOB_READ_WRITE_TOKEN set): the bytes go to Vercel Blob under
+ *   `images/<timestamp>-<rand>.webp` — the same unique names as disk — because
+ *   the function filesystem is read-only/ephemeral there.
+ * - Docker/local (no token): written to UPLOADS_DIR/images as always.
+ * Either way the returned public URL is `/uploads/images/<fileName>`, which is
+ * the contract the DB regex (`^\/uploads\//`) and the frontend depend on; app.ts
+ * serves that path from Blob (302 to the CDN) or from disk respectively.
  */
 export async function saveDataUrl(dataUrl: string, mime: string): Promise<string> {
+  // Fail loudly BEFORE doing any work when the deployment is misconfigured:
+  // writing to disk on Vercel would "succeed" and then vanish with the
+  // instance, losing the upload silently.
+  if (!blobStorageEnabled() && process.env.VERCEL) {
+    console.error("[storage] BLOB_READ_WRITE_TOKEN is not set while VERCEL=1 — refusing to write uploads to the ephemeral filesystem");
+    throw new Error("BLOB_STORAGE_NOT_CONFIGURED");
+  }
+
   const match = dataUrl.match(/^data:[^;]+;base64,(.+)$/);
   if (!match) throw new Error("INVALID_DATA_URL");
   const buffer = Buffer.from(match[1], "base64");
   if (buffer.length > MAX_IMAGE_BYTES) throw new Error("FILE_TOO_LARGE");
   if (!magicBytesMatch(mime, buffer)) throw new Error("CONTENT_MISMATCH");
-
-  const dir = path.join(UPLOADS_DIR, "images");
-  fs.mkdirSync(dir, { recursive: true });
 
   // Size cap + magic bytes above run against the ORIGINAL bytes; conversion
   // happens only after every validation has passed.
@@ -96,6 +121,21 @@ export async function saveDataUrl(dataUrl: string, mime: string): Promise<string
   const fileBuffer = toWebp ? await convertToWebp(buffer) : buffer;
   const ext = toWebp ? "webp" : extFor(mime);
   const fileName = `${Date.now()}-${crypto.randomBytes(12).toString("hex")}.${ext}`;
+
+  if (blobStorageEnabled()) {
+    // The name already embeds a timestamp + 12 random bytes, so no random
+    // suffix is needed (and addRandomSuffix would break the on-disk naming
+    // parity with files migrated by scripts/uploads-to-blob.ts).
+    await put(`images/${fileName}`, fileBuffer, {
+      access: "public",
+      addRandomSuffix: false,
+      contentType: toWebp ? "image/webp" : mime,
+    });
+    return `/uploads/images/${fileName}`;
+  }
+
+  const dir = path.join(UPLOADS_DIR, "images");
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, fileName), fileBuffer);
   return `/uploads/images/${fileName}`;
 }

@@ -1,0 +1,39 @@
+name: Migrate (Deploy)
+
+# Applies Prisma migrations to the production (Neon) database.
+# Separate from CI: ci.yml migrates a throwaway local Postgres; this workflow
+# targets the real DATABASE_URL secret, so it must never run on pull requests.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/prisma/**'
+  workflow_dispatch:  # Allow manual trigger (e.g. after a hotfix merge)
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      # Guard first: if the secret is missing, fail with a clear message
+      # instead of a cryptic Prisma/P1001 error three steps later.
+      - name: Verify DATABASE_URL secret is set
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL GitHub secret is not set. Add it under Settings → Secrets and variables → Actions before running this workflow."
+            exit 1
+          fi
+          echo "DATABASE_URL is present."
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npx prisma generate
+        working-directory: backend
+      - run: npx prisma migrate deploy
+        working-directory: backend

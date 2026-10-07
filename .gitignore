@@ -26,6 +26,9 @@ npm-debug.log*
 .idea/
 coverage/
 
+# Vercel CLI link dir (per-project; never commit)
+.vercel/
+
 # uploads (local file storage)
 backend/uploads/
 frontend/public/uploads/

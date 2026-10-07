@@ -77,10 +77,18 @@ describe("MAX_IMAGE_BYTES", () => {
     expect(MAX_IMAGE_BYTES).toBe(10 * 1024 * 1024);
   });
 
-  it("base64-inflates to under the 15mb body-parser limit, well under Cloudflare's 100 MB cap", () => {
-    // base64 encodes 3 bytes into 4, so the JSON body is ~4/3 the raw bytes.
+  it("endpoint body cap (4400kb) binds before the 10MB decoded-image ceiling", () => {
+    // base64 encodes 3 bytes into 4, so a 4400kb JSON body can carry at most
+    // ~3.3MB of decoded image bytes — the /api/admin/uploads body limit
+    // (Vercel's 4.5MB function cap) is therefore the real ceiling, not the
+    // MAX_IMAGE_BYTES safety cap below. That is correct: the frontend uploads
+    // ≤1920px WebP, so well-formed uploads never approach either bound.
+    const maxDecodedUnderBodyCap = Math.floor((4400 * 1024) / 4) * 3;
+    expect(maxDecodedUnderBodyCap).toBeLessThan(MAX_IMAGE_BYTES);
+
+    // Sanity: even MAX_IMAGE_BYTES base64-inflated stays under Cloudflare's
+    // 100 MB cap, so no intermediary can hard-reject it on size alone.
     const inflatedAsBase64 = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
-    expect(inflatedAsBase64).toBeLessThan(15 * 1024 * 1024);
     expect(inflatedAsBase64).toBeLessThan(100 * 1024 * 1024);
   });
 });

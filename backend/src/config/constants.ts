@@ -6,6 +6,14 @@
 /** Default HTTP port (overridable via PORT env — see config/env.ts). */
 export const DEFAULT_PORT = 4000;
 
+/**
+ * JSON body limit for the admin upload endpoint (base64 data URLs). Kept under
+ * Vercel's 4.5 MB function request-body cap — the frontend compresses images to
+ * ≤1920px WebP before upload, so real payloads sit far below this ceiling.
+ * See the comment above its use in app.ts.
+ */
+export const UPLOAD_JSON_BODY_LIMIT = "4400kb";
+
 /** Admin JWT lifetime (was inline in lib/auth.ts). */
 export const ADMIN_JWT_EXPIRES_IN = "12h";
 

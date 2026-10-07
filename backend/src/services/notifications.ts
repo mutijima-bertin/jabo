@@ -1,6 +1,7 @@
 import type { Booking } from "@prisma/client";
 import { promises as fs } from "fs";
 import path from "path";
+import { waitUntil } from "@vercel/functions";
 import { env } from "../config/env";
 import { sendEmail } from "./mailer";
 import { sendWhatsApp } from "./zavu";
@@ -25,9 +26,18 @@ import { notifyAdmin } from "./adminNotifications";
 /**
  * Run an async function in the background, detached from the request path.
  * Every call site MUST attach a .catch to avoid unhandled rejections.
+ *
+ * On Vercel the function context freezes as soon as the response is sent, so
+ * detached work (emails, WhatsApp, NotificationLog rows, the ContactMessage
+ * insert) would be killed mid-flight. There the promise is registered with
+ * waitUntil() from @vercel/functions, which keeps the invocation alive until
+ * it settles (it degrades to a no-op via getContext().waitUntil?.() outside
+ * the platform). Everywhere else — Docker/local — behavior is unchanged: a
+ * plain detached promise with a .catch.
  */
 export function runFireAndForget(fn: () => Promise<unknown>): void {
-  void fn().catch((err) => console.error("[notify:fire-and-forget]", (err as Error).message));
+  const promise = fn().catch((err) => console.error("[notify:fire-and-forget]", (err as Error).message));
+  if (process.env.VERCEL) waitUntil(promise);
 }
 
 async function log(entry: {

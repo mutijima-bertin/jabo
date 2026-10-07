@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { apiOrigin } from "./apiOrigin";
+import { compressImageDataUrl } from "./imageCompress";
 const TOKEN_KEY = "css_admin_token";
 
 export function getToken(): string | null {
@@ -80,8 +81,16 @@ export const adminApi = {
 
 /**
  * Upload a raw data URL to POST /api/admin/uploads — the ONLY admin upload
- * path (services, portfolio, blog covers, logos). That endpoint sits behind a
- * 20/hr per-IP rate limiter (express-rate-limit, standardHeaders draft-7) which
+ * path (services, portfolio, blog covers, logos).
+ *
+ * The payload is compressed in the browser BEFORE the POST (decode → downscale
+ * to the server's 1920×1920 geometry → WebP q0.82 re-encode, see
+ * `lib/imageCompress.ts`) because Vercel Functions cap request bodies at 4.5 MB
+ * while a base64 data URL of a 10 MB photo costs ~13.3 MB. Compression never
+ * blocks: on any failure the original data URL goes out unchanged.
+ *
+ * That endpoint sits behind a 20/hr per-IP rate limiter (express-rate-limit,
+ * standardHeaders draft-7) which
  * emits ONE combined `RateLimit: limit=20, remaining=19, reset=3600` header —
  * NOT the legacy `RateLimit-Remaining`. Parse the combined header first, fall
  * back to `RateLimit-Remaining` for older backends, so the UI can tell the
@@ -91,13 +100,14 @@ export const adminApi = {
  * the status.
  */
 export async function adminUpload(token: string, dataUrl: string): Promise<{ url: string; remaining?: number }> {
+  const payloadDataUrl = await compressImageDataUrl(dataUrl);
   const res = await fetch(`${apiOrigin()}/api/admin/uploads`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ dataUrl }),
+    body: JSON.stringify({ dataUrl: payloadDataUrl }),
     cache: "no-store",
   });
   if (!res.ok) {
