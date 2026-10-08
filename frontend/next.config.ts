@@ -59,8 +59,16 @@ const nextConfig: NextConfig = {
               // Next inlines critical CSS; Tailwind uses external files but
               // inline styles may appear in SSR output.
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob:",
-              "media-src 'self' blob:",
+              // data:/blob: cover inline SVGs and client object URLs. The
+              // Vercel Blob CDN host must be listed explicitly: the admin
+              // panel renders raw <img src="/uploads/..."> and the backend
+              // 302-redirects those to the CDN — CSP checks the FINAL URL,
+              // so 'self' alone blanked every admin thumbnail. Public pages
+              // go through same-origin /_next/image and never needed it.
+              // media-src pre-authorizes the same store for future
+              // portfolio videos served straight from Blob.
+              "img-src 'self' data: blob: https://x9eveaplhocclmvl.public.blob.vercel-storage.com",
+              "media-src 'self' blob: https://x9eveaplhocclmvl.public.blob.vercel-storage.com",
               // Browser→API calls, same-origin via the /api rewrite in prod.
               `connect-src ${CONNECT_SRC}`,
               "font-src 'self'",

@@ -366,6 +366,9 @@ single-use; request a fresh one rather than retrying an old URL.
 Flow: backend storage → frontend rewrite `/uploads/:path*` → `BACKEND_URL`. If images 404:
 (1) check files exist: `docker exec css-backend ls /app/uploads`;
 (2) confirm the frontend was **built** with the right `BACKEND_URL` (build-time constant).
+On the Vercel/Neon deployment the same symptom usually means a **DB reference without a CDN
+object** — run `scripts/verify-cdn-assets.sh` and repair with
+`scripts/mirror-uploads-to-cdn.sh` (§11).
 
 ### `curl http://localhost:4000/api/health` → connection refused
 Backend not running or crashed. `docker compose ps`, then `docker compose logs --tail=50 backend`.
@@ -624,8 +627,63 @@ testimonials and must never run against the live site.
 
 ---
 
+## 11. CDN asset integrity — verify & mirror
+
+**The invariant:** every image the database references as `/uploads/<path>` must exist on the
+public Vercel Blob store **`css-backend-blob-public`**, base URL
+
+```
+https://x9eveaplhocclmvl.public.blob.vercel-storage.com/<path>
+```
+
+so `/uploads/images/x.webp` is served at `…/images/x.webp` (the backend answers `/uploads/…`
+with a 302 onto that base). **Never** commit the store token: `BLOB_READ_WRITE_TOKEN` and
+`DATABASE_URL` are read at runtime from the environment or the gitignored `backend/.env.neon`,
+and neither script ever prints them.
+
+**Why this section exists.** Once already, the database carried 50 `/uploads/…` references
+while 39 of the files existed only inside the running `css-backend` container
+(`/app/uploads/images/`, the **docker-era source of truth**, 204 files) and had never been
+mirrored to the CDN — broken images in admin and on the public site, found twice before
+anyone noticed. Two scripts make that failure loud instead of silent:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/verify-cdn-assets.sh` | Read-only audit. Pulls every reference out of Postgres (`PortfolioItem.coverUrl` + `mediaUrls`, `Service.imageUrl`, `BlogPost.coverImageUrl`, `ClientLogo.imageUrl`, `SiteSetting.value` starting `/uploads/`), deduplicates, HEADs each CDN URL and prints `total/ok/broken`. Exits **1** if anything is not HTTP 200, if psql/the DB fails, or if the query returns 0 rows (so a broken connection can never masquerade as "0 broken"). |
+| `scripts/mirror-uploads-to-cdn.sh` | Repair. For every referenced file missing on the CDN it finds the bytes — first `backend/uploads/<path>` (repo-local), else `docker exec css-backend cat /app/uploads/<path>` — and uploads with `npx --yes vercel blob put <file> --pathname "<path>" --access public --allow-overwrite true`. Reports `NOT-RECOVERABLE` (exit 1) when neither source has the file. Idempotent: present objects are skipped, so it can be re-run/resumed at any time; it never deletes. |
+
+**Run these after any DB restore, reseed, or image drift:**
+
+```sh
+scripts/verify-cdn-assets.sh            # audit — must print "broken=0" and exit 0
+scripts/mirror-uploads-to-cdn.sh --check  # dry run: what WOULD be uploaded
+scripts/mirror-uploads-to-cdn.sh        # repair the pending files
+```
+
+Options worth knowing:
+
+- `--all` (mirror) additionally pushes **every** docker-era/repo-local file that is absent on
+  the CDN — the full archival mirror — and refuses to run if `css-backend` is not up (a partial
+  archival mirror defeats its purpose). Default stays DB-referenced-only.
+- psql is invoked **inside the `css-postgres` container by default** (`docker exec … psql`,
+  this machine has no host psql); pass `--no-docker` (or `PSQL=<binary>`) for a host binary —
+  that is what CI does. `--docker-exec` forces the container path and fails loudly if it is down.
+- Files uploaded through the **Vercel-deployed** backend go straight to Blob (its filesystem is
+  ephemeral), so they have **no** local copy anywhere; `NOT-RECOVERABLE` then means exactly that.
+
+**CI:** `.github/workflows/verify-assets.yml` runs `scripts/verify-cdn-assets.sh --no-docker`
+on every push to `main` and on manual `workflow_dispatch`, using the existing `DATABASE_URL`
+GitHub secret (never echoed; the workflow fails up front if the secret is missing). The runner
+installs `postgresql-client` with apt — the same bash+curl+psql code path as a local run, so CI
+and local can never disagree. Any broken reference fails the job.
+
+---
+
 *Every fact in this file was verified against the repository on 2026-10-03: `docker-compose.yml`,
 `docker-compose.override.yml`, `docker-compose.prod.yml`, `deploy/Caddyfile`, both Dockerfiles,
 `backend/src/index.ts`, `backend/src/app.ts`, `backend/src/config/env.ts`, `backend/src/services/storage.ts`,
 `backend/src/services/emailTemplates.ts`, `frontend/next.config.ts`, `frontend/src/lib/apiOrigin.ts`,
-Playwright config and specs, and `docs/DATABASE.md`.*
+Playwright config and specs, and `docs/DATABASE.md`. §11 (plus the §9 cross-reference) was added
+and verified on 2026-10-08 against `scripts/verify-cdn-assets.sh`,
+`scripts/mirror-uploads-to-cdn.sh`, `.github/workflows/verify-assets.yml` and a live scan of all
+50 database references (50/50 HTTP 200 on the public Blob store).*

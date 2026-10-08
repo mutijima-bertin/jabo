@@ -22,7 +22,7 @@ import {
   selectChevron,
   thumbCls,
 } from "@/lib/ui";
-import { CollectionManager, DeleteButton, Dropzone, Field, ManagerEditor, putCollectionOrder } from "@/components/admin/shared/CollectionManager";
+import { CollectionManager, DeleteButton, Dropzone, Field, ManagerEditor, onImageError, putCollectionOrder } from "@/components/admin/shared/CollectionManager";
 
 const empty = {
   titleEn: "",
@@ -252,7 +252,7 @@ export function AdminPortfolio({ token }: { token: string }) {
             <div className="flex flex-wrap gap-3">
               {editing.mediaUrls.map((url, i) => (
                 <div key={url} className="relative">
-                  <img src={url} alt="" className="h-20 w-28 rounded-lg object-cover" />
+                  <img src={url} alt="" className="h-20 w-28 rounded-lg object-cover" onError={onImageError} />
                   <button
                     type="button"
                     aria-label={t("admin_service_remove_image")}
@@ -375,7 +375,7 @@ export function AdminPortfolio({ token }: { token: string }) {
                   key={i.id}
                   className="relative flex flex-col overflow-hidden rounded-2xl border border-admin-border bg-admin-base"
                 >
-                  <img src={i.coverUrl} alt={i.titleEn} className={thumbCls} loading="lazy" />
+                  <img src={i.coverUrl} alt={i.titleEn} className={thumbCls} loading="lazy" onError={onImageError} />
                   {/* In-flow card footer: title + category, then the always-visible
                       action row (edit/delete/reorder) under the media at every
                       breakpoint — no hover-reveal, no scrim overlay. The footer

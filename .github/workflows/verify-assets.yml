@@ -1,0 +1,61 @@
+name: Verify CDN Assets
+
+# Guards against the "DB references an image the CDN doesn't serve" failure.
+# Incident that motivated this: 50 rows referenced /uploads/images/<file>.webp
+# but 39 of those files only existed inside the docker-era css-backend
+# container and were never mirrored to the public Blob store → broken images
+# in admin + public site, noticed twice. This job makes that drift fail the
+# build instead of surfacing as a broken image.
+#
+# Why a separate workflow (not an extra step in migrate.yml):
+#   migrate.yml is path-filtered to backend/prisma/**, but image drift is not
+#   caused by migrations alone — a DB restore, a seed, an admin edit or a
+#   Blob-store change can all break references. So this check runs on EVERY
+#   push to main, plus manual workflow_dispatch.
+#
+# DB access decision (documented per the task requirement):
+#   * Secret: the same `DATABASE_URL` GitHub secret migrate.yml already uses
+#     (Settings → Secrets and variables → Actions). Its value is never echoed.
+#   * Driver: bash + curl + psql — the script itself, run with `--no-docker`
+#     because GitHub-hosted runners have no css-postgres container.
+#   * psql is installed with `apt-get install postgresql-client` (the runner
+#     image does not reliably ship it). This is far lighter than migrate.yml's
+#     Node path (npm ci + prisma generate), needs no Node cache, and the
+#     Ubuntu client speaks to Neon over TLS fine. Deliberately NOT a node
+#     one-liner: the SQL lives in the script so local runs and CI run the
+#     exact same query — no second implementation to drift.
+#
+# Any broken reference => scripts/verify-cdn-assets.sh exits 1 => job fails.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # allow manual runs (e.g. right after a DB restore)
+
+permissions:
+  contents: read
+
+jobs:
+  verify-cdn-assets:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      # Guard first: a missing secret must fail with a clear message instead
+      # of a cryptic psql/parse error later (same pattern as migrate.yml).
+      - name: Verify DATABASE_URL secret is set
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL GitHub secret is not set. Add it under Settings → Secrets and variables → Actions before running this workflow."
+            exit 1
+          fi
+          echo "DATABASE_URL is present."
+      - uses: actions/checkout@v5
+      - name: Install PostgreSQL client (psql)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql --version
+      - name: Check every DB-referenced image on the CDN
+        # Exits 1 if any /uploads/... reference does not return HTTP 200.
+        run: ./scripts/verify-cdn-assets.sh --no-docker

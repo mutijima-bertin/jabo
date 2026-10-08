@@ -4,6 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
 import { adminApi, adminUpload, useSessionGuard } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
+import { AdminDialog, DialogFooter } from "@/components/admin/shared/AdminDialog";
 import {
   adminFieldError,
   adminFieldHint,
@@ -11,7 +12,6 @@ import {
   btnDanger,
   btnPrimary,
   btnSecondary,
-  btnSm,
   cardBody,
   cardFooter,
   cardHeader,
@@ -47,6 +47,45 @@ export async function uploadImage(token: string, file: File): Promise<{ url: str
     reader.readAsDataURL(file);
   });
   return adminUpload(token, dataUrl);
+}
+
+// ---------------------------------------------------------------------------
+// onImageError — broken-image fallback for raw admin <img> previews
+// ---------------------------------------------------------------------------
+
+/**
+ * Wordless "image missing" placeholder for admin thumbnails — one inline SVG
+ * data URI (allowed by CSP `img-src data:`), themed with the admin tokens from
+ * globals.css: `--admin-raised` fill, `--admin-faint` image-off glyph. No i18n
+ * key: the call site keeps its own `alt`, which stays the accessible name, and
+ * the glyph carries the visual cue.
+ *
+ * `#` is percent-encoded deliberately — a bare `#` would start a URI fragment
+ * and the browser would fail to decode the SVG (re-firing onError forever).
+ */
+const MISSING_IMAGE_SRC =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 120'%3E" +
+  "%3Crect width='160' height='120' fill='%231e1a15'/%3E" +
+  "%3Ccircle cx='69' cy='50' r='5' fill='%238a7f72'/%3E" +
+  "%3Cg fill='none' stroke='%238a7f72' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E" +
+  "%3Crect x='54' y='34' width='52' height='52' rx='8'/%3E" +
+  "%3Cpath d='M60 78l14-14 9 9 8-7 11 12'/%3E" +
+  "%3Cpath d='M49 29l62 62'/%3E" +
+  "%3C/g%3E%3C/svg%3E";
+
+/**
+ * `onError` for every raw admin `<img>` (Dropzone previews, collection card
+ * thumbnails, logo walls): a missing CDN object previously rendered as a
+ * silent blank, so the owner could not tell WHICH item they were editing.
+ * Swapping `src` in place — instead of rendering a different element — keeps
+ * the image's own box (`thumbCls` aspect, `h-14` logo sizing …) intact, and
+ * React never reverts it: the `src` prop is unchanged on re-render, so only a
+ * genuinely new URL re-attempts a load (and re-arms this handler).
+ */
+export function onImageError(e: React.SyntheticEvent<HTMLImageElement>): void {
+  const img = e.currentTarget;
+  if (img.getAttribute("src") === MISSING_IMAGE_SRC) return; // already the placeholder — never loop
+  img.setAttribute("src", MISSING_IMAGE_SRC);
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +242,7 @@ export function ManagerEditor({ title, onSubmit, onCancel, dirty, busy, saved, e
 }
 
 // ---------------------------------------------------------------------------
-// DeleteButton — always-visible row action that morphs into an inline confirm
+// DeleteButton — always-visible row action with modal confirmation
 // ---------------------------------------------------------------------------
 
 interface DeleteButtonProps {
@@ -215,38 +254,62 @@ interface DeleteButtonProps {
 
 export function DeleteButton({ busy, onConfirm, confirmLabel }: DeleteButtonProps) {
   const { t } = useI18n();
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  if (!confirming) {
-    return (
-      <button type="button" className={rowActionDanger} disabled={busy} onClick={() => setConfirming(true)}>
+  const titleId = "delete-dialog-title";
+  const descId = "delete-dialog-desc";
+
+  return (
+    <>
+      <button
+        type="button"
+        className={rowActionDanger}
+        disabled={busy}
+        aria-haspopup="dialog"
+        aria-label={t("admin_form_delete")}
+        onClick={() => setOpen(true)}
+      >
         <Trash2 className="h-3.5 w-3.5" />
         {t("admin_form_delete")}
       </button>
-    );
-  }
-  return (
-    <div className={confirmBox}>
-      <p className={confirmTitle}>{confirmLabel ?? t("admin_delete_title")}</p>
-      <p className={confirmBody}>{t("admin_delete_body")}</p>
-      <div className="mt-2 flex flex-wrap justify-end gap-2">
-        <button type="button" className={cx(btnSecondary, btnSm)} disabled={busy} onClick={() => setConfirming(false)}>
-          {t("admin_form_cancel")}
-        </button>
-        <button
-          type="button"
-          className={cx(btnDanger, btnSm)}
-          disabled={busy}
-          onClick={() => {
-            setConfirming(false);
-            onConfirm();
-          }}
-        >
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          {busy ? t("admin_deleting") : t("admin_delete_confirm")}
-        </button>
-      </div>
-    </div>
+      {open && (
+        <AdminDialog labelledBy={titleId} describedBy={descId} size="sm" onClose={() => !busy && setOpen(false)}>
+          <header className={cx(cardHeader, "pr-12")}>
+            <h2 id={titleId} className={cardHeaderTitle}>
+              {confirmLabel ?? t("admin_delete_title")}
+            </h2>
+          </header>
+          <div className={cx(cardBody, "space-y-2")}>
+            <p id={descId} className="text-sm text-admin-muted">
+              {t("admin_delete_body")}
+            </p>
+          </div>
+          <DialogFooter>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className={btnSecondary}
+                disabled={busy}
+                onClick={() => setOpen(false)}
+              >
+                {t("admin_form_cancel")}
+              </button>
+              <button
+                type="button"
+                className={btnDanger}
+                disabled={busy}
+                onClick={() => {
+                  onConfirm();
+                }}
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {busy ? t("admin_deleting") : t("admin_delete_confirm")}
+              </button>
+            </div>
+          </DialogFooter>
+        </AdminDialog>
+      )}
+    </>
   );
 }
 
@@ -327,7 +390,7 @@ export function Dropzone({ token, value, onChange, onError, title, hint }: Dropz
       >
         {value ? (
           /* eslint-disable-next-line @next/next/no-img-element -- admin upload preview; dimensions vary per collection */
-          <img src={value} alt="" className="max-h-40 rounded-xl object-contain" />
+          <img src={value} alt="" className="max-h-40 rounded-xl object-contain" onError={onImageError} />
         ) : (
           <UploadCloud className={dropzoneIcon} />
         )}

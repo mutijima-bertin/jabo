@@ -45,7 +45,7 @@ import {
   thCls,
   tbody,
 } from "@/lib/ui";
-import { DeleteButton, Dropzone, Field, putCollectionOrder, uploadImage } from "@/components/admin/shared/CollectionManager";
+import { DeleteButton, Dropzone, Field, onImageError, putCollectionOrder, uploadImage } from "@/components/admin/shared/CollectionManager";
 
 /* ---------------------------------------------------------------------------
  * AdminSettings — three independent sections, each a real <form>:
@@ -388,7 +388,7 @@ function LogosSection({ token }: { token: string }) {
             >
               {logo.imageUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element -- admin-only thumbnail */
-                <img src={logo.imageUrl} alt={logo.name} className="h-14 w-auto max-w-full object-contain" loading="lazy" />
+                <img src={logo.imageUrl} alt={logo.name} className="h-14 w-auto max-w-full object-contain" loading="lazy" onError={onImageError} />
               ) : (
                 <span className="min-w-0 max-w-full truncate rounded-full border border-admin-line-strong px-4 py-2 font-serif text-sm tracking-wide text-admin-muted">
                   {logo.name}

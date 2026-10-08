@@ -108,7 +108,10 @@ export const rowAction =
 
 export const rowActionDefault = cx(rowAction, "border-admin-line-strong text-admin-muted hover:border-admin-muted hover:text-admin-text");
 export const rowActionBrass = cx(rowAction, "border-accent/40 text-brass-light hover:border-accent hover:bg-accent/10");
-export const rowActionDanger = cx(rowAction, "border-admin-danger/30 text-admin-danger hover:bg-admin-danger/10");
+export const rowActionDanger = cx(
+  rowAction,
+  "border-admin-danger/50 bg-admin-danger/15 text-admin-danger hover:bg-admin-danger/25",
+);
 
 /** Square icon buttons (dialog close, table header filters …) — ≥40px targets. */
 export const iconBtn =

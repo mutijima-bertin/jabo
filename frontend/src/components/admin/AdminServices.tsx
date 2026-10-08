@@ -28,7 +28,7 @@ import {
   selectChevron,
   thumbWide,
 } from "@/lib/ui";
-import { CollectionManager, DeleteButton, Dropzone, Field, ManagerEditor, putCollectionOrder } from "@/components/admin/shared/CollectionManager";
+import { CollectionManager, DeleteButton, Dropzone, Field, ManagerEditor, onImageError, putCollectionOrder } from "@/components/admin/shared/CollectionManager";
 
 const empty = {
   nameEn: "",
@@ -394,7 +394,7 @@ export function AdminServices({ token }: { token: string }) {
                 <div key={s.id} className={cx(cardCls, "overflow-hidden")}>
                   {s.imageUrl && (
                     /* eslint-disable-next-line @next/next/no-img-element -- admin-only service thumbnail */
-                    <img src={s.imageUrl} alt="" className={thumbWide} loading="lazy" />
+                    <img src={s.imageUrl} alt="" className={thumbWide} loading="lazy" onError={onImageError} />
                   )}
                   <div className={cardBody}>
                     <p className="font-semibold text-admin-text">{s.nameEn}</p>
