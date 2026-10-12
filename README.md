@@ -87,6 +87,8 @@ You can also run each service on its own — one database container plus two dev
 
 ## Documentation
 
+For the new visual identity and website redesign, start with [README-REDESIGN.md](README-REDESIGN.md): MVP scope, ordered phases, current status, and the next action. Earlier design/progress notes remain historical references.
+
 | Document                                        | What's inside                                                                                             |
 | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md)        | Owner operations manual: quick start, local dev, ports, rebuilds, database ops, troubleshooting, go-live checklist |

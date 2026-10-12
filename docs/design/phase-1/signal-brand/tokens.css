@@ -1,0 +1,5 @@
+/* Signal: selected identity, refinement 1. Scope to avoid changing live UI. */
+@font-face{font-family:Signal Sans;src:url('./fonts/Montserrat-Regular.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:Signal Sans;src:url('./fonts/Montserrat-Medium.otf') format('opentype');font-weight:500;font-display:swap}
+@font-face{font-family:Signal Sans;src:url('./fonts/Montserrat-SemiBold.otf') format('opentype');font-weight:600;font-display:swap}
+.signal-refined{--ink:#151817;--bone:#efece4;--vermilion:#e67c52;--quiet:#575b54;--line:#c8c7bd;--display:'Signal Sans',Arial,sans-serif;--body:'Signal Sans',Arial,sans-serif;--space:4px;--gutter:clamp(22px,5vw,80px);--measure:1440px;--ease:cubic-bezier(.2,.65,.3,1);--duration:450ms;--focus:#974225}
