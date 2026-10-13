@@ -1,102 +1,29 @@
 "use client";
-
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
-import { BRAND } from "@/lib/constants";
+import { usePathname, useRouter } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
-import { localizedPath } from "@/lib/locale";
+import { localizedPath, swapLocaleInPath } from "@/lib/locale";
 import { Logo } from "@/components/shared/Logo";
-
 export function Nav() {
-  const { locale, t } = useI18n();
-  const [open, setOpen] = useState(false);
-
-  // `localizedPath` (not `/${locale}…`) so every entry below is a BARE route
-  // constant that stays in lockstep with PUBLIC_PATHS in lib/locale.ts — the
-  // locale segment is applied in exactly one place. Before the `[locale]`
-  // refactor these were bare literals and /about was a 404.
-  const links = [
-    { href: localizedPath(locale, "/"), label: t("nav_home") },
-    { href: localizedPath(locale, "/services"), label: t("nav_services") },
-    { href: localizedPath(locale, "/portfolio"), label: t("nav_portfolio") },
-    { href: localizedPath(locale, "/blog"), label: t("nav_blog") },
-  ];
-
-  return (
-    <header className="sticky top-0 z-50 border-b border-ink/10 bg-cream/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
-        <Link href={localizedPath(locale, "/")} aria-label={`${BRAND} — home`} className="shrink-0">
-          <Logo className="h-10 w-auto" />
-        </Link>
-
-        {/* Desktop nav */}
-        <nav aria-label={t("nav_main_aria")} className="hidden items-center gap-8 text-sm font-medium text-ink/70 md:flex">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="transition hover:text-brass">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-4 md:flex">
-          <Link
-            href={localizedPath(locale, "/book")}
-            className="rounded-full bg-brass-deep px-4 py-2 text-sm font-semibold text-cream transition hover:bg-brass-dark"
-          >
-            {t("nav_book")}
-          </Link>
-        </div>
-
-        {/* Mobile hamburger */}
-        <div className="flex items-center md:hidden">
-          <button
-            type="button"
-            onClick={() => setOpen((o) => !o)}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label={open ? t("nav_menu_close") : t("nav_menu_open")}
-            className="rounded-full border border-ink/15 p-2 text-ink/70 transition hover:border-brass hover:text-brass"
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
+  const { locale, t, setLocale } = useI18n(); const [open, setOpen] = useState(false); const menu = useRef<HTMLButtonElement>(null); const pathname = usePathname(); const router = useRouter();
+  const links = [['/portfolio', t('nav_portfolio')], ['/services', t('nav_services')], ['/about', t('nav_about')]];
+  const changeLanguage = () => { const next = locale === 'en' ? 'rw' : 'en'; setLocale(next); router.push(swapLocaleInPath(pathname + window.location.search + window.location.hash, next)); setOpen(false); };
+  return <>
+    <header className="header">
+      <Link className="brand" href={localizedPath(locale, '/')} aria-label="Creative Sound Studio — home">
+        <Logo />
+      </Link>
+      <nav aria-label={t('nav_main_aria')}>{links.map(([href, label]) =>
+        <Link key={href} href={localizedPath(locale, href)} aria-current={pathname === localizedPath(locale, href) ? 'page' : undefined}>{label}</Link>)}</nav>
+      <div className="nav-actions">
+        <button className="language-switch" onClick={changeLanguage} aria-label={t('footer_switch_language_aria')}>{locale === 'en' ? 'RW' : 'EN'}</button>
+        <Link className="header-cta" href={localizedPath(locale, '/book')}>{locale === 'en' ? 'Start a conversation' : 'Tuganire'} ↗</Link>
+        <button ref={menu} className="menu" aria-controls="mobile-menu" aria-expanded={open} aria-label={open ? t('nav_menu_close') : t('nav_menu_open')} onClick={() => setOpen(!open)}>{open ? (locale === 'en' ? 'Close' : 'Funga') : 'Menu'}</button>
       </div>
-
-      {/* Mobile menu panel */}
-      {open && (
-        <nav id="mobile-menu" aria-label={t("nav_mobile_aria")} className="border-t border-ink/10 bg-cream md:hidden">
-          <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink/75 transition hover:bg-cream-alt hover:text-brass"
-              >
-                {l.label}
-              </Link>
-            ))}
-            <Link
-              // /login is in the deliberately BARE set (lib/locale.ts): no
-              // locale segment, no localizedPath() — the page follows the
-              // persisted `css_locale` preference instead.
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-ink/55 transition hover:bg-cream-alt hover:text-brass"
-            >
-              {t("client_login_title")}
-            </Link>
-            <Link
-              href={localizedPath(locale, "/book")}
-              onClick={() => setOpen(false)}
-              className="mt-2 rounded-full bg-brass-deep px-4 py-2.5 text-center text-sm font-semibold text-cream transition hover:bg-brass-dark"
-            >
-              {t("nav_book")}
-            </Link>
-          </div>
-        </nav>
-      )}
     </header>
-  );
+    <nav id="mobile-menu" hidden={!open} aria-label={t('nav_mobile_aria')} onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); menu.current?.focus(); } }}>{[...links, ['/blog', t('nav_blog')], ['/contact', t('nav_contact')], ['/book', t('nav_book')]].map(([href, label]) =>
+      <Link key={href} href={localizedPath(locale, href)} onClick={() => setOpen(false)}>{label}</Link>)}<Link href="/login" onClick={() => setOpen(false)}>{t('client_login_title')}</Link>
+    </nav>
+  </>;
 }

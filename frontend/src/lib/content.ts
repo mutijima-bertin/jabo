@@ -68,3 +68,7 @@ export async function fetchPost(slug: string): Promise<PostFull | null> {
 export function s(settings: SettingsMap, key: string, locale: "en" | "rw"): string {
   return settings.get(`${key}/${locale}`) ?? settings.get(`${key}/en`) ?? "";
 }
+
+/** Integrated public routes surface outages through their retry boundary. Sitemap/legacy callers retain graceful fallbacks. */
+export function fetchRequiredServices(): Promise<Service[]> { return api.get<Service[]>("/public/services"); }
+export function fetchRequiredPortfolio(): Promise<PortfolioItem[]> { return api.get<PortfolioItem[]>("/public/portfolio"); }

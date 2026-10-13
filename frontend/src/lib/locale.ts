@@ -100,7 +100,7 @@ export function localizedPath(locale: Locale, path?: string): string {
   let pathname = qAt === -1 ? beforeHash : beforeHash.slice(0, qAt);
 
   // "/" and "" both mean "the locale home page" → "/en", never "/en/".
-  if (pathname === "" || pathname === "/") return `/${locale}${hash}${search}`;
+  if (pathname === "" || pathname === "/") return `/${locale}${search}${hash}`;
   if (!pathname.startsWith("/")) pathname = `/${pathname}`;
 
   return `/${locale}${pathname}${search}${hash}`;

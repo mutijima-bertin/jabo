@@ -138,7 +138,7 @@ export function BookingForm({ services, initialServiceId }: Props) {
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <a
             href={`https://wa.me/250783269951?text=${encodeURIComponent(
-              "Hello! I just booked a production (reference " + result.reference + ") — I have a question.",
+              "Hello! I sent a project request (reference " + result.reference + ") — I have a question.",
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -168,8 +168,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
   return (
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <label className={labelCls}>{t("book_service")} *</label>
-        <select
+        <label htmlFor="booking-service" className={labelCls}>{t("book_service")} *</label>
+        <select id="booking-service"
           required
           value={form.serviceId}
           onChange={(e) => set("serviceId", e.target.value)}
@@ -190,8 +190,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
       </div>
 
       <div>
-        <label className={labelCls}>{t("book_name")} *</label>
-        <input
+        <label htmlFor="booking-name" className={labelCls}>{t("book_name")} *</label>
+        <input id="booking-name"
           required
           value={form.contactName}
           onChange={(e) => set("contactName", e.target.value)}
@@ -205,8 +205,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
         )}
       </div>
       <div>
-        <label className={labelCls}>{t("book_email")} *</label>
-        <input
+        <label htmlFor="booking-email" className={labelCls}>{t("book_email")} *</label>
+        <input id="booking-email"
           required
           type="email"
           value={form.contactEmail}
@@ -238,8 +238,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
         )}
       </div>
       <div>
-        <label className={labelCls}>{t("book_date")}</label>
-        <input
+        <label htmlFor="booking-date" className={labelCls}>{t("book_date")}</label>
+        <input id="booking-date"
           type="date"
           value={form.eventDate}
           onChange={(e) => set("eventDate", e.target.value)}
@@ -252,8 +252,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
         )}
       </div>
       <div>
-        <label className={labelCls}>{t("book_location")}</label>
-        <input
+        <label htmlFor="booking-location" className={labelCls}>{t("book_location")}</label>
+        <input id="booking-location"
           value={form.location}
           onChange={(e) => set("location", e.target.value)}
           className={fieldErrors.location ? inputErrorCls : inputCls}
@@ -299,8 +299,8 @@ export function BookingForm({ services, initialServiceId }: Props) {
       </div>
 
       <div className="sm:col-span-2">
-        <label className={labelCls}>{t("book_details")}</label>
-        <textarea
+        <label htmlFor="booking-details" className={labelCls}>{t("book_details")}</label>
+        <textarea id="booking-details"
           rows={4}
           value={form.details}
           onChange={(e) => set("details", e.target.value)}

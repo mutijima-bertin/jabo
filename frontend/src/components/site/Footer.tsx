@@ -1,180 +1,35 @@
 "use client";
-
-import { useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Languages, Mail, MapPin, Phone } from "lucide-react";
-import { BRAND } from "@/lib/constants";
 import { useI18n } from "@/lib/i18n";
-import { localizedPath, swapLocaleInPath, type Locale } from "@/lib/locale";
+import { localizedPath, swapLocaleInPath } from "@/lib/locale";
 import { CONTACT } from "@/lib/site";
 import { Logo } from "@/components/shared/Logo";
-import { WhatsAppIcon, InstagramIcon, YoutubeIcon } from "@/components/shared/social-icons";
-
-export function Footer() {
-  const { t, locale, setLocale } = useI18n();
-  const pathname = usePathname();
-  const router = useRouter();
-  const year = new Date().getFullYear();
-
-  // BARE route constants + localizedPath(), same contract as Nav: the locale
-  // segment is applied by the helper, not by string concatenation here.
-  const quickLinks = [
-    { href: localizedPath(locale, "/"), label: t("nav_home") },
-    { href: localizedPath(locale, "/services"), label: t("nav_services") },
-    { href: localizedPath(locale, "/portfolio"), label: t("nav_portfolio") },
-    // Hash link, and the one entry a naive `/x` grep misses. localizedPath
-    // splits the fragment off BEFORE prefixing, so this yields "/en#about" and
-    // not "/en/#about" — the latter puts a slash segment in front of the hash
-    // and never reaches the home page's #about anchor.
-    { href: localizedPath(locale, "/#about"), label: t("nav_about") },
-    { href: localizedPath(locale, "/blog"), label: t("nav_blog") },
-    { href: localizedPath(locale, "/contact"), label: t("nav_contact") },
-    { href: localizedPath(locale, "/book"), label: t("nav_book") },
-  ];
-
-  /**
-   * EN/RW toggle. It has to NAVIGATE, not just set state: on the 8 localized
-   * routes the URL segment is the source of truth for the language (the
-   * I18nProvider deliberately ignores localStorage there), so a setLocale-only
-   * toggle left the address bar on /en/... while the button claimed Kinyarwanda.
-   *
-   * `window.location` is read in the handler rather than via useSearchParams():
-   * this Footer is shared chrome on every route, and a useSearchParams() here
-   * would pull the whole chrome into a Suspense boundary and force dynamic
-   * rendering app-wide just to preserve `?page=2` on the blog pager. Reading it
-   * at click time costs nothing and keeps that query string across the switch.
-   */
-  const switchLocale = useCallback(
-    (next: Locale) => {
-      router.push(swapLocaleInPath(`${pathname}${window.location.search}${window.location.hash}`, next));
-      setLocale(next);
-    },
-    [pathname, router, setLocale],
-  );
-
-  const socials = [
-    { href: CONTACT.whatsappUrl, label: t("social_whatsapp"), Icon: WhatsAppIcon },
-    { href: "https://www.instagram.com/creativesoundstudiorw/", label: t("social_instagram_studio"), Icon: InstagramIcon },
-    { href: "https://www.instagram.com/jabo_nkurunziza/", label: t("social_instagram_jabo"), Icon: InstagramIcon },
-    { href: "https://www.youtube.com/@nkurunzizajabo7867", label: t("social_youtube"), Icon: YoutubeIcon },
-  ];
-
-  return (
-    <footer className="border-t border-ink/10 bg-cream-alt">
-      <div className="mx-auto max-w-7xl px-4 py-14">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1.3fr]">
-          {/* Brand */}
-          <div>
-            <Link href={localizedPath(locale, "/")} aria-label={`${BRAND} — home`}>
-              <Logo className="h-12 w-auto" />
-            </Link>
-            <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink/60">
-              {t("footer_sub")}
-            </p>
-
-            {/* Social icons */}
-            <ul className="mt-6 flex items-center gap-3">
-              {socials.map(({ href, label, Icon }) => (
-                <li key={href}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    title={label}
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/15 text-ink/60 transition hover:border-brass hover:bg-brass hover:text-cream"
-                  >
-                    <Icon className="h-4 w-4" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-5 flex flex-col gap-2 text-xs font-medium text-ink/50">
-              {/* /login and /track are in the deliberately BARE set (lib/locale.ts):
-                  clients paste them between devices and /track/<token> is emailed
-                  as a magic link, so they keep no locale segment and follow the
-                  persisted preference instead. */}
-              <Link href="/login" className="w-fit underline-offset-2 transition hover:text-brass hover:underline">
-                {t("client_login_title")}
-              </Link>
-              <Link href="/track" className="w-fit underline-offset-2 transition hover:text-brass hover:underline">
-                {t("footer_track")}
-              </Link>
-            </div>
-          </div>
-
-          {/* Quick links */}
-          <nav aria-label="Footer" className="text-sm">
-            <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brass">
-              {t("footer_links")}
-            </h2>
-            <ul className="mt-4 space-y-2.5">
-              {quickLinks.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="text-ink/65 transition hover:text-brass">
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Contact + language */}
-          <div className="text-sm">
-            <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.22em] text-brass">
-              {t("footer_contact")}
-            </h2>
-            <ul className="mt-4 space-y-2.5 text-ink/65">
-              <li className="flex items-center gap-2.5">
-                <MapPin className="h-4 w-4 shrink-0 text-brass" />
-                Kigali, Rwanda
-              </li>
-              <li>
-                <a
-                  href={CONTACT.whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 transition hover:text-brass"
-                >
-                  <WhatsAppIcon className="h-4 w-4 shrink-0 text-brass" />
-                  {CONTACT.phoneDisplay}
-                </a>
-              </li>
-              <li>
-                <a href={CONTACT.emailHref} className="flex items-center gap-2.5 transition hover:text-brass">
-                  <Mail className="h-4 w-4 shrink-0 text-brass" />
-                  {CONTACT.email}
-                </a>
-              </li>
-              <li>
-                <a href={CONTACT.phoneHref} className="flex items-center gap-2.5 transition hover:text-brass">
-                  <Phone className="h-4 w-4 shrink-0 text-brass" />
-                  {CONTACT.phoneDisplay}
-                </a>
-              </li>
-            </ul>
-            <button
-              onClick={() => switchLocale(locale === "en" ? "rw" : "en")}
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-ink/15 bg-cream px-3.5 py-2 text-xs font-medium text-ink/70 transition hover:border-brass hover:text-brass"
-              aria-label={t("footer_switch_language_aria")}
-            >
-              <Languages className="h-3.5 w-3.5" />
-              {locale === "en" ? "Kinyarwanda" : "English"}
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ink/10 pt-6 text-xs text-ink/50 sm:flex-row">
-          <p>
-            © {year} {BRAND}. {t("footer_rights")}
-          </p>
-          <p className="font-serif text-xs italic tracking-wide text-ink/45">
-            {t("footer_caption")}
-          </p>
-        </div>
+export function Footer() {  
+const { locale, t, setLocale } = useI18n(); const pathname = usePathname(); const router = useRouter(); return <footer className="wrap site-footer">
+    <div className="footer-top">
+      <div>
+        <Link href={localizedPath(locale, '/')} aria-label="Creative Sound Studio — home">
+          <Logo className="footer-logo" />
+        </Link>
+        <p>{locale === 'en' ? 'Photography. Film. Live production.' : 'Amafoto. Filime. Ibikorwa bya live.'}<br />Kigali, Rwanda.</p>
       </div>
-    </footer>
-  );
+      <nav aria-label="Footer">{[['/portfolio', t('nav_portfolio')], ['/services', t('nav_services')], ['/about', t('nav_about')], ['/blog', t('nav_blog')], ['/contact', t('nav_contact')]].map(([href, label]) =>
+        <Link key={href} href={localizedPath(locale, href)}>{label}</Link>)}<Link href="/login">{t('client_login_title')}</Link>
+        <Link href="/track">{t('footer_track')}</Link>
+      </nav>
+      <div className="footer-contact">
+        <a href={CONTACT.emailHref}>{CONTACT.email}</a>
+        <a href={CONTACT.phoneHref}>{CONTACT.phoneDisplay}</a>
+        <a href={CONTACT.whatsappUrl} target="_blank" rel="noopener noreferrer">WhatsApp ↗</a>
+        <a href="https://www.instagram.com/creativesoundstudiorw/" target="_blank" rel="noopener noreferrer">Instagram ↗</a>
+        <a href="https://www.youtube.com/@nkurunzizajabo7867" target="_blank" rel="noopener noreferrer">YouTube ↗</a>
+      </div>
+    </div>
+    <div className="footer-bottom">
+      <span>© {new Date().getFullYear()} Creative Sound Studio. {t('footer_rights')}</span>
+      <button aria-label={t('footer_switch_language_aria')} onClick={() => { const next = locale === 'en' ? 'rw' : 'en'; router.push(swapLocaleInPath(pathname + window.location.search + window.location.hash, next)); setLocale(next); }}>{locale === 'en' ? 'Kinyarwanda' : 'English'} ↗</button>
+      <a href="#site-main">{locale === 'en' ? 'Back to the start' : 'Subira hejuru'} ↑</a>
+    </div>
+  </footer>
 }
