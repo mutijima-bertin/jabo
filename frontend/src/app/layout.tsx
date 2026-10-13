@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
+import "./signal.css";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
@@ -8,22 +9,12 @@ import { HtmlLangSync } from "@/components/shared/HtmlLangSync";
 import { DEFAULT_LOCALE, LOCALE_HEADER, isLocale, localizedPath, OG_LOCALES } from "@/lib/locale";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
-
+const geistSans = localFont({src: [
+  {path: "../../public/brand/fonts/Montserrat-Regular.otf", weight: "400"},
+  {path: "../../public/brand/fonts/Montserrat-Medium.otf", weight: "500"},
+  {path: "../../public/brand/fonts/Montserrat-SemiBold.otf", weight: "600"},
+], variable: "--font-geist-sans", display: "swap"});
+const fraunces = localFont({src: "../../public/brand/fonts/LiberationSerif-Regular.ttf", variable: "--font-fraunces", display: "swap"});
 // SEO phase 2 — metadata foundation. metadataBase resolves all relative
 // URL-based fields (canonical/og) to absolute; title.template appends the
 // brand to child page titles (pages export bare keywords only). SEO phase 6 —
@@ -89,7 +80,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang={lang}
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      className={`${geistSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <head>
         <meta name="referrer" content="no-referrer" />

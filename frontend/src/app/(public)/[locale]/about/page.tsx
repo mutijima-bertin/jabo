@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { fetchSettings } from "@/lib/content";
-import { AboutPageContent } from "@/components/site/AboutPageContent";
+import { fetchSettings, s } from "@/lib/content";
+import { Studio } from "@/components/signal/Home";
 import { isLocale } from "@/lib/locale";
 import { localeMetadata } from "@/lib/seo";
 
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return localeMetadata(locale, "/about", "about");
 }
 
-export default async function AboutPage() {
-  const settings = await fetchSettings();
-  return <AboutPageContent settings={settings} />;
+export default async function AboutPage({params}:Props) {
+ const {locale:raw}=await params;const locale=isLocale(raw)?raw:"en";const settings=await fetchSettings();
+ return <><div className="wrap signal-page-heading"><p className="eyebrow">KIGALI / CREATIVE SOUND STUDIO</p><h1>{locale==="en"?"A personal point of view.":"Uburyo bwihariye bwo kubona inkuru."}</h1></div><Studio founder={s(settings,"about_founder_image",locale)||"/studio/founder-1440.webp"} story={s(settings,"about_story",locale)}/></>;
 }

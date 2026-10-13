@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fetchServices } from "@/lib/content";
+import { fetchRequiredServices as fetchServices } from "@/lib/content";
 import { BookPageShell } from "@/components/site/BookPageShell";
 import { PageHeading } from "@/components/shared/PageHeading";
 import { isLocale } from "@/lib/locale";

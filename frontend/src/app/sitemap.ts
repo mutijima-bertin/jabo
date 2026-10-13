@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo";
-import { fetchPosts } from "@/lib/content";
+import { fetchPosts, fetchPortfolio } from "@/lib/content";
 import { LOCALES, PUBLIC_PATHS } from "@/lib/locale";
 
 // Single consistent <lastmod> stamp for the static entry set (repo commit day).
@@ -89,5 +89,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // still advertise the crawlable surface.
     postEntries = [];
   }
-  return [...staticEntries, ...postEntries];
+  const projects = await fetchPortfolio();
+  const projectEntries: MetadataRoute.Sitemap = projects.filter(p=>p.published).flatMap(project=>{
+    const path=`/portfolio/${encodeURIComponent(project.id)}`;
+    return LOCALES.map(locale=>({url:absoluteUrl(path,locale),changeFrequency:"monthly" as const,priority:0.7,alternates:{languages:alternatesFor(path)}}));
+  });
+  return [...staticEntries, ...postEntries, ...projectEntries];
 }

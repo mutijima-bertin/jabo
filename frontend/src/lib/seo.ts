@@ -134,9 +134,9 @@ export const PAGE_META = {
   },
   book: {
     en: {
-      title: "Book a Production",
+      title: "Start a Project",
       description:
-        "Book photography, videography or livestreaming in Kigali in minutes. Receive a confirmation and a personal tracking link by email and WhatsApp.",
+        "Request photography, film or live production in Kigali. Share your brief, receive a tracking link, and agree scope and availability with the studio.",
     },
     rw: {
       title: "Andikisha umurimo",

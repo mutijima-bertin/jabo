@@ -6,6 +6,8 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Inbox, Loader2, Pencil, X } from "lucide-react";
 import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
 import type { PortfolioItem } from "@/lib/api";
+import { localizedPath } from "@/lib/locale";
+import { mediaKind, safeMediaUrl } from "@/lib/project-media";
 import { useI18n, type DictKey } from "@/lib/i18n";
 import {
   adminInputCls,
@@ -53,11 +55,12 @@ function categoryLabel(category: string, t: (k: DictKey) => string): string {
 }
 
 export function AdminPortfolio({ token }: { token: string }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const handleSessionExpired = useSessionGuard();
   const { data: items, error: loadError, loading, reload, setData } = useAdminFetch<PortfolioItem[]>("/admin/portfolio", token);
 
   const [editing, setEditing] = useState<Partial<PortfolioItem> | null>(null);
+  const [mediaUrlDraft, setMediaUrlDraft] = useState("");
   const [baseline, setBaseline] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -72,6 +75,7 @@ export function AdminPortfolio({ token }: { token: string }) {
 
   const openNew = () => {
     setError("");
+    setMediaUrlDraft("");
     setSaved(false);
     setEditing({ ...empty, tags: [] });
     setBaseline(JSON.stringify({ ...empty, tags: [] }));
@@ -79,6 +83,7 @@ export function AdminPortfolio({ token }: { token: string }) {
 
   const openEdit = (i: PortfolioItem) => {
     setError("");
+    setMediaUrlDraft("");
     setSaved(false);
     const row = { ...i, tags: [...i.tags], mediaUrls: [...i.mediaUrls] };
     setEditing(row);
@@ -237,6 +242,7 @@ export function AdminPortfolio({ token }: { token: string }) {
           error={error}
           saveLabel={editing.id ? t("admin_save") : t("admin_form_create")}
         >
+          {editing.id && editing.published && <a href={localizedPath(locale,`/portfolio/${encodeURIComponent(editing.id)}`)} target="_blank" rel="noopener noreferrer" className="text-sm underline">{locale==="en"?"View published project":"Reba igikorwa cyashyizwe hanze"} ↗</a>}
           <Field label={t("admin_portfolio_cover")}>
             <Dropzone
               token={token}
@@ -252,7 +258,7 @@ export function AdminPortfolio({ token }: { token: string }) {
             <div className="flex flex-wrap gap-3">
               {editing.mediaUrls.map((url, i) => (
                 <div key={url} className="relative">
-                  <img src={url} alt="" className="h-20 w-28 rounded-lg object-cover" onError={onImageError} />
+                  {mediaKind(url)==="image" ? <img src={url} alt="" className="h-20 w-28 rounded-lg object-cover" onError={onImageError} /> : <span className="block max-w-56 break-all rounded border border-admin-line p-3 text-xs">{url}</span>}
                   <button
                     type="button"
                     aria-label={t("admin_service_remove_image")}
@@ -266,6 +272,17 @@ export function AdminPortfolio({ token }: { token: string }) {
             </div>
           )}
 
+          <div className="rounded border border-admin-line p-4">
+            <Field label={locale==="en"?"Film / captions URL":"Umuyoboro wa filime / amagambo"} htmlFor="pf-media-url">
+              <input id="pf-media-url" className={adminInputCls} value={mediaUrlDraft} onChange={e=>setMediaUrlDraft(e.target.value)} placeholder="https://…/film.mp4" />
+            </Field>
+            <p className="mt-2 text-xs text-admin-muted">{locale==="en"?"Add an approved MP4/WebM, YouTube or Vimeo URL. Add .en.vtt or .rw.vtt caption files alongside direct video. The cover remains its poster. Save to apply changes.":"Shyiramo umuyoboro wa MP4/WebM, YouTube cyangwa Vimeo. Ongeraho dosiye .en.vtt cyangwa .rw.vtt. Ifoto ibanza ni yo ikoreshwa mbere yo gukina filime. Bika impinduka."}</p>
+            <button type="button" className="mt-3 rounded border border-admin-line px-4 py-2 text-sm" onClick={()=>{
+              const value=mediaUrlDraft.trim();
+              if(!safeMediaUrl(value)||!["video","captions"].includes(mediaKind(value))){setError(locale==="en"?"Use a supported film or VTT captions URL.":"Shyiramo umuyoboro wa filime cyangwa VTT wemewe.");return;}
+              set({mediaUrls:[...new Set([...(editing.mediaUrls??[]),value])]});setMediaUrlDraft("");setError("");
+            }}>{locale==="en"?"Add media URL":"Ongeraho umuyoboro"}</button>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("admin_portfolio_title_en")} htmlFor="pf-title-en">
               <input

@@ -72,6 +72,7 @@ const nextConfig: NextConfig = {
               // Browser→API calls, same-origin via the /api rewrite in prod.
               `connect-src ${CONNECT_SRC}`,
               "font-src 'self'",
+              "frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
