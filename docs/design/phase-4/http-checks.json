@@ -1,0 +1,156 @@
+{
+  "origin": "http://127.0.0.1:3011",
+  "checked": 25,
+  "results": [
+    {
+      "path": "/en",
+      "status": 200,
+      "milliseconds": 187,
+      "bytes": 47558
+    },
+    {
+      "path": "/en/portfolio",
+      "status": 200,
+      "milliseconds": 31,
+      "bytes": 34042
+    },
+    {
+      "path": "/en/services",
+      "status": 200,
+      "milliseconds": 33,
+      "bytes": 35613
+    },
+    {
+      "path": "/en/about",
+      "status": 200,
+      "milliseconds": 29,
+      "bytes": 30848
+    },
+    {
+      "path": "/en/book",
+      "status": 200,
+      "milliseconds": 33,
+      "bytes": 47341
+    },
+    {
+      "path": "/en/contact",
+      "status": 200,
+      "milliseconds": 24,
+      "bytes": 44096
+    },
+    {
+      "path": "/en/blog",
+      "status": 200,
+      "milliseconds": 25,
+      "bytes": 31792
+    },
+    {
+      "path": "/rw",
+      "status": 200,
+      "milliseconds": 30,
+      "bytes": 47615
+    },
+    {
+      "path": "/rw/portfolio",
+      "status": 200,
+      "milliseconds": 25,
+      "bytes": 34326
+    },
+    {
+      "path": "/rw/services",
+      "status": 200,
+      "milliseconds": 26,
+      "bytes": 35818
+    },
+    {
+      "path": "/rw/about",
+      "status": 200,
+      "milliseconds": 25,
+      "bytes": 30890
+    },
+    {
+      "path": "/rw/book",
+      "status": 200,
+      "milliseconds": 23,
+      "bytes": 47494
+    },
+    {
+      "path": "/rw/contact",
+      "status": 200,
+      "milliseconds": 18,
+      "bytes": 44373
+    },
+    {
+      "path": "/rw/blog",
+      "status": 200,
+      "milliseconds": 26,
+      "bytes": 31944
+    },
+    {
+      "path": "/",
+      "status": 308,
+      "milliseconds": 5,
+      "bytes": 3
+    },
+    {
+      "path": "/login",
+      "status": 200,
+      "milliseconds": 23,
+      "bytes": 32331
+    },
+    {
+      "path": "/account",
+      "status": 200,
+      "milliseconds": 19,
+      "bytes": 24913
+    },
+    {
+      "path": "/admin/login",
+      "status": 200,
+      "milliseconds": 26,
+      "bytes": 12912
+    },
+    {
+      "path": "/track",
+      "status": 200,
+      "milliseconds": 20,
+      "bytes": 37771
+    },
+    {
+      "path": "/api/public/portfolio",
+      "status": 200,
+      "milliseconds": 33,
+      "bytes": 1170
+    },
+    {
+      "path": "/en/portfolio/signal-preview-summit",
+      "status": 200,
+      "milliseconds": 40,
+      "bytes": 32375
+    },
+    {
+      "path": "/rw/portfolio/signal-preview-summit",
+      "status": 200,
+      "milliseconds": 31,
+      "bytes": 32532
+    },
+    {
+      "path": "/en/portfolio/phase4-nonexistent-project",
+      "status": 200,
+      "milliseconds": 41,
+      "bytes": 30267
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "milliseconds": 51,
+      "bytes": 9484
+    },
+    {
+      "path": "/favicon.ico",
+      "status": 200,
+      "milliseconds": 7,
+      "bytes": 6349
+    }
+  ]
+}

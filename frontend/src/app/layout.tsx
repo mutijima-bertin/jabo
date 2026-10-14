@@ -14,7 +14,8 @@ const geistSans = localFont({src: [
   {path: "../../public/brand/fonts/Montserrat-Medium.otf", weight: "500"},
   {path: "../../public/brand/fonts/Montserrat-SemiBold.otf", weight: "600"},
 ], variable: "--font-geist-sans", display: "swap"});
-const fraunces = localFont({src: "../../public/brand/fonts/LiberationSerif-Regular.ttf", variable: "--font-fraunces", display: "swap"});
+const fraunces = localFont({src: "../../public/brand/fonts/LiberationSerif-Regular.ttf", variable: "--font-fraunces", display: "swap", preload: false});
+const studioNote = localFont({src: "../../public/brand/fonts/LiberationSerif-Italic.ttf", style: "italic", weight: "400", variable: "--font-studio-note", display: "swap", preload: false});
 // SEO phase 2 — metadata foundation. metadataBase resolves all relative
 // URL-based fields (canonical/og) to absolute; title.template appends the
 // brand to child page titles (pages export bare keywords only). SEO phase 6 —
@@ -81,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={lang}
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${fraunces.variable} ${studioNote.variable} h-full antialiased`}
     >
       <head>
         <meta name="referrer" content="no-referrer" />

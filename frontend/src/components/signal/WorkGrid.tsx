@@ -13,7 +13,7 @@ export function WorkGrid({ items, home = false }: { items: PortfolioItem[]; home
     {visible.length ? <div className="work-grid">{visible.map((item, i) => {      
 const title = locale === 'rw' ? (item.titleRw || item.titleEn) : item.titleEn; return <article key={item.id} className={`work-card ${home && i === 0 ? 'feature' : ''} ${home && i === 2 ? 'portrait-card' : ''}`}>
         <Link href={localizedPath(locale, `/portfolio/${encodeURIComponent(item.id)}`)}>
-          <Media src={item.coverUrl} alt={title} />
+          <Media src={item.coverUrl} alt="" />
           <div className="work-caption">
             <h3>{title}</h3>
             <span>{item.category} ↗</span>

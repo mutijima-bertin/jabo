@@ -1,6 +1,6 @@
 # Creative Sound Studio — Redesign roadmap
 
-Last updated: **13 October 2026** · Status: **Phase 2 prototype delivered — ready for visual review**
+Last updated: **14 October 2026** · Status: **Phase 4 local QA complete — release gates remain**
 
 This is the working plan and progress record for the new Creative Sound Studio identity and website. Its priority is an original, visually compelling experience that feels personally art-directed and demonstrates the studio's craft.
 
@@ -8,15 +8,15 @@ This is the working plan and progress record for the new Creative Sound Studio i
 
 | Item | Current position |
 | --- | --- |
-| Completed | Phase 0 research; Phase 1 identity; Phase 2 complete homepage prototype |
-| Current phase | **Phase 2 delivered; visual review before Phase 3 integration** |
-| Immediate task | Review the [complete homepage](docs/design/phase-2/index.html), then integrate the selected experience |
+| Completed | Phase 0 research; Phase 1 identity; Phase 2 accepted prototype; Phase 3 local integration |
+| Current phase | **Phase 4 quality checks and release preparation** |
+| Immediate task | Close the [remaining release gates](docs/design/phase-4/README.md) and review the candidate |
 | Identity deliverable | [Final board](docs/design/phase-1/index.html), [brand guide](docs/design/phase-1/signal-brand/BRAND.md), [asset ZIP](docs/design/phase-1/creative-sound-studio-identity.zip) |
 | First public release | Phase 3 working public-site MVP, after Phase 4 launch checks |
-| Awaiting decisions | Homepage visual feedback; approved projects/film and bilingual copy before launch |
+| Awaiting decisions | Integrated-site review; approved projects/film and bilingual copy before launch |
 | Blocked? | No |
 
-**Final foundation: Signal Notes.** Audience: organisations, brands and events. Approved combination: Strong bone surfaces with Subtle sans-serif headlines. Preserve the open-C + upright signal, full company name, ink/bone/vermilion, real founder image and serif archive notes. Identity finalisation does not mean the production website has been rebuilt.
+**Final foundation: Signal Notes.** Audience: organisations, brands and events. Approved combination: Strong bone surfaces with Subtle sans-serif headlines. Preserve the open-C + upright signal, full company name, ink/bone/vermilion, real founder image and serif archive notes. The identity is now integrated locally; the deployed website has not been updated.
 
 ## What success means
 
@@ -65,7 +65,7 @@ Delivered: live public/admin review, international reference analysis, and this 
 
 **Done when:** the user has reviewed tangible concepts and selected a direction; the logo remains legible in monochrome and at small sizes; the direction works on both desktop and mobile. Concept creation proceeds autonomously; selection is a creative decision, not a permission request to start work.
 
-### Phase 2 — Homepage prototype · DELIVERED FOR REVIEW
+### Phase 2 — Homepage prototype · ACCEPTED
 
 1. Build a complete homepage preview using the chosen identity, including navigation and footer.
 2. Compose the full sequence: opening → selected productions → capabilities → people/process → enquiry. Adjust that sequence if the selected concept justifies it.
@@ -77,7 +77,7 @@ Delivered: live public/admin review, international reference analysis, and this 
 
 **Done when:** the user can assess the entire page, the experience has an identifiable CSS character, and essential information/actions survive without animation or video. Review typography, composition, originality, pacing, and mobile usability against the selected concept. A pretty hero alone does not complete this phase.
 
-### Phase 3 — Working public-site MVP
+### Phase 3 — Working public-site MVP · IMPLEMENTED AND LOCALLY VERIFIED
 
 1. Implement the shared visual system in the existing Next.js frontend; read applicable repository and installed-framework guidance before changing code.
 2. Build the work index, project detail, services, about, and enquiry pages; connect them to existing data and routes.
@@ -140,13 +140,17 @@ This README is the persistent status board. It does not send background notifica
 | --- | --- | --- |
 | 0 — Research and planning | Complete | Public/admin review and five-studio analysis in this chat; this roadmap |
 | 1 — Identity | Complete | [Final board](docs/design/phase-1/index.html), [brand guide](docs/design/phase-1/signal-brand/BRAND.md), [verification](docs/design/phase-1/signal-brand/VERIFY.md), outlined SVG/PNG family, icons and watermarks |
-| 2 — Homepage prototype | Implemented and locally verified; visual acceptance pending | [Homepage](docs/design/phase-2/index.html), [responsive/fallback review](docs/design/phase-2/review.html), [verification and asset requirements](docs/design/phase-2/README.md) |
-| 3 — Public-site MVP | Not started | — |
-| 4 — Verification and launch | Not started | — |
+| 2 — Homepage prototype | Accepted by user; integrated in Phase 3 | [Homepage](docs/design/phase-2/index.html), [responsive/fallback review](docs/design/phase-2/review.html), [verification and asset requirements](docs/design/phase-2/README.md) |
+| 3 — Public-site MVP | Implemented and locally verified | [Integration, CMS handoff, verification and remaining launch checks](docs/design/phase-3/README.md) |
+| 4 — Verification and launch | Local QA passed; final media, device/environment checks and publication pending | [Results and remaining gates](docs/design/phase-4/README.md), [release/rollback plan](docs/design/phase-4/RELEASE.md) |
 | 5 — Admin/client refinement | Not started | — |
 | 6 — Optional extensions | Backlog | — |
 
 ### Session log
+
+**14 October 2026 — Phase 4 local QA pass.** Fixed compact-phone navigation overflow, Escape handling, skip-link focus, duplicate work-link announcements, redundant font loading and misleading tracking copy. Replaced the old social preview with the approved Signal identity. The production build, four unit tests and 25 read-only HTTP checks passed; an isolated enquiry and valid film/caption playback passed in the browser. Saved desktop/mobile evidence and a release/rollback procedure. Final project selection, independent device/browser and production-environment checks remain; nothing deployed. See [Phase 4 results](docs/design/phase-4/README.md).
+
+**14 October 2026 — Phase 3 integrated.** Applied the approved Signal identity to the public Next.js application, built data-driven work/detail/services/about routes, connected the enquiry journey and tracking, and added bilingual navigation and portfolio film/caption editing. Production build, TypeScript and four focused tests pass; lint has no errors and three existing warnings. The isolated enquiry journey and 44 backend tests passed earlier in this session. See [Phase 3 handoff](docs/design/phase-3/README.md). Next: Phase 4 production QA and release preparation. Nothing deployed.
 
 **13 October 2026 — Phase 2 prototype delivered.** Built the full homepage sequence, three archive previews, a three-stage framing interaction, service disclosures, founder/process sections, studio-film poster/fallback states and a local brief preview/download. Checked responsive widths, keyboard dialog dismissal/focus, menu, brief validation and reduced-motion override. Corrected dialog focus and a simulated loading-state issue. See [scope and verification](docs/design/phase-2/README.md). Film playback, bilingual integration, real enquiries and deployment remain later work. Next: visual feedback, then Phase 3 application integration.
 

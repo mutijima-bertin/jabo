@@ -19,7 +19,7 @@ export function Nav() {
       <div className="nav-actions">
         <button className="language-switch" onClick={changeLanguage} aria-label={t('footer_switch_language_aria')}>{locale === 'en' ? 'RW' : 'EN'}</button>
         <Link className="header-cta" href={localizedPath(locale, '/book')}>{locale === 'en' ? 'Start a conversation' : 'Tuganire'} ↗</Link>
-        <button ref={menu} className="menu" aria-controls="mobile-menu" aria-expanded={open} aria-label={open ? t('nav_menu_close') : t('nav_menu_open')} onClick={() => setOpen(!open)}>{open ? (locale === 'en' ? 'Close' : 'Funga') : 'Menu'}</button>
+        <button ref={menu} className="menu" aria-controls="mobile-menu" aria-expanded={open} aria-label={open ? t('nav_menu_close') : t('nav_menu_open')} onKeyDown={e => { if (e.key === "Escape") setOpen(false); }} onClick={() => setOpen(!open)}>{open ? (locale === 'en' ? 'Close' : 'Funga') : 'Menu'}</button>
       </div>
     </header>
     <nav id="mobile-menu" hidden={!open} aria-label={t('nav_mobile_aria')} onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); menu.current?.focus(); } }}>{[...links, ['/blog', t('nav_blog')], ['/contact', t('nav_contact')], ['/book', t('nav_book')]].map(([href, label]) =>

@@ -137,10 +137,6 @@ export default function TrackPage() {
         </ol>
       )}
 
-      <p className="mt-12 text-center text-xs text-ink/50">
-        {t("track_request_new")}
-      </p>
-
       {/* Contact strip — lives inside the section container so every status
           screen keeps a working next action. */}
       <div className="mt-6 rounded-2xl border border-ink/10 bg-white/70 p-5">

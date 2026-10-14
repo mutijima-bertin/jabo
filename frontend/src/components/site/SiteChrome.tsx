@@ -29,7 +29,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     <div className="signal-site flex min-h-screen flex-col">
       <a href="#site-main" className="skip">Skip to content / Jya ku bikubiye ku rupapuro</a>
       <Nav />
-      <main id="site-main" className="flex-1">{children}</main>
+      <main tabIndex={-1} id="site-main" className="flex-1">{children}</main>
       <Footer />
       <WhatsAppFab />
     </div>
