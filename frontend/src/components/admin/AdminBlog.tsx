@@ -116,10 +116,12 @@ export function AdminBlog({ token }: { token: string }) {
         published: editing.published ?? true,
       };
       // Backend routes: create=POST, edit=PATCH, delete=DELETE (QA #1).
-      if (editing.id) await adminApi.patch(`/admin/posts/${editing.id}`, token, body);
-      else await adminApi.post("/admin/posts", token, body);
+      const stored = editing.id
+        ? await adminApi.patch<AdminPost>(`/admin/posts/${editing.id}`, token, body)
+        : await adminApi.post<AdminPost>("/admin/posts", token, body);
+      setEditing(stored);
       setSaved(true);
-      setBaseline(JSON.stringify(editing));
+      setBaseline(JSON.stringify(stored));
       reload();
     } catch (e) {
       if ((e as Error).message === "NOT_AUTHENTICATED") {

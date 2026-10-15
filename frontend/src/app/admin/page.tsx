@@ -14,6 +14,8 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import Link from "next/link";
+import { Logo } from "@/components/shared/Logo";
 import { BRAND } from "@/lib/constants";
 import { clearToken, useAdminAuth } from "@/lib/admin";
 import { formatDate } from "@/lib/format";
@@ -30,7 +32,6 @@ import {
   mobileNav,
   shellMain,
   sidebar,
-  sidebarBrand,
   sideLinkActive,
   sideLinkDanger,
   sideLinkIcon,
@@ -139,7 +140,7 @@ export default function AdminPage() {
 }
 
 function AdminShellInner() {
-  const { t, locale } = useI18n();
+  const { t, locale, setLocale } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -260,8 +261,9 @@ function AdminShellInner() {
     <div className={shellMain}>
       <div className="flex flex-col gap-8 md:flex-row md:gap-8">
         {/* Desktop sidebar — hidden below md (spec §4.1) */}
-        <aside className={sidebar} aria-label={t("admin_nav_aria")}>
-          <p className={sidebarBrand}>{BRAND}</p>
+        <aside className={cx(sidebar, "signal-admin-sidebar")} aria-label={t("admin_nav_aria")}>
+          <Link href={localizedPath(locale, "/")} className="admin-brand" aria-label="Creative Sound Studio"><Logo /></Link>
+          <p className="workspace-label">{locale === "en" ? "Studio workspace" : "Ahakorerwa imirimo"}</p>
           <nav className="flex flex-col gap-0.5">
             {tabs.map((tb) => {
               const Icon = tb.icon;
@@ -279,6 +281,7 @@ function AdminShellInner() {
               );
             })}
           </nav>
+          <Link href={localizedPath(locale, "/")} target="_blank" className="admin-website-link">{locale === "en" ? "View website" : "Reba urubuga"} ↗</Link>
           <button onClick={logout} className={cx(sideLinkDanger, "mt-auto")}>
             <LogOut className={sideLinkIcon} />
             {t("admin_logout")}
@@ -289,9 +292,10 @@ function AdminShellInner() {
           {/* Sticky topbar — starts the main column, above the mobile pill nav
               and tab content. Search opens the ⌘K palette, the bell is the live
               AdminNotifications dropdown; the account chip is still static. */}
-          <header className={topbar}>
+          <header className={cx(topbar, "admin-topbar")}>
             <div className={topbarInner}>
-              <p className={topbarBreadcrumb}>
+              <Link href={localizedPath(locale, "/")} aria-label="Creative Sound Studio" className="md:hidden"><Logo className="admin-topbar-logo" /></Link>
+              <p className={cx(topbarBreadcrumb, "admin-breadcrumb-text")}>
                 <span className={topbarBrandLabel}>{BRAND}</span>
                 <ChevronRight className={topbarSeparator} aria-hidden="true" />
                 <span className={topbarTabLabel}>{t(activeTab.label)}</span>
@@ -314,6 +318,7 @@ function AdminShellInner() {
                   <span className="hidden truncate sm:inline">{t("admin_search_placeholder")}</span>
                   <kbd className={topbarKbd}>⌘K</kbd>
                 </button>
+                <button type="button" className="admin-language" onClick={() => setLocale(locale === "en" ? "rw" : "en")} aria-label={locale === "en" ? "Switch to Kinyarwanda" : "Switch to English"}>{locale === "en" ? "RW" : "EN"}</button>
                 <AdminNotifications token={token} />
                 <span role="img" aria-label={t("admin_account_chip_aria")} className={accountChip}>
                   A

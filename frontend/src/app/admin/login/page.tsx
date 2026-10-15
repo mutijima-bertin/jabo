@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { BRAND } from "@/lib/constants";
+import { Logo } from "@/components/shared/Logo";
 import { adminApi, setToken } from "@/lib/admin";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -73,7 +73,7 @@ function LoginInner() {
     <div className="w-full max-w-md">
       {/* Brand mark header (spec §9) */}
       <div className="text-center">
-        <p className="font-serif text-3xl font-semibold text-admin-text">{BRAND}</p>
+        <Logo className="admin-login-brand" />
         <p className="mt-1 text-sm text-admin-muted">{t("admin_area_sub")}</p>
       </div>
 

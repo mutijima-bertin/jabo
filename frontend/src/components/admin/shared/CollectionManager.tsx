@@ -189,7 +189,7 @@ export function ManagerEditor({ title, onSubmit, onCancel, dirty, busy, saved, e
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const handleCancel = () => {
-    if (dirty && !saved) setConfirmCancel(true);
+    if (dirty) setConfirmCancel(true);
     else onCancel();
   };
 
@@ -200,7 +200,7 @@ export function ManagerEditor({ title, onSubmit, onCancel, dirty, busy, saved, e
       </div>
       <div className={cx(cardBody, "space-y-5")}>{children}</div>
       <div className={cx(cardFooter, "flex-col items-stretch gap-3")}>
-        {saved && (
+        {saved && !dirty && (
           <div className={successBanner} role="status">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             {t("admin_saved")}
@@ -232,7 +232,7 @@ export function ManagerEditor({ title, onSubmit, onCancel, dirty, busy, saved, e
             </button>
             <button type="submit" className={btnPrimary} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {busy ? t("admin_saving") : saved ? t("admin_saved") : saveLabel}
+              {busy ? t("admin_saving") : saved && !dirty ? t("admin_saved") : saveLabel}
             </button>
           </div>
         )}

@@ -1,6 +1,6 @@
 # Creative Sound Studio — Redesign roadmap
 
-Last updated: **14 October 2026** · Status: **Phase 4 local QA complete — release gates remain**
+Last updated: **15 October 2026** · Status: **Phase 5 core admin redesign ready for review — launch gates remain**
 
 This is the working plan and progress record for the new Creative Sound Studio identity and website. Its priority is an original, visually compelling experience that feels personally art-directed and demonstrates the studio's craft.
 
@@ -9,8 +9,8 @@ This is the working plan and progress record for the new Creative Sound Studio i
 | Item | Current position |
 | --- | --- |
 | Completed | Phase 0 research; Phase 1 identity; Phase 2 accepted prototype; Phase 3 local integration |
-| Current phase | **Phase 4 quality checks and release preparation** |
-| Immediate task | Close the [remaining release gates](docs/design/phase-4/README.md) and review the candidate |
+| Current phase | **Phase 5 admin/client refinement — core workflow ready for review** |
+| Immediate task | Review the [Signal admin workspace](docs/design/phase-5/README.md), then close the remaining Phase 4 release gates |
 | Identity deliverable | [Final board](docs/design/phase-1/index.html), [brand guide](docs/design/phase-1/signal-brand/BRAND.md), [asset ZIP](docs/design/phase-1/creative-sound-studio-identity.zip) |
 | First public release | Phase 3 working public-site MVP, after Phase 4 launch checks |
 | Awaiting decisions | Integrated-site review; approved projects/film and bilingual copy before launch |
@@ -143,10 +143,12 @@ This README is the persistent status board. It does not send background notifica
 | 2 — Homepage prototype | Accepted by user; integrated in Phase 3 | [Homepage](docs/design/phase-2/index.html), [responsive/fallback review](docs/design/phase-2/review.html), [verification and asset requirements](docs/design/phase-2/README.md) |
 | 3 — Public-site MVP | Implemented and locally verified | [Integration, CMS handoff, verification and remaining launch checks](docs/design/phase-3/README.md) |
 | 4 — Verification and launch | Local QA passed; final media, device/environment checks and publication pending | [Results and remaining gates](docs/design/phase-4/README.md), [release/rollback plan](docs/design/phase-4/RELEASE.md) |
-| 5 — Admin/client refinement | Not started | — |
+| 5 — Admin/client refinement | Core redesign implemented and locally verified; owner review pending | [Workflow changes, evidence and limits](docs/design/phase-5/README.md) |
 | 6 — Optional extensions | Backlog | — |
 
 ### Session log
+
+**15 October 2026 — Phase 5 core admin redesign delivered.** Applied Signal to the admin shell, login, management panels and charts. Added draft-first project creation, publication badges, gallery uploads and a current-version preview. Fixed repeated-create behaviour in project/service/blog editors, tag entry and cancellation after later edits. Clarified client-visible status notes and added next-step guidance to tracking. Verified the isolated upload/draft/publish/unpublish workflow and phone editing; no production changes. Owner review and Phase 4 release gates remain. See [Phase 5 handoff](docs/design/phase-5/README.md).
 
 **14 October 2026 — Phase 4 local QA pass.** Fixed compact-phone navigation overflow, Escape handling, skip-link focus, duplicate work-link announcements, redundant font loading and misleading tracking copy. Replaced the old social preview with the approved Signal identity. The production build, four unit tests and 25 read-only HTTP checks passed; an isolated enquiry and valid film/caption playback passed in the browser. Saved desktop/mobile evidence and a release/rollback procedure. Final project selection, independent device/browser and production-environment checks remain; nothing deployed. See [Phase 4 results](docs/design/phase-4/README.md).
 

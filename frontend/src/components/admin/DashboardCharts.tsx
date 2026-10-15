@@ -10,8 +10,8 @@
  * here, never re-renders on refresh independently.
  *
  * Design language mirrors `cardCls` cards (admin dark theme). All colors are
- * the design tokens' hex values (globals.css): brass #b08d57 / brass-light
- * #c9a86f / admin-muted #a49a8d / admin-border #26211b / …  — hardcoded here
+ * the design tokens' hex values (globals.css): brass #e67c52 / brass-light
+ * #974225 / admin-muted #51574f / admin-border #d3d0c5 / …  — hardcoded here
  * because recharts SVG fills take raw colors, not Tailwind classes.
  *
  * Empty-data contract: a flat chart is NEVER drawn over zero/NaN series.
@@ -30,15 +30,15 @@ import { truncateServiceName } from "@/lib/admin-charts";
 // ---------------------------------------------------------------------------
 // Brand tokens (globals.css) as raw hex for SVG fills/strokes
 // ---------------------------------------------------------------------------
-const BRASS = "#b08d57"; // --brass / --accent
-const BRASS_LIGHT = "#c9a86f"; // --brass-light
-const ADMIN_PANEL = "#161310"; // --admin-panel (donut stroke, card bg)
-const ADMIN_TEXT = "#f2ede3"; // --admin-text (tooltip text)
-const ADMIN_MUTED = "#a49a8d"; // --admin-muted (axis ticks, subtext)
-const ADMIN_BORDER = "#26211b"; // --admin-border (grid lines)
-const SUCCESS = "#34d399"; // --admin-success
-const WARNING = "#fbbf24"; // --admin-warning
-const DANGER = "#f87171"; // --admin-danger
+const BRASS = "#e67c52"; // --brass / --accent
+const BRASS_LIGHT = "#974225"; // --brass-light
+const ADMIN_PANEL = "#faf8f2"; // --admin-panel (donut stroke, card bg)
+const ADMIN_TEXT = "#151817"; // --admin-text (tooltip text)
+const ADMIN_MUTED = "#51574f"; // --admin-muted (axis ticks, subtext)
+const ADMIN_BORDER = "#d3d0c5"; // --admin-border (grid lines)
+const SUCCESS = "#246044"; // --admin-success
+const WARNING = "#80520d"; // --admin-warning
+const DANGER = "#a82d24"; // --admin-danger
 const GREEN = "#3f5a46"; // --green (brand deep green)
 
 /** Six distinct on-brand hues, ordered by STATUS_ORDER (donut slices). */

@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- admin gallery thumbnails; next/image isn't used in the panel (matches AdminSettings pattern) */
 
+import { ProjectMedia } from "@/components/signal/ProjectMedia";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Inbox, Loader2, Pencil, X } from "lucide-react";
 import { adminApi, useAdminFetch, useSessionGuard } from "@/lib/admin";
@@ -35,7 +36,7 @@ const empty = {
   coverUrl: "",
   mediaUrls: [] as string[],
   mediaType: "image" as const,
-  published: true,
+  published: false,
   sortOrder: 0,
 };
 
@@ -61,6 +62,8 @@ export function AdminPortfolio({ token }: { token: string }) {
 
   const [editing, setEditing] = useState<Partial<PortfolioItem> | null>(null);
   const [mediaUrlDraft, setMediaUrlDraft] = useState("");
+  const [tagsDraft, setTagsDraft] = useState("");
+  const [preview, setPreview] = useState(false);
   const [baseline, setBaseline] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,14 +72,16 @@ export function AdminPortfolio({ token }: { token: string }) {
   /** Non-null while a reorder PUT is in flight: all arrows disabled, clicked one spins. */
   const [orderBusy, setOrderBusy] = useState<{ id: string; dir: -1 | 1 } | null>(null);
 
-  const dirty = editing !== null && JSON.stringify(editing) !== baseline;
+  const dirty = editing !== null && (JSON.stringify(editing) !== baseline || !!mediaUrlDraft.trim());
 
-  const set = (patch: Partial<PortfolioItem>) => setEditing((prev) => ({ ...(prev ?? {}), ...patch }));
+  const set = (patch: Partial<PortfolioItem>) => { setSaved(false); setEditing((prev) => ({ ...(prev ?? {}), ...patch })); };
 
   const openNew = () => {
     setError("");
     setMediaUrlDraft("");
+    setPreview(false);
     setSaved(false);
+    setTagsDraft("");
     setEditing({ ...empty, tags: [] });
     setBaseline(JSON.stringify({ ...empty, tags: [] }));
   };
@@ -84,7 +89,9 @@ export function AdminPortfolio({ token }: { token: string }) {
   const openEdit = (i: PortfolioItem) => {
     setError("");
     setMediaUrlDraft("");
+    setPreview(false);
     setSaved(false);
+    setTagsDraft(i.tags.join(", "));
     const row = { ...i, tags: [...i.tags], mediaUrls: [...i.mediaUrls] };
     setEditing(row);
     setBaseline(JSON.stringify(row));
@@ -99,6 +106,8 @@ export function AdminPortfolio({ token }: { token: string }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!editing) return;
+    if (mediaUrlDraft.trim()) { setError(locale === "en" ? "Add the media URL below, or clear it before saving." : "Banza wongereho umuyoboro wanditse cyangwa uwusibe mbere yo kubika."); return; }
+    if (!safeMediaUrl(editing.coverUrl ?? "")) { setError(locale === "en" ? "Add a cover image before saving this project." : "Banza wongereho ifoto ibanza mbere yo kubika."); return; }
     setBusy(true);
     setError("");
     try {
@@ -111,13 +120,15 @@ export function AdminPortfolio({ token }: { token: string }) {
         coverUrl: editing.coverUrl,
         mediaUrls: [...(editing.mediaUrls ?? [])],
         mediaType: editing.mediaType ?? "image",
-        published: editing.published ?? true,
+        published: editing.published ?? false,
         sortOrder: editing.sortOrder ?? 0,
       };
-      if (editing.id) await adminApi.put(`/admin/portfolio/${editing.id}`, token, body);
-      else await adminApi.post("/admin/portfolio", token, body);
+      const stored = editing.id
+        ? await adminApi.put<PortfolioItem>(`/admin/portfolio/${editing.id}`, token, body)
+        : await adminApi.post<PortfolioItem>("/admin/portfolio", token, body);
+      setEditing(stored);
       setSaved(true);
-      setBaseline(JSON.stringify(editing));
+      setBaseline(JSON.stringify(stored));
       reload();
     } catch (e) {
       if ((e as Error).message === "NOT_AUTHENTICATED") {
@@ -242,7 +253,16 @@ export function AdminPortfolio({ token }: { token: string }) {
           error={error}
           saveLabel={editing.id ? t("admin_save") : t("admin_form_create")}
         >
-          {editing.id && editing.published && <a href={localizedPath(locale,`/portfolio/${encodeURIComponent(editing.id)}`)} target="_blank" rel="noopener noreferrer" className="text-sm underline">{locale==="en"?"View published project":"Reba igikorwa cyashyizwe hanze"} ↗</a>}
+          <div className="admin-publish-panel">
+            <div><strong>{editing.published ? (locale === "en" ? "Publish on save" : "Bika ushyira hanze") : (locale === "en" ? "Private draft" : "Igikorwa kitarashyirwa hanze")}</strong><p>{locale === "en" ? "Drafts stay off the website. Preview your images and film, then enable Published when the project is ready. Changes go live only when you save." : "Ibitarashyirwa hanze ntibigaragara ku rubuga. Banza urebe amafoto na filime, hanyuma uhitemo kubishyira hanze. Impinduka zijyaho iyo ubikije."}</p></div>
+            <button type="button" className={rowActionBrass} aria-expanded={preview} onClick={() => setPreview(!preview)}>{preview ? (locale === "en" ? "Close preview" : "Funga isuzuma") : (locale === "en" ? "Preview project" : "Reba igikorwa")}</button>
+          </div>
+          {preview && <section className="signal-site admin-project-preview" aria-label={locale === "en" ? "Project preview" : "Isuzuma ry’igikorwa"}>
+            <p className="eyebrow">{locale === "en" ? "EDITOR PREVIEW / CURRENT VERSION" : "ISUZUMA / IBIRI MU MWANDITSI"}</p>
+            <h3>{(locale === "rw" ? editing.titleRw || editing.titleEn : editing.titleEn) || (locale === "en" ? "Your project title" : "Izina ry’igikorwa")}</h3>
+            {editing.coverUrl ? <ProjectMedia cover={editing.coverUrl} urls={editing.mediaUrls ?? []} title={editing.titleEn || "Project"} /> : <p>{locale === "en" ? "Add a cover to see your project here." : "Ongeraho ifoto ibanza."}</p>}
+          </section>}
+          {editing.id && baseline && JSON.parse(baseline).published && <a href={localizedPath(locale,`/portfolio/${encodeURIComponent(editing.id)}`)} target="_blank" rel="noopener noreferrer" className="text-sm underline">{locale==="en"?"View published project":"Reba igikorwa cyashyizwe hanze"} ↗</a>}
           <Field label={t("admin_portfolio_cover")}>
             <Dropzone
               token={token}
@@ -272,6 +292,10 @@ export function AdminPortfolio({ token }: { token: string }) {
             </div>
           )}
 
+          <div className="admin-media-tools">
+            <h3>{locale === "en" ? "Build the gallery" : "Ongeraho amafoto"}</h3>
+            <Dropzone token={token} value="" title={locale === "en" ? "Add gallery image" : "Ongeraho ifoto"} hint={locale === "en" ? "Upload one image at a time. The cover stays separate from your gallery." : "Ongeraho ifoto imwe imwe. Ifoto ibanza iguma ukwawo."} onError={setError} onChange={url => set({mediaUrls:[...new Set([...(editing.mediaUrls ?? []),url])]})} />
+          </div>
           <div className="rounded border border-admin-line p-4">
             <Field label={locale==="en"?"Film / captions URL":"Umuyoboro wa filime / amagambo"} htmlFor="pf-media-url">
               <input id="pf-media-url" className={adminInputCls} value={mediaUrlDraft} onChange={e=>setMediaUrlDraft(e.target.value)} placeholder="https://…/film.mp4" />
@@ -350,10 +374,8 @@ export function AdminPortfolio({ token }: { token: string }) {
               <input
                 id="pf-tags"
                 className={adminInputCls}
-                value={(editing.tags ?? []).join(", ")}
-                onChange={(e) =>
-                  set({ tags: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) })
-                }
+                value={tagsDraft}
+                onChange={(e) => { setTagsDraft(e.target.value); set({ tags: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }); }}
               />
             </Field>
             <div className="flex items-end">
@@ -378,6 +400,11 @@ export function AdminPortfolio({ token }: { token: string }) {
               </div>
             </div>
           )}
+          <div className="admin-portfolio-summary" aria-label={locale === "en" ? "Portfolio status" : "Ibyerekeye ibikorwa"}>
+            <span>{list.filter(i=>i.published).length} {locale === "en" ? "published" : "byashyizwe hanze"}</span>
+            <span>{list.filter(i=>!i.published).length} {locale === "en" ? "drafts" : "bitarashyirwa hanze"}</span>
+            <span>{locale === "en" ? "Use the arrows to set the order visitors see." : "Koresha imyambi uhindure uko bikurikirana."}</span>
+          </div>
           {items && items.length === 0 ? (
             <div className={emptyState}>
               <div className={emptyStateIconWrap}>
@@ -386,7 +413,7 @@ export function AdminPortfolio({ token }: { token: string }) {
               <p className={emptyStateTitle}>{t("admin_portfolio_empty")}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((i, idx) => (
                 <div
                   key={i.id}
@@ -400,7 +427,7 @@ export function AdminPortfolio({ token }: { token: string }) {
                   <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-admin-text">{i.titleEn}</p>
-                      <p className="truncate text-xs text-admin-muted">{categoryLabel(i.category, t)}</p>
+                      <p className="truncate text-xs text-admin-muted">{categoryLabel(i.category, t)}</p><span className="admin-status" data-published={i.published}>{i.published ? (locale === "en" ? "Published" : "Byashyizwe hanze") : (locale === "en" ? "Draft" : "Ntibirashyirwa hanze")}</span>
                     </div>
                     {renderActions(i, idx)}
                   </div>

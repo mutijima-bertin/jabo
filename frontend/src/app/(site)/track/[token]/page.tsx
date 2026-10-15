@@ -75,6 +75,15 @@ export default function TrackPage() {
   const currentIndex = STATUS_ORDER.indexOf(booking.status as (typeof STATUS_ORDER)[number]);
   const serviceName = locale === "rw" ? booking.service?.nameRw ?? "" : booking.service?.nameEn ?? "";
   const isCancelled = booking.status === "CANCELLED";
+  const nextSteps: Record<string, [string, string]> = {
+    PENDING: ["Your request is with the studio. Availability, scope and a quote need to be agreed before the booking is confirmed.", "Sitidiyo yakiriye icyifuzo cyawe. Mukeneye kumvikana ku gihe, ibizakorwa n’igiciro mbere yo kwemeza umurimo."],
+    CONFIRMED: ["Your booking is confirmed. Contact the studio if the date, location or brief needs to change.", "Umurimo wawe wemejwe. Menyesha sitidiyo niba igihe, ahantu cyangwa ibizakorwa bihindutse."],
+    IN_PRODUCTION: ["The studio is working on your production. Use the contact details below for questions or updates to your brief.", "Sitidiyo irimo gukora umurimo wawe. Koresha imiyoboro iri hasi niba ufite ikibazo cyangwa impinduka."],
+    DELIVERED: ["Your production has been marked as delivered. Review the files shared by the studio and discuss any agreed revisions.", "Umusaruro wawe washyizweho ko watanzwe. Reba dosiye wohererejwe, muganire ku byo mwumvikanye gukosora."],
+    COMPLETED: ["This production is complete. Contact the studio if you need help with your delivered files or want to plan another project.", "Uyu murimo warangiye. Vugana na sitidiyo niba ukeneye ubufasha kuri dosiye cyangwa ushaka gutegura undi murimo."],
+    CANCELLED: ["This booking is cancelled. Contact the studio to discuss any questions or a new project request.", "Uyu murimo wahagaritswe. Vugana na sitidiyo niba ufite ikibazo cyangwa icyifuzo gishya."],
+  };
+
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
@@ -97,6 +106,10 @@ export default function TrackPage() {
         </div>
       </div>
 
+      <section className="mt-8 border-l-4 border-brass bg-cream-alt p-6" aria-labelledby="tracking-next-step">
+        <h2 id="tracking-next-step" className="text-lg font-semibold">{locale === "en" ? "What happens next" : "Igikurikiraho"}</h2>
+        <p className="mt-3 text-sm leading-relaxed">{nextSteps[booking.status]?.[locale === "en" ? 0 : 1]}</p>
+      </section>
       {isCancelled ? (
         <div className="mt-10 rounded-2xl border border-red-300 bg-red-50 p-6 text-sm text-red-700">
           {t("track_cancelled")}.

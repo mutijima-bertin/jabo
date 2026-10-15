@@ -1,0 +1,50 @@
+/* Signal workspace. Scoped to admin; public and client routes keep their own chrome. */
+.admin-shell {
+  --admin-base:#efece4; --admin-panel:#faf8f2; --admin-raised:#e5e1d6;
+  --admin-scrim:#151817; --admin-border:#d3d0c5; --admin-line:#d3d0c5;
+  --admin-line-strong:#a8aba0; --admin-text:#151817; --admin-muted:#51574f;
+  --admin-faint:#62675e; --admin-danger:#a82d24; --admin-warning:#80520d;
+  --admin-success:#246044; --accent:#e67c52; --brass:#974225;
+  --brass-light:#974225; --brass-dark:#78351e; --ink:#151817;
+  --focus-ring:#974225; --font-fraunces:var(--font-geist-sans);
+  color-scheme:light;
+}
+.admin-shell .font-serif{font-family:var(--font-geist-sans),sans-serif;letter-spacing:-.035em}
+.admin-shell .rounded-full:not([role=img]){border-radius:6px}
+.admin-shell .rounded-2xl,.admin-shell .rounded-xl{border-radius:8px}
+.admin-shell h1{font-size:clamp(28px,3vw,42px);line-height:1.15;letter-spacing:-.055em}
+.admin-shell .signal-admin-sidebar{
+  position:sticky;top:24px;align-self:flex-start;min-height:calc(100dvh - 48px);
+  background:#151817;padding:24px 14px;border-radius:10px;
+  --admin-text:#efece4;--admin-muted:#c7cbc0;--admin-faint:#b7bdaf;
+  --admin-raised:#2d332f;--brass-light:#e67c52;--admin-danger:#ffa79f;--focus-ring:#e67c52;
+}
+.admin-shell .signal-admin-sidebar .workspace-label{color:#b7bdaf;margin:20px 12px 24px;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.admin-shell .signal-admin-sidebar nav button{min-height:46px;margin-block:2px}
+.admin-shell .signal-admin-sidebar nav button[aria-current=page]{border-left:3px solid #e67c52;border-radius:0 6px 6px 0}
+.admin-shell .admin-brand{display:block;color:#efece4;padding:0 8px}
+.admin-shell .admin-brand svg{width:100%;height:auto}
+.admin-shell .admin-website-link{display:block;padding:16px 12px;color:var(--admin-muted);font-size:12px;border-top:1px solid #41483e;margin-top:30px}
+.admin-shell .admin-topbar{margin-bottom:30px}
+.admin-shell .admin-topbar-logo{width:145px;height:auto;display:none}
+.admin-shell .admin-language{min-height:40px;min-width:40px;border:1px solid var(--admin-line-strong);border-radius:6px;font-size:12px}
+.admin-shell .admin-portfolio-summary{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0;color:var(--admin-muted);font-size:13px}
+.admin-shell .admin-portfolio-summary span{padding:8px 12px;border:1px solid var(--admin-line);border-radius:4px}
+.admin-shell .admin-publish-panel{display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between;background:var(--admin-raised);padding:20px;border-left:3px solid var(--accent)}
+.admin-shell .admin-publish-panel p{font-size:12px;margin-top:6px;color:var(--admin-muted);max-width:600px}
+.admin-shell .admin-project-preview{border:1px solid var(--admin-line);padding:24px;border-radius:6px}
+.admin-shell .admin-project-preview h3{font-size:28px;margin-bottom:16px}
+.admin-shell .admin-project-preview .project-gallery>.media{max-height:420px}
+.admin-shell .admin-media-tools{border-top:1px solid var(--admin-line);padding-top:20px}
+.admin-shell .admin-media-tools>h3{font-size:16px;font-weight:600;margin-bottom:12px}
+.admin-shell .admin-status{display:inline-flex;gap:6px;align-items:center;font-size:11px;border:1px solid var(--admin-line);border-radius:4px;padding:5px 8px;margin-top:8px}
+.admin-shell .admin-status[data-published=true]{color:var(--admin-success);border-color:var(--admin-success)}
+.admin-shell button.bg-admin-danger{color:#fff}
+.admin-shell .admin-login-brand{max-width:300px;margin:0 auto 24px;color:var(--admin-text)}
+.admin-shell .admin-login-note{font:italic 28px var(--font-studio-note),Georgia,serif;color:var(--admin-muted);margin-top:24px}
+@media(max-width:767px){
+ .admin-shell .admin-topbar>div{height:auto;min-height:68px;flex-wrap:wrap;padding-block:8px;gap:10px}
+ .admin-shell .admin-topbar-logo{display:block}
+ .admin-shell .admin-topbar .admin-breadcrumb-text{display:none}
+ .admin-shell .admin-topbar{position:static;margin-bottom:16px}
+}

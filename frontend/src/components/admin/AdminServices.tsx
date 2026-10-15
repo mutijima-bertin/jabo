@@ -124,10 +124,12 @@ export function AdminServices({ token }: { token: string }) {
         published: editing.published,
         sortOrder: editing.sortOrder,
       };
-      if (editing.id) await adminApi.put(`/admin/services/${editing.id}`, token, body);
-      else await adminApi.post("/admin/services", token, body);
+      const stored = editing.id
+        ? await adminApi.put<Service>(`/admin/services/${editing.id}`, token, body)
+        : await adminApi.post<Service>("/admin/services", token, body);
+      setEditing(stored);
       setSaved(true);
-      setBaseline(JSON.stringify(editing));
+      setBaseline(JSON.stringify(stored));
       reload();
     } catch (e) {
       if ((e as Error).message === "NOT_AUTHENTICATED") {
