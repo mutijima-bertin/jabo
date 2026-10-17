@@ -57,6 +57,17 @@ export const LOCALE_STORAGE_KEY = "css_locale";
  */
 export const LOCALE_HEADER = "x-css-locale";
 
+/**
+ * Request header set by `src/proxy.ts` carrying the request pathname.
+ *
+ * Same channel as LOCALE_HEADER, same reason: the root layout sits above every
+ * route and must decide things per-path (today: whether to load the Umami
+ * analytics tracker) without being able to read a child route's params. The
+ * proxy already runs on every rendered route, so forwarding the path costs one
+ * header and no extra render.
+ */
+export const PATHNAME_HEADER = "x-css-path";
+
 /** Type guard for a locale URL segment — `true` for exactly "en" | "rw". */
 export function isLocale(v: string): v is Locale {
   return (LOCALES as readonly string[]).includes(v);

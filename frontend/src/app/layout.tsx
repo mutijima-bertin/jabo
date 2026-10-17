@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import Script from "next/script";
 import localFont from "next/font/local";
 import "./signal.css";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { I18nProvider } from "@/lib/i18n";
 import { HtmlLangSync } from "@/components/shared/HtmlLangSync";
-import { DEFAULT_LOCALE, LOCALE_HEADER, isLocale, localizedPath, OG_LOCALES } from "@/lib/locale";
+import { DEFAULT_LOCALE, LOCALE_HEADER, PATHNAME_HEADER, isLocale, localizedPath, OG_LOCALES } from "@/lib/locale";
 import { OG_IMAGE, SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "@/lib/seo";
 
 const geistSans = localFont({src: [
@@ -73,10 +74,25 @@ export const metadata: Metadata = {
 //
 // Bare routes (/admin, /login, /account, /track) carry no locale segment, so the
 // proxy sends DEFAULT_LOCALE and they keep rendering lang="en".
+//
+// ANALYTICS: Umami Cloud (cookieless, GDPR-compliant — no consent banner needed).
+// The tracker is a raw third-party script, so it must carry the per-request CSP
+// nonce (see lib/securityPolicy.ts) or 'strict-dynamic' would reject it. It is
+// deliberately NOT loaded on /admin or /login: those are staff-only surfaces, and
+// counting the owner's own visits would corrupt the numbers the studio reads.
+// The pathname arrives on PATHNAME_HEADER because a root layout cannot read a
+// child's route segment. The website id is public by design (it ships in the
+// page source of every Umami site); it is not a secret.
+const UMAMI_WEBSITE_ID = "8c3380b0-3d46-47bd-97af-cfaef45477c8";
+const ANALYTICS_EXCLUDED = /^\/(admin|login)(\/|$)/;
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const requestHeaders = await headers();
   const headerLocale = requestHeaders.get(LOCALE_HEADER) ?? "";
   const lang = isLocale(headerLocale) ? headerLocale : DEFAULT_LOCALE;
+  const pathname = requestHeaders.get(PATHNAME_HEADER) ?? "";
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
+  const analyticsEnabled = process.env.ANALYTICS_ENABLED === "true" && !ANALYTICS_EXCLUDED.test(pathname);
 
   return (
     <html
@@ -93,6 +109,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             for a fresh document. This keeps it right after a soft locale switch —
             see the component for why it reads the URL instead of useI18n(). */}
         <HtmlLangSync />
+        {analyticsEnabled && (
+          <Script
+            src="https://cloud.umami.is/script.js"
+            data-website-id={UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+            nonce={nonce}
+          />
+        )}
       </body>
     </html>
   );

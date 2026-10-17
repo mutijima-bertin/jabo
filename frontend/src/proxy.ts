@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { DEFAULT_LOCALE, LOCALE_HEADER, isLocale } from "@/lib/locale";
+import { securityPolicy } from "@/lib/securityPolicy";
+import { DEFAULT_LOCALE, LOCALE_HEADER, PATHNAME_HEADER, isLocale } from "@/lib/locale";
 
 /**
  * Locale routing (Next 16.3.4 `proxy` file convention — the successor to
@@ -44,8 +45,23 @@ export function proxy(request: NextRequest) {
   const first = pathname.split("/")[1] ?? "";
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, isLocale(first) ? first : DEFAULT_LOCALE);
+  // Forwarded so the root layout can branch per-path (analytics excludes the
+  // staff-only /admin and /login surfaces). See PATHNAME_HEADER.
+  requestHeaders.set(PATHNAME_HEADER, pathname);
 
-  return NextResponse.next({ request: { headers: requestHeaders } });
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const csp = securityPolicy(nonce, process.env.NODE_ENV === "development");
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("Content-Security-Policy", csp);
+  // Never share nonce-bearing HTML between visitors or cache account pages.
+  response.headers.set("Cache-Control", "private, no-store");
+  if (/^\/(admin|account|login|track)(\/|$)/.test(pathname)) {
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  return response;
 }
 
 export const config = {
